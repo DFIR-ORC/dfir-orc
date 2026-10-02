@@ -19,6 +19,35 @@ Use Get-Toolchain.ps1 script or follow [air-gap-guide.md](air-gap-guide.md).
 ## The functional test module
 The `test.psm1` module contains multiple functions to help building functional tests and check their results.
 
+> **Analysis has moved to `orca`** (`tests/orca`). Expanding, comparing and reporting on results
+> is done there, and since `orca collect` so is *running* ORC: it covers `Invoke-OrcOffline`
+> and `Invoke-OrcVM`, generates the `local.xml` itself, and pulls a VM's results back to the
+> host. The PowerShell functions still work and are not deprecated; `orca` is the one to reach
+> for, and is where fixes go.
+>
+> ```
+> orca collect --offline <disk|dir|vhd> --orc <orc.exe> --out <dir> [-- <orc args>]
+> orca collect --vm <name> [--checkpoint <name>] --orc <orc.exe> --out <dir>
+> ```
+>
+> ```
+> orca diff --run <new>\Archive --reference <ref>\Archive [--private-key contoso.com.key]
+> orca extract <archive-or-dir> --out <dir> [--private-key contoso.com.key]
+> orca report <run-dir>
+> ```
+>
+> `orca diff` accepts collected archives directly - `.7z`, `.p7b` or a directory holding an
+> Outcome - decrypting and unnesting them itself, and caching each ingested side. Neither
+> `unstream.exe` nor nushell is needed any more; `openssl` is only a last-resort fallback, used
+> when neither the Windows certificate store nor a loadable `libcrypto` can do the decryption.
+>
+> **During the transition both paths are kept.** The `Expand-*`, `Compare-*` and `Test-Orc*`
+> functions below still work and are not deprecated; orca is the one to reach for, and is where
+> fixes go. Expect them to disagree in one known way: `orca report` lists zero-byte ORC *output*
+> files that `Test-OrcResults` also checks, but it finds them from the archive manifest without
+> expanding anything, so it reports them on result sets nobody has expanded. Where the two
+> differ on the same expanded tree, treat that as a bug worth reporting.
+
 
 ### Minimal requirements
 - Powershell Core - https://github.com/PowerShell/PowerShell/releases
@@ -144,23 +173,23 @@ Compare-OrcDiffableResults `
 Output example
 ```
 02:16:15 Statistics for 'C:\temp\orc\w10_enterprise_offline\build\diffable\'
-DANDEV: Execution: 00.00:02:19, fails: 0, max memory: 695.6 MB (ORC_Offline), files: 42612 (756.9 MB)
+WIN-UEP1AAROS8L: Execution: 00.00:02:19, fails: 0, max memory: 695.6 MB (ORC_Offline), files: 42612 (756.9 MB)
 02:16:18 Statistics for 'C:\temp\orc\w10_enterprise_offline\10.1.0-rc9\diffable\'
-DANDEV: Execution: 00.00:02:16, fails: 0, max memory: 695.2 MB (ORC_Offline), files: 42612 (782.3 MB)
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\ADS\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\Artefacts\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\Browsers_complet\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\CatRoot\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\Event\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\EXE_TMP\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\ExtAttrs\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\Residents\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\SAM\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\Scripts\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\Secure\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\SystemHives\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\TextLogs\GetThis.csv'
-WARNING: Files differ: 'DANDEV\ORC_WorkStation_DANDEV_Offline\UserHives\GetThis.csv'
+WIN-UEP1AAROS8L: Execution: 00.00:02:16, fails: 0, max memory: 695.2 MB (ORC_Offline), files: 42612 (782.3 MB)
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\ADS\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\Artefacts\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\Browsers_complet\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\CatRoot\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\Event\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\EXE_TMP\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\ExtAttrs\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\Residents\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\SAM\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\Scripts\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\Secure\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\SystemHives\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\TextLogs\GetThis.csv'
+WARNING: Files differ: 'WIN-UEP1AAROS8L\ORC_WorkStation_DANDEV_Offline\UserHives\GetThis.csv'
 Differing file(s) count: 14
 ```
 
@@ -195,7 +224,7 @@ Test-OrcExpandedResults results\w10
 
 Output example
 ```
-WARNING: DANDEV: Empty file: Browsers_complet.log
+WARNING: WIN-UEP1AAROS8L: Empty file: Browsers_complet.log
 ```
 
 

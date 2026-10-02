@@ -2,7 +2,16 @@
 import argparse
 import sys
 
-from . import cms, extract, ingest, merge, outcome, outline, report, diff, getthis
+from . import cms, collect, extract, ingest, merge, outcome, outline, report, diff, getthis
+
+
+def orc_passthrough(remainder: list[str]) -> list[str]:
+    """argparse keeps the '--' separator in REMAINDER; ORC must not see it."""
+    items = list(remainder or [])
+    if items and items[0] == "--":
+        return items[1:]
+
+    return items
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -110,6 +119,32 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="max change patterns shown per table (default 10)")
     df.add_argument("--one-line", action="store_true", help="one summary line")
     df.add_argument("--json", action="store_true", help="summary JSON")
+
+    cl = sub.add_parser("collect", help="run ORC on a disk, a VHD or a VM -> archives")
+    target = cl.add_mutually_exclusive_group(required=True)
+    target.add_argument("--offline", default=None, help="disk image, mounted dir, or .vhd(x)")
+    target.add_argument("--vm", default=None, help="Hyper-V virtual machine name")
+    cl.add_argument("--orc", required=True, help="the configured ORC executable")
+    cl.add_argument("--out", required=True, help="result directory")
+    cl.add_argument("--temp", default=None, help="ORC's /TempDir= (default: a scratch dir)")
+    cl.add_argument("--checkpoint", default=None, help="VM only: checkpoint to restore first")
+    cl.add_argument("--credential", default=None,
+                    help="VM only: .clixml/.xml or .json credential (default: prompt)")
+    cl.add_argument("--no-pull", action="store_true",
+                    help="VM only: leave the results in the guest or on the upload share")
+    cl.add_argument("--public-key", default=None, help="PEM certificate: encrypt to .p7b")
+    cl.add_argument("--upload", default=None, help="upload URI for the collected archives")
+    cl.add_argument("--bits", action="store_true", help="upload with BITS instead of filecopy")
+    cl.add_argument("--allow-invalid-uri", action="store_true",
+                    help="emit the upload URI as one attribute, for %%VARIABLE%% values")
+    cl.add_argument("--enable-key", nargs="*", default=None, dest="enable_keys")
+    cl.add_argument("--disable-key", nargs="*", default=None, dest="disable_keys")
+    cl.add_argument("--key", nargs="*", default=None, dest="keys")
+    cl.add_argument("--local-config", default=None, help="a local.xml to merge over")
+    cl.add_argument("--force", action="store_true",
+                    help="collect into a non-empty --out, and pass /overwrite to ORC")
+    cl.add_argument("orc_args", nargs=argparse.REMAINDER,
+                    help="arguments after '--' are passed to ORC verbatim")
     return parser
 
 
@@ -160,4 +195,13 @@ def main(argv=None) -> int:
                       password=args.password, private_key=args.private_key,
                       cms_backend=args.cms_backend, exclude_files=args.exclude_files,
                       skip_errors=args.skip_errors)
+    elif args.command == "collect":
+        return collect.run_collect(
+            orc=args.orc, out=args.out, offline=args.offline, vm=args.vm,
+            checkpoint=args.checkpoint, temp=args.temp, public_key=args.public_key,
+            upload=args.upload, bits=args.bits, allow_invalid_uri=args.allow_invalid_uri,
+            enable_keys=args.enable_keys, disable_keys=args.disable_keys, keys=args.keys,
+            local_config=args.local_config, credential=args.credential,
+            pull=not args.no_pull, force=args.force,
+            orc_args=orc_passthrough(args.orc_args))
     return 0

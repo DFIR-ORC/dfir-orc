@@ -70,3 +70,20 @@ class TestCli(unittest.TestCase):
 
     def test_main_is_callable(self):
         self.assertTrue(callable(cli.main))
+
+
+class TestCollectParsing(unittest.TestCase):
+    def test_collect_requires_a_target(self):
+        with self.assertRaises(SystemExit):
+            cli._build_parser().parse_args(["collect", "--orc", "orc.exe", "--out", "r"])
+
+    def test_offline_and_vm_are_exclusive(self):
+        with self.assertRaises(SystemExit):
+            cli._build_parser().parse_args(["collect", "--orc", "orc.exe", "--out", "r",
+                                            "--offline", "d.dd", "--vm", "w10"])
+
+    def test_double_dash_arguments_reach_orc_args(self):
+        args = cli._build_parser().parse_args(
+            ["collect", "--orc", "orc.exe", "--out", "r", "--offline", "d.dd",
+             "--", "/key=GetEvt", "/utf8"])
+        self.assertEqual(cli.orc_passthrough(args.orc_args), ["/key=GetEvt", "/utf8"])

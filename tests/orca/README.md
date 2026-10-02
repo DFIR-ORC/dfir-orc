@@ -95,6 +95,40 @@ otherwise abort type detection, and text keeps schemas stable across versions fo
 
 ## Typical command lines
 
+### Collect
+
+Run ORC and leave a result directory the other commands read. `collect` produces archives and
+nothing else: ingesting them is `orca ingest`, comparing them is `orca diff`.
+
+```powershell
+# a disk image: handed to ORC as is, nothing is mounted
+orca collect --offline E:\dumps\w10.dd --orc build\orc.exe --out E:\runs\w10
+
+# a VHDX: attached read-only for the duration of the run, then detached
+orca collect --offline E:\vm\w10.vhdx --orc build\orc.exe --out E:\runs\w10 --force
+
+# encrypted output, and arguments passed to ORC verbatim after '--'
+orca collect --offline E:\dumps\w10.dd --orc build\orc.exe --out E:\runs\w10 `
+    --public-key tools\ci\contoso.com.pem -- /key=GetEvt
+
+# a Hyper-V VM: restore a checkpoint, run, pull the results back to --out
+orca collect --vm w10 --checkpoint clean --orc build\orc.exe --out E:\runs\w10 `
+    --credential vm.clixml
+
+# then compare two ORC versions on the same input
+orca diff --run E:\runs\w10-new --reference E:\runs\w10-old `
+    --exclude-files "*.log" "*/Statistics.json" "Capsule#*"
+```
+
+`--out` holds the archives, the `local.xml` ORC ran with, and `collect.json` (the target, the
+ORC binary's sha256, the argv, timings and the exit code). A VHD(X) attach needs an elevated
+shell. The VM target needs PowerShell, Hyper-V and a guest reachable by PowerShell Direct;
+without `--credential` it prompts, and `--credential` reads `.clixml`/`.xml`
+(`Get-Credential | Export-Clixml`) or `.json` (`{"user": ..., "password": ...}`).
+
+ORC's own non-zero exit is not treated as a failed collect: the archives it did produce are
+kept and the code is returned, because a partial collection is still diffable.
+
 ### Ingest
 
 ```powershell
