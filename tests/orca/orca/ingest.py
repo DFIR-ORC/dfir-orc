@@ -120,20 +120,28 @@ def loose_archives(directory: str) -> list[str]:
                   and entry.lower() + ".p7b" not in sealed)
 
 
+def archives_not_named(directory: str, named: list[str]) -> list[str]:
+    """The archives of 'directory' that none of 'named' accounts for.
+
+    Matched by archive stem, so the decrypted copy of a named archive is not taken for a new
+    one just because the Outcome names the sealed spelling. Pure: 'orca report' asks the same
+    question to say which archives nobody's Outcome accounts for, and must not print as it
+    goes.
+    """
+    stems = {layout.archive_stem(path).lower() for path in named}
+    return [path for path in loose_archives(directory)
+            if layout.archive_stem(path).lower() not in stems]
+
+
 def unnamed_archives(directory: str, named: list[str]) -> list[str]:
     """The archives of 'directory' no Outcome named, each reported as it is picked up.
 
-    One directory can hold several ORC runs, each with its own Outcome, and only one Outcome is
-    read - nothing says which run a caller meant. The other runs' archives are collected data
+    One directory can hold several ORC runs, each with its own Outcome, and an ingest reads
+    one - nothing says which run a caller meant. The other runs' archives are collected data
     sitting right there, so they are opened too rather than dropped without a word. An archive
     ORC wrote after the Outcome it belongs to, or one dropped in by hand, lands here as well.
-
-    Matched by archive stem, so the decrypted copy of a named archive is not taken for a new
-    one just because the Outcome names the sealed spelling.
     """
-    stems = {layout.archive_stem(path).lower() for path in named}
-    found = [path for path in loose_archives(directory)
-             if layout.archive_stem(path).lower() not in stems]
+    found = archives_not_named(directory, named)
     for path in found:
         print(f"'{os.path.basename(path)}' is not in the Outcome that was read; "
               "opening it anyway")
@@ -611,6 +619,35 @@ def write_skipped(skipped: list, out_dir: str) -> None:
     with open(path, "w", encoding="utf-8") as f:
         for name, reason in skipped:
             f.write(f"{name}\t{reason}\n")
+
+
+def find_outcome_jsons(directory: str) -> list[str]:
+    """Every ORC Outcome JSON in 'directory', by content rather than by name.
+
+    A directory can hold several: a fleet is often dumped into one directory, one machine's
+    files beside the next, and then each Outcome is a collection of its own.
+    """
+    found = []
+    try:
+        entries = sorted(os.listdir(directory))
+    except OSError:
+        return found
+
+    for entry in entries:
+        if not entry.lower().endswith(".json"):
+            continue
+
+        full = os.path.join(directory, entry)
+        try:
+            with open(full, encoding="utf-8") as f:
+                data = json.load(f)
+        except (ValueError, OSError):
+            continue
+
+        if (data.get("dfir-orc") or {}).get("outcome"):
+            found.append(full)
+
+    return found
 
 
 def find_outcome_json(path: str) -> str | None:

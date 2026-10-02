@@ -54,10 +54,9 @@ class TestCli(unittest.TestCase):
 
     def test_the_mode_parser_takes_the_table_options(self):
         args = cli._build_mode_parser("outcome").parse_args(
-            ["E:/runs/host", "--root", "E:/runs", "--out", "x.parquet", "--json"])
+            ["E:/runs/host", "--out", "x.parquet", "--json"])
 
         self.assertEqual(args.run_dirs, ["E:/runs/host"])
-        self.assertEqual(args.root, "E:/runs")
         self.assertEqual(args.out, "x.parquet")
         self.assertTrue(args.json)
 
@@ -66,7 +65,7 @@ class TestCli(unittest.TestCase):
         self.assertEqual(cli._build_mode_parser("outline").prog, "orca report outline")
 
     def test_report_takes_list_and_failed(self):
-        args = cli._build_parser().parse_args(["report", "--root", "E:/runs", "--list",
+        args = cli._build_parser().parse_args(["report", "E:/runs", "--list",
                                                "--failed"])
 
         self.assertTrue(args.list)
@@ -78,6 +77,19 @@ class TestCli(unittest.TestCase):
                      ["report", "x", "--json", "--one-line"]):
             with self.assertRaises(SystemExit):
                 cli._build_parser().parse_args(argv)
+
+    def test_report_has_no_root_option_any_more(self):
+        # A directory means every collection in it, so there is nothing left for --root to do.
+        with self.assertRaises(SystemExit):
+            cli._build_parser().parse_args(["report", "--root", "E:/runs"])
+
+        for mode in cli.REPORT_TABLE_MODES:
+            with self.assertRaises(SystemExit):
+                cli._build_mode_parser(mode).parse_args(["--root", "E:/runs"])
+
+    def test_report_needs_something_to_report_on(self):
+        with self.assertRaises(SystemExit):
+            cli._build_parser().parse_args(["report"])
 
     def test_report_takes_the_keys_it_needs_to_unseal_a_collection(self):
         # A collection arrives with its Outcome, Outline and log each sealed.
@@ -94,7 +106,7 @@ class TestCli(unittest.TestCase):
         for mode in cli.REPORT_TABLE_MODES:
             args = cli._build_mode_parser(mode).parse_args(
                 ["E:/dumps/ORC_HOST", "--private-key", "k.pem", "--work-dir", "E:/work",
-                 "--refresh", "--cms-backend", "libcrypto"])
+                 "--refresh", "--cms-backend", "libcrypto"])  # no --root any more
 
             self.assertEqual(args.private_key, "k.pem", mode)
             self.assertEqual(args.work_dir, "E:/work", mode)

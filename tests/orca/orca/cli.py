@@ -40,8 +40,8 @@ def _build_mode_parser(mode: str) -> argparse.ArgumentParser:
         prog=f"orca report {mode}",
         description=f"One queryable row per {'command run' if mode == 'outcome' else 'ORC run'}"
                     f", across every run dir given.")
-    parser.add_argument("run_dirs", nargs="*", help="one or more run dirs")
-    parser.add_argument("--root", default=None, help="discover run dirs under this parent")
+    parser.add_argument("run_dirs", nargs="+",
+                        help="run dir(s), collection(s), or a directory holding either")
     parser.add_argument("--out", default=None,
                         help=f"output parquet (default: <run>/{mode}.parquet)")
     parser.add_argument("--json", action="store_true",
@@ -131,8 +131,8 @@ def _build_parser() -> argparse.ArgumentParser:
                                     "per command run) and 'orca report outline' (one row per "
                                     "ORC run).",
                         epilog="orca report outcome --root E:\\runs --out fleet.parquet")
-    rp.add_argument("run_dirs", nargs="*", help="one or more run dirs")
-    rp.add_argument("--root", default=None, help="discover run dirs under this parent")
+    rp.add_argument("run_dirs", nargs="+",
+                    help="run dir(s), collection(s), or a directory holding either")
     rp.add_argument("--view", action="append", default=None,
                     choices=["outcome", "empty", "stats", "errors"], help="view(s) to show")
     shape = rp.add_mutually_exclusive_group()
@@ -229,7 +229,7 @@ def main(argv=None) -> int:
     if mode:
         args = _build_mode_parser(mode).parse_args(items[2:])
         runner = outcome.run_outcome if mode == "outcome" else outline.run_outline
-        runner(args.run_dirs, root=args.root, out=args.out, engine_name=args.engine,
+        runner(args.run_dirs, out=args.out, engine_name=args.engine,
                as_json=args.json, private_key=args.private_key,
                cms_backend=args.cms_backend, work_dir=args.work_dir, refresh=args.refresh)
         return 0
@@ -266,7 +266,7 @@ def main(argv=None) -> int:
         getthis.run_getthis(args.run, out=args.out, engine_name=args.engine,
                             as_json=args.json)
     elif args.command == "report":
-        report.run_report(args.run_dirs, root=args.root, views=args.view,
+        report.run_report(args.run_dirs, views=args.view,
                           one_line=args.one_line, as_json=args.json,
                           list_commands=args.list, failed_only=args.failed,
                           private_key=args.private_key, cms_backend=args.cms_backend,

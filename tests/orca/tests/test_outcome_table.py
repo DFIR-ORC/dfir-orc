@@ -95,12 +95,10 @@ class TestCommandRows(OutcomeTableCase):
 
 class TestCollecting(OutcomeTableCase):
     def test_reads_the_outcome_of_each_run(self):
-        run_a = os.path.join(self.dir.name, "a")
-        run_b = os.path.join(self.dir.name, "b")
-        self.write(os.path.join("a", "outcome.json"), OUTCOME)
-        os.makedirs(run_b, exist_ok=True)  # a run whose collection had no Outcome
+        first = self.write(os.path.join("a", "outcome.json"), OUTCOME)
+        # A run whose collection had no Outcome contributes no path and so no rows.
 
-        rows = outcome.collect_command_rows([run_a, run_b])
+        rows = outcome.command_rows_from([first])
         self.assertEqual(len(rows), 2)
 
     def test_an_outline_is_not_an_outcome(self):
@@ -112,7 +110,7 @@ class TestCollecting(OutcomeTableCase):
         with open(path, "w", encoding="utf-8") as f:
             f.write("{nope")
         self.assertIsNone(outcome.read_outcome(path))
-        self.assertEqual(outcome.collect_command_rows([self.dir.name]), [])
+        self.assertEqual(outcome.command_rows_from([path]), [])
 
     def test_outcome_file_of_a_run_without_one(self):
         self.assertIsNone(outcome.outcome_file(self.dir.name))

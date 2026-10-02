@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 
-from orca import check, cli, sevenzip
+from orca import check, cli, scratch, sevenzip
 
 SEVEN_ZIP = sevenzip.find_7z()
 
@@ -435,6 +435,9 @@ class TestRunCheck(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
+        # The work dir lives in that temp dir and the scratch base is module state: left
+        # pointing at a deleted directory it breaks the next test that takes a scratch dir.
+        self.addCleanup(scratch.use, None)
         self.stage = os.path.join(self.root.name, "stage")
         self.dumps = os.path.join(self.root.name, "dumps")
         self.work = os.path.join(self.root.name, "work")

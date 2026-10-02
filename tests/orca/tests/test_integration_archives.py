@@ -12,7 +12,8 @@ import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
-from orca import check, cli, cms, engine, journal, layout, report, sevenzip
+from orca import (check, cli, cms, engine, journal, layout, report, scratch,
+                  sevenzip)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CI_DIR = os.path.abspath(os.path.join(HERE, "..", "..", "..", "tools", "ci"))
@@ -48,6 +49,10 @@ class OrcFixtures:
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.dir.cleanup)
+        # These tests pass '--work-dir' inside that temp dir, and the scratch base is module
+        # state: left pointing at a directory that has since been deleted, the next test's
+        # unsealing fails on a path it cannot create.
+        self.addCleanup(scratch.use, None)
         self.dumps = os.path.join(self.dir.name, "dumps")
         self.work = os.path.join(self.dir.name, "work")
         os.makedirs(self.dumps)
@@ -277,11 +282,19 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
 
         self.assertEqual(sorted(os.listdir(source)), before)
 
-    def test_root_finds_the_sealed_collection_without_a_key(self):
-        # Discovery is by name, so it works before anything is decrypted.
+    def test_a_parent_directory_finds_the_sealed_collection(self):
+        # The collection is a child of what was asked about, and its Outcome is sealed: it is
+        # found by unsealing, which is why the key is passed here and not at discovery.
         self.sealed_collection()
 
-        self.assertIn(self.dumps, report.discover_run_dirs([], self.dir.name))
+        scratch.use(self.work)
+        dirs = report.candidate_dirs([self.dir.name])
+        sealed = report.unsealed_sidecar_dirs(dirs, self.work, PRIVATE_KEY)
+        runs = report.find_runs(dirs, sealed)
+
+        self.assertIn(self.dumps, [run.run_dir for run in runs])
+        self.assertIn("SEALEDHOST", [report.host_of(r.run_dir, r.extra_dirs, r.outcome_path)
+                                     for r in runs])
 
 
 @unittest.skipUnless(SEVEN_ZIP and DUCKDB and OPENSSL and os.path.exists(PRIVATE_KEY),

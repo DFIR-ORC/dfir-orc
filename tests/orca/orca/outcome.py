@@ -184,35 +184,37 @@ def outcome_file(run_dir: str, extra_dirs: list | None = None) -> str | None:
     return None
 
 
-def collect_command_rows(run_dirs, extra_dirs: dict | None = None) -> list[dict]:
-    """Every command of every run. 'extra_dirs' maps a run dir to a directory holding its
-    unsealed sidecars, for a collection whose Outcome is encrypted."""
+def command_rows_from(outcome_paths: list) -> list[dict]:
+    """Every command of every Outcome given, in the order the Outcomes were given.
+
+    By Outcome rather than by directory: one directory can hold a whole fleet's collections,
+    one Outcome per machine, and reading 'the' Outcome of such a directory reported the first
+    machine and silently dropped the others.
+    """
     rows = []
-    for run_dir in run_dirs:
-        extra = (extra_dirs or {}).get(run_dir)
-        path = outcome_file(run_dir, [extra] if extra else None)
-        outcome = read_outcome(path) if path else None
+    for path in outcome_paths:
+        outcome = read_outcome(path)
         if outcome is not None:
             rows.extend(command_rows(outcome, path))
+
     return rows
 
 
-def run_outcome(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False,
+def run_outcome(run_dirs, out=None, engine_name="duckdb", as_json=False,
                private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
     from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
-    from .report import discover_run_dirs, unsealed_sidecar_dirs
+    from .report import candidate_dirs, find_runs, unsealed_sidecar_dirs
 
-    dirs = discover_run_dirs(list(run_dirs or []), root)
-    if not dirs:
-        raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
+    dirs = candidate_dirs(list(run_dirs or []))
 
     # A collection arrives with its sidecars sealed, and this table is read from one of them.
     scratch.use(work_dir)
     sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
                                    private_key, cms_backend, refresh)
 
-    rows = collect_command_rows(dirs, sealed)
+    runs = find_runs(dirs, sealed)
+    rows = command_rows_from([run.outcome_path for run in runs if run.outcome_path])
     if not rows:
         raise RuntimeError(f"no Outcome captured in {len(dirs)} run dir(s)")
 

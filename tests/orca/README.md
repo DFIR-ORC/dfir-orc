@@ -204,15 +204,63 @@ orca getthis --run E:\runs\host --json
 ```powershell
 orca report E:\runs\host                       # all views
 orca report E:\runs\host --view errors         # just one view (outcome | empty | stats | errors)
-orca report --root E:\runs                      # discover every run or collection under a parent
-orca report --root E:\runs --one-line           # one summary line per host
+orca report E:\runs                      # every run or collection under a parent
+orca report E:\runs --one-line           # one summary line per host
 orca report E:\runs\host --json                 # one flat JSON object per host
-orca report --root E:\runs --list               # one line per command, every host
-orca report --root E:\runs --list --failed      # only the commands that did not exit 0
+orca report E:\runs --list               # one line per command, every host
+orca report E:\runs --list --failed      # only the commands that did not exit 0
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed collection
 ```
 
 `report` also holds the two row tables: `orca report outcome` and `orca report outline` (below).
+
+#### What a directory means
+
+```powershell
+# a merged dump: one directory, one machine's files beside the next
+orca report \\host\archive\merged --private-key contoso.com.key --one-line
+DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ...
+w11test:         ok=False cmds=35 fails=12 ...
+
+# a directory of per-host folders: the same command
+orca report E:\runs --one-line
+```
+
+**The Outcome identifies a run, not the directory.** A fleet arrives either as a directory of
+per-host folders or as one directory holding every machine's files side by side, and the second
+shape used to report the first Outcome found and silently drop the rest - two machines out of
+three, with nothing saying so. Every Outcome in a directory is now its own run, and so is every
+child directory that holds one. There was a `--root` for the first shape; it has no job left and
+is gone.
+
+What is looked at is the directory given plus its immediate children - not a deeper walk,
+because an ingested run and an expanded tree each hold a copy of the collection's Outcome and
+depth would report one collection two and three times. Where the same run is seen twice
+(`ingest` writes its run *inside* the collection, Outcome and all), the sighting with an ingest
+timing beside it wins: that is the one with tables to report. An ingested run carrying no
+Outcome at all is still a run, since its tables are worth reporting.
+
+A sealed Outcome is found by the name ORC gives it, so discovery needs no key; reading it needs
+one. Only an Outcome makes a directory a collection - a stray sealed log says nothing about what
+a directory is.
+
+**Logs are attributed per run.** ORC names a run's files after the run
+(`ORC_<set>_<host>_<stamp>.log` beside `ORC_<set>_<host>_<stamp>_Outcome.json`), so in a shared
+directory each collection reads its own log instead of all of them. In a run directory of its
+own every log belongs to the one run, which is what makes the expanded `Errors` container and
+ORC's console output show up where they should.
+
+**Archives nothing accounts for are named**, once per directory, after the hosts:
+
+```
+\\host\archive\merged
+  archives no Outcome names (1)
+    ORC_WS-0009_Orphan.7z  32 bytes
+```
+
+In a merged dump that is the thing worth noticing: a collection whose Outcome never arrived, so
+data is sitting there that nothing in the report says a word about. Matched by archive stem, so
+the decrypted copy of a sealed archive is not mistaken for an orphan.
 
 #### The default report
 
@@ -283,10 +331,10 @@ asking for a view and getting nothing back cannot be told from a broken report.
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key
 
 # a whole fleet of them, failures only
-orca report --root \\host\dumps --list --failed --private-key contoso.com.key
+orca report \\host\dumps --list --failed --private-key contoso.com.key
 
 # and the row tables read the same sealed sidecars
-orca report outline --root \\host\dumps --private-key contoso.com.key --json
+orca report outline \\host\dumps --private-key contoso.com.key --json
 ```
 
 When ORC encrypts a collection it seals its own outputs too, one `.7z.p7b` per file, so a
@@ -325,11 +373,9 @@ They are a few KB, so paying for the decryption again costs nothing.
 or no key or certificate can open them, each failure is named and the report prints the views
 it can still build.
 
-**`--root` finds collections, not just runs.** It takes a directory holding
-`.orca\ingest-timing.csv` (an ingested run) **or** an Outcome, plain or sealed - which is what
-makes the fleet sweep above work on dumps as they arrive. A sealed Outcome is recognised by the
-name ORC gives it, never by decrypting, so discovery stays cheap and needs no key; only an
-Outcome counts, since a stray sealed log says nothing about what the directory is.
+**A directory means every collection in it.** There is no `--root`: a directory is read for
+what it holds, and both shapes a fleet arrives in are the same command (see *What a directory
+means* below).
 
 #### `--one-line`: one line per host
 
@@ -415,14 +461,14 @@ Every `--one-line` scalar at the top level, each view's detail on a key below it
 fleet has to stay a one-liner:
 
 ```powershell
-orca report --root E:\runs --json | ConvertFrom-Json | ? fails -gt 0 | Select host,fails,tables
+orca report E:\runs --json | ConvertFrom-Json | ? fails -gt 0 | Select host,fails,tables
 
 host               ok fails tables stats_available
 ----               -- ----- ------ ---------------
 DESKTOP-U9N26B0 False    12                  False
 
 # and the detail is there once the filter has found something
-orca report --root E:\runs --json | ConvertFrom-Json |
+orca report E:\runs --json | ConvertFrom-Json |
     % { $_.failures } | Group-Object exit_code | Select Name,Count
 ```
 
@@ -756,7 +802,7 @@ command line, the configured archives. `ingest` captures every Outline a collect
 (sealed ones too), and `orca report outline` turns them into a table.
 
 ```powershell
-orca report outline --root E:\runs --out E:\runs\fleet.parquet   # across many collections
+orca report outline E:\runs --out E:\runs\fleet.parquet   # across many collections
 orca report outline E:\runs\host                                  # one run -> <run>\outline.parquet
 orca report outline E:\runs\host --json                           # just print the rows
 ```
@@ -792,7 +838,7 @@ Also a mode of `report`. Where `report outline` says what ran, `outcome` says ho
 its exit code, timing, IO counters and the archive it wrote into.
 
 ```powershell
-orca report outcome --root E:\runs --out E:\runs\commands.parquet
+orca report outcome E:\runs --out E:\runs\commands.parquet
 orca report outcome E:\runs\host            # one run -> <run>\outcome.parquet
 ```
 

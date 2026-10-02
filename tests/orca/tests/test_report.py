@@ -1,7 +1,9 @@
 import csv
+import io
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from unittest import mock
 from orca import layout, report
 
@@ -170,30 +172,6 @@ class TestViewAvailability(unittest.TestCase):
         self.assertEqual(hr["stats"]["tables"], 1)
 
 
-class TestRunDirDiscovery(unittest.TestCase):
-    def test_a_run_dir_that_does_not_exist_is_an_error(self):
-        # It used to report cheerfully on nothing: no Outcome, no tables, all zeros. A typo
-        # has to be a typo, which is also what makes a mistyped mode name legible.
-        with self.assertRaises(RuntimeError) as caught:
-            report.discover_run_dirs(["E:/definitely/not/here"], None)
-
-        self.assertIn("no such run dir", str(caught.exception))
-
-    def test_an_existing_run_dir_is_kept(self):
-        with tempfile.TemporaryDirectory() as directory:
-            self.assertEqual(report.discover_run_dirs([directory], None), [directory])
-
-    def test_root_discovery_only_takes_ingested_runs(self):
-        with tempfile.TemporaryDirectory() as parent:
-            ingested = os.path.join(parent, "run")
-            os.makedirs(os.path.join(ingested, layout.ORCA_DIR))
-            with open(layout.timing_path(ingested), "w", encoding="utf-8") as f:
-                f.write("kind,name,rows,bytes,seconds\n")
-            os.makedirs(os.path.join(parent, "an-extracted-tree"))
-
-            self.assertEqual(report.discover_run_dirs([], parent), [ingested])
-
-
 OUTCOME_DOC = ('{"dfir-orc": {"outcome": {"computer_name": "HOST", "command_set": '
                '[{"name": "ORC_General", "statistics": {"process_memory_peak": 2048}, '
                '"commands": [{"name": "USNInfo", "exit_code": 18, "start": "", "end": ""}, '
@@ -243,7 +221,8 @@ class TestReadingFromASecondDirectory(unittest.TestCase):
 
         from orca import outcome as outcome_module
 
-        rows = outcome_module.collect_command_rows([self.run], {self.run: self.side})
+        runs = report.find_runs([self.run], {self.run: self.side})
+        rows = outcome_module.command_rows_from([r.outcome_path for r in runs])
 
         self.assertEqual([r["command"] for r in rows], ["USNInfo", "NTFSInfo"])
 
@@ -285,45 +264,6 @@ class TestReadingFromASecondDirectory(unittest.TestCase):
         self.assertTrue(hr["outcome"]["available"])
         self.assertEqual(hr["outcome"]["commands"], 2)
         self.assertEqual([log["error_lines"] for log in hr["errors"]["logs"]], [1])
-
-    def test_root_also_finds_a_collection_that_was_never_ingested(self):
-        # A folder of collections as they arrive is what a fleet sweep is pointed at, and
-        # nothing in it has an '.orca' yet.
-        with tempfile.TemporaryDirectory() as parent:
-            raw = os.path.join(parent, "ORC_HOST")
-            os.makedirs(raw)
-            with open(os.path.join(raw, "ORC_Outcome.json"), "w", encoding="utf-8") as f:
-                f.write(OUTCOME_DOC)
-
-            self.assertEqual(report.discover_run_dirs([], parent), [raw])
-
-    def test_root_finds_a_collection_whose_outcome_is_still_sealed(self):
-        # By name, never by decrypting: discovery has to stay cheap and must not need a key.
-        with tempfile.TemporaryDirectory() as parent:
-            raw = os.path.join(parent, "ORC_HOST")
-            os.makedirs(raw)
-            with open(os.path.join(raw, "ORC_HOST_Outcome.json.7z.p7b"), "wb") as f:
-                f.write(b"sealed, and not opened to answer this")
-
-            self.assertEqual(report.discover_run_dirs([], parent), [raw])
-
-    def test_root_still_ignores_a_directory_that_is_neither(self):
-        with tempfile.TemporaryDirectory() as parent:
-            os.makedirs(os.path.join(parent, "an-expanded-tree"))
-            with open(os.path.join(parent, "loose.7z"), "wb") as f:
-                f.write(b"not a directory at all")
-
-            self.assertEqual(report.discover_run_dirs([], parent), [])
-
-    def test_a_sealed_log_alone_does_not_make_a_directory_reportable(self):
-        # Only an Outcome says "this is a collection"; a stray sealed log says nothing.
-        with tempfile.TemporaryDirectory() as parent:
-            raw = os.path.join(parent, "ORC_HOST")
-            os.makedirs(raw)
-            with open(os.path.join(raw, "ORC_HOST.log.7z.p7b"), "wb") as f:
-                f.write(b"sealed log")
-
-            self.assertEqual(report.discover_run_dirs([], parent), [])
 
 
 class TestErrorsViewAvailability(unittest.TestCase):
@@ -426,6 +366,309 @@ class TestUnsealedSidecarDirs(unittest.TestCase):
             mapped = report.unsealed_sidecar_dirs([directory], self.work)
 
         self.assertEqual(mapped, {})
+
+
+def write_outcome(directory: str, host: str, run_id: str = "", code: int = 0) -> str:
+    """An Outcome named the way ORC names one, so the sidecars of a run can be told apart."""
+    import json
+
+    document = {"dfir-orc": {"outcome": {
+        "computer_name": host, "id": run_id or "{" + host + "}",
+        "start": "2026-09-25T14:41:27Z", "end": "2026-09-25T14:48:14Z",
+        "command_set": [{"name": "ORC_General",
+                         "archive": {"name": f"ORC_{host}_General.7z", "size": 1024},
+                         "commands": [{"name": "USNInfo", "tool": "USNInfo",
+                                       "exit_code": code, "start": "", "end": ""}]}]}}}
+    path = os.path.join(directory, f"ORC_{host}_20260925_144127_Outcome.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(document, f)
+
+    return path
+
+
+def mark_ingested(directory: str) -> None:
+    os.makedirs(os.path.join(directory, layout.ORCA_DIR), exist_ok=True)
+    with open(layout.timing_path(directory), "w", encoding="utf-8") as f:
+        f.write("kind,name,rows,bytes,seconds\n")
+
+
+class TestFindRuns(unittest.TestCase):
+    """One directory, several collections.
+
+    A fleet arrives either as a directory of per-host folders or as one directory holding every
+    machine's files side by side - a 'merged' dump - and the second shape used to report the
+    first Outcome found and silently drop the rest. The Outcome, not the directory, is what
+    identifies a run.
+    """
+
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.dir = self.root.name
+
+    def hosts(self, *paths) -> list:
+        return sorted(run.outcome_path and os.path.basename(run.outcome_path)
+                      for run in report.find_runs(report.candidate_dirs(list(paths)), {}))
+
+    def test_every_outcome_in_one_directory_is_its_own_run(self):
+        for host in ("WS-0001", "WS-0002", "WS-0003"):
+            write_outcome(self.dir, host)
+
+        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+
+        self.assertEqual(len(runs), 3)
+        self.assertEqual(sorted(os.path.basename(r.outcome_path) for r in runs),
+                         ["ORC_WS-0001_20260925_144127_Outcome.json",
+                          "ORC_WS-0002_20260925_144127_Outcome.json",
+                          "ORC_WS-0003_20260925_144127_Outcome.json"])
+
+    def test_a_directory_of_per_host_folders_is_found_the_same_way(self):
+        for host in ("WS-0001", "WS-0002"):
+            child = os.path.join(self.dir, host)
+            os.makedirs(child)
+            write_outcome(child, host)
+
+        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+
+        self.assertEqual(len(runs), 2)
+        self.assertEqual(sorted(os.path.basename(r.run_dir) for r in runs),
+                         ["WS-0001", "WS-0002"])
+
+    def test_a_collection_and_the_run_dir_inside_it_are_one_run(self):
+        # 'ingest' copies the Outcome into the run it writes inside the collection, so the same
+        # run is visible twice; the ingested copy is the one worth reporting, it has the tables.
+        write_outcome(self.dir, "WS-0001")
+        run = os.path.join(self.dir, "ORC_WS-0001_Offline")
+        os.makedirs(run)
+        write_outcome(run, "WS-0001")
+        mark_ingested(run)
+
+        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].run_dir, run)
+
+    def test_an_ingested_run_with_no_outcome_is_still_a_run(self):
+        mark_ingested(self.dir)
+
+        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+
+        self.assertEqual([r.run_dir for r in runs], [self.dir])
+        self.assertIsNone(runs[0].outcome_path)
+
+    def test_a_sealed_outcome_is_read_from_where_it_was_unsealed(self):
+        side = os.path.join(self.root.name, "unsealed")
+        os.makedirs(side)
+        collection = os.path.join(self.dir, "sealed")
+        os.makedirs(collection)
+        with open(os.path.join(collection, "ORC_WS-0007_Outcome.json.7z.p7b"), "wb") as f:
+            f.write(b"sealed")
+        write_outcome(side, "WS-0007")
+
+        runs = report.find_runs([collection], {collection: side})
+
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs[0].run_dir, collection)
+        self.assertEqual(runs[0].extra_dirs, [side])
+
+    def test_a_directory_with_nothing_in_it_yields_no_run(self):
+        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir]), {}), [])
+
+    def test_a_directory_that_is_neither_a_run_nor_a_collection_yields_no_run(self):
+        os.makedirs(os.path.join(self.dir, "an-expanded-tree"))
+        with open(os.path.join(self.dir, "loose.7z"), "wb") as f:
+            f.write(b"not a directory at all")
+
+        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir]), {}), [])
+
+    def test_a_sealed_log_alone_does_not_make_a_collection(self):
+        # Only an Outcome says a directory is a collection; a stray sealed log says nothing.
+        child = os.path.join(self.dir, "ORC_HOST")
+        os.makedirs(child)
+        with open(os.path.join(child, "ORC_HOST.log.7z.p7b"), "wb") as f:
+            f.write(b"sealed log")
+
+        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir]), {}), [])
+
+    def test_runs_come_back_in_host_order(self):
+        for host in ("WS-0003", "WS-0001", "WS-0002"):
+            write_outcome(self.dir, host)
+
+        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+
+        self.assertEqual([os.path.basename(r.outcome_path).split("_")[1] for r in runs],
+                         ["WS-0001", "WS-0002", "WS-0003"])
+
+    def test_a_path_that_does_not_exist_is_an_error(self):
+        with self.assertRaises(RuntimeError) as caught:
+            report.candidate_dirs(["E:/definitely/not/here"])
+
+        self.assertIn("no such", str(caught.exception))
+
+    def test_a_file_is_not_a_directory_of_collections(self):
+        path = os.path.join(self.dir, "ORC_HOST.7z")
+        with open(path, "wb") as f:
+            f.write(b"an archive, not a directory")
+
+        with self.assertRaises(RuntimeError):
+            report.candidate_dirs([path])
+
+
+class TestLogAttribution(unittest.TestCase):
+    """Which logs belong to which run, when one directory holds several.
+
+    ORC names a run's files after the run - 'ORC_<host>_<stamp>.log' beside
+    'ORC_<host>_<stamp>_Outcome.json' - so in a merged directory a log can be attributed to the
+    collection it came from instead of to all of them.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.first = write_outcome(self.dir.name, "WS-0001")
+        self.second = write_outcome(self.dir.name, "WS-0002")
+        for host in ("WS-0001", "WS-0002"):
+            path = os.path.join(self.dir.name, f"ORC_{host}_20260925_144127.log")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("an Error here\n")
+
+    def test_the_stem_of_a_run_is_its_outcome_without_the_suffix(self):
+        self.assertEqual(report.log_stem(self.first), "ORC_WS-0001_20260925_144127")
+
+    def test_a_run_in_a_shared_directory_reads_only_its_own_log(self):
+        view = report.build_errors_view(self.dir.name, None, report.log_stem(self.first))
+
+        self.assertEqual([log["log"] for log in view["logs"]],
+                         ["ORC_WS-0001_20260925_144127.log"])
+
+    def test_without_a_stem_every_log_of_the_directory_is_read(self):
+        # A run directory of its own: the collection's log, each command's log out of the
+        # expanded Errors container, and ORC's console output all belong to the one run.
+        view = report.build_errors_view(self.dir.name)
+
+        self.assertEqual(len(view["logs"]), 2)
+
+
+class TestOrphanArchives(unittest.TestCase):
+    """An archive in the directory that no Outcome accounts for.
+
+    In a merged dump that is the thing worth noticing: a collection whose Outcome never
+    arrived, so nothing in the report says anything about it.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+
+    def archive(self, name: str, size: int = 32) -> str:
+        path = os.path.join(self.dir.name, name)
+        with open(path, "wb") as f:
+            f.write(b"x" * size)
+        return path
+
+    def test_an_archive_no_outcome_names_is_reported_with_its_size(self):
+        write_outcome(self.dir.name, "WS-0001")
+        self.archive("ORC_WS-0001_General.7z", 1024)
+        self.archive("ORC_WS-0009_Orphan.7z", 32)
+
+        rows = report.orphan_rows(self.dir.name)
+
+        self.assertEqual(rows, [["ORC_WS-0009_Orphan.7z", "32 bytes"]])
+
+    def test_every_outcome_of_the_directory_has_its_say(self):
+        # Two collections side by side: an archive named by either of them is accounted for.
+        write_outcome(self.dir.name, "WS-0001")
+        write_outcome(self.dir.name, "WS-0002")
+        self.archive("ORC_WS-0001_General.7z")
+        self.archive("ORC_WS-0002_General.7z")
+
+        self.assertEqual(report.orphan_rows(self.dir.name), [])
+
+    def test_a_directory_with_no_archive_at_all_has_no_orphan(self):
+        write_outcome(self.dir.name, "WS-0001")
+
+        self.assertEqual(report.orphan_rows(self.dir.name), [])
+
+
+class TestRunReport(unittest.TestCase):
+    """The command over a directory: every collection in it, and what nothing accounts for."""
+
+    def setUp(self):
+        self.root = tempfile.TemporaryDirectory()
+        self.addCleanup(self.root.cleanup)
+        self.dir = self.root.name
+
+    def invoke(self, *paths, **kwargs) -> str:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            report.run_report(list(paths) or [self.dir], **kwargs)
+        return out.getvalue()
+
+    def test_a_merged_directory_reports_every_collection_in_it(self):
+        for host, code in (("WS-0001", 18), ("WS-0002", 9), ("WS-0003", 0)):
+            write_outcome(self.dir, host, code=code)
+
+        output = self.invoke(one_line=True)
+
+        self.assertEqual(len(output.strip().splitlines()), 3)
+        for host in ("WS-0001", "WS-0002", "WS-0003"):
+            self.assertIn(host, output)
+
+    def test_a_directory_of_per_host_folders_reports_each_of_them(self):
+        for host in ("WS-0001", "WS-0002"):
+            child = os.path.join(self.dir, host)
+            os.makedirs(child)
+            write_outcome(child, host)
+
+        output = self.invoke(one_line=True)
+
+        self.assertEqual(len(output.strip().splitlines()), 2)
+
+    def test_a_run_reads_only_its_own_log_when_the_directory_is_shared(self):
+        write_outcome(self.dir, "WS-0001")
+        write_outcome(self.dir, "WS-0002")
+        for host, lines in (("WS-0001", 1), ("WS-0002", 3)):
+            path = os.path.join(self.dir, f"ORC_{host}_20260925_144127.log")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("an Error here\n" * lines)
+
+        output = self.invoke(views=["errors"])
+
+        self.assertIn("ORC_WS-0001_20260925_144127.log  1", output)
+        self.assertIn("ORC_WS-0002_20260925_144127.log  3", output)
+
+    def test_an_archive_nothing_accounts_for_is_named(self):
+        write_outcome(self.dir, "WS-0001")
+        with open(os.path.join(self.dir, "ORC_WS-0009_Orphan.7z"), "wb") as f:
+            f.write(b"y" * 32)
+
+        output = self.invoke()
+
+        self.assertIn("archives no Outcome names (1)", output)
+        self.assertIn("ORC_WS-0009_Orphan.7z  32 bytes", output)
+
+    def test_the_orphan_block_names_its_directory_once(self):
+        for host in ("WS-0001", "WS-0002"):
+            write_outcome(self.dir, host)
+        with open(os.path.join(self.dir, "ORC_WS-0009_Orphan.7z"), "wb") as f:
+            f.write(b"y")
+
+        output = self.invoke()
+
+        self.assertEqual(output.count("archives no Outcome names"), 1)
+
+    def test_a_directory_whose_archives_are_all_named_says_nothing(self):
+        write_outcome(self.dir, "WS-0001")
+        with open(os.path.join(self.dir, "ORC_WS-0001_General.7z"), "wb") as f:
+            f.write(b"y")
+
+        self.assertNotIn("archives no Outcome", self.invoke())
+
+    def test_nothing_to_report_is_an_error_naming_what_was_looked_at(self):
+        with self.assertRaises(RuntimeError) as caught:
+            self.invoke()
+
+        self.assertIn("no collection", str(caught.exception))
 
 
 if __name__ == "__main__":

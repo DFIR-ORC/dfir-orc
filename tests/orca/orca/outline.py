@@ -118,15 +118,29 @@ def outline_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
     return find_outlines([run_dir] + list(extra_dirs or []))
 
 
-def run_outline(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False,
+def dedupe_by_run(rows: list) -> list:
+    """One row per ORC run. A collection and the run 'ingest' wrote inside it both hold the
+    Outline, so the same run is seen twice when a directory is read with its children."""
+    seen = set()
+    unique = []
+    for row in rows:
+        identity = row.get("run_id") or row.get("source")
+        if identity in seen:
+            continue
+
+        seen.add(identity)
+        unique.append(row)
+
+    return unique
+
+
+def run_outline(run_dirs, out=None, engine_name="duckdb", as_json=False,
                private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
     from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
-    from .report import discover_run_dirs, unsealed_sidecar_dirs
+    from .report import candidate_dirs, find_runs, unsealed_sidecar_dirs
 
-    dirs = discover_run_dirs(list(run_dirs or []), root)
-    if not dirs:
-        raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
+    dirs = candidate_dirs(list(run_dirs or []))
 
     # A collection arrives with its sidecars sealed, and this table is read from one of them.
     scratch.use(work_dir)
@@ -136,7 +150,7 @@ def run_outline(run_dirs, root=None, out=None, engine_name="duckdb", as_json=Fal
     paths = [path for run_dir in dirs
              for path in outline_files(run_dir,
                                        [sealed[run_dir]] if run_dir in sealed else None)]
-    rows = collect_rows(paths)
+    rows = dedupe_by_run(collect_rows(paths))
     if not rows:
         raise RuntimeError(f"no Outline captured in {len(dirs)} run dir(s); "
                            f"ingest a collection that carries one")

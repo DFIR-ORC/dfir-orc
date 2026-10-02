@@ -650,5 +650,38 @@ class TestDecryptArchive(unittest.TestCase):
         self.assertTrue(os.path.exists(plain))
 
 
+class TestArchivesNotNamed(unittest.TestCase):
+    """The orphan computation on its own, without the line unnamed_archives prints."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+
+    def touch(self, name: str, payload: bytes = b"x") -> str:
+        path = os.path.join(self.dir.name, name)
+        with open(path, "wb") as f:
+            f.write(payload)
+        return path
+
+    def test_an_archive_no_outcome_names_is_found(self):
+        self.touch("ORC_A_General.7z")
+        orphan = self.touch("ORC_B_General.7z")
+
+        self.assertEqual(ingest.archives_not_named(self.dir.name, ["ORC_A_General.7z"]),
+                         [orphan])
+
+    def test_the_decrypted_copy_of_a_named_archive_is_not_an_orphan(self):
+        # The Outcome names the sealed spelling; the '.7z' beside it is orca's own decryption.
+        self.touch("ORC_A_General.7z.p7b")
+        self.touch("ORC_A_General.7z")
+
+        self.assertEqual(ingest.archives_not_named(self.dir.name, ["ORC_A_General.7z.p7b"]), [])
+
+    def test_a_sealed_sidecar_is_not_an_archive(self):
+        self.touch("ORC_A_Outcome.json.7z.p7b")
+
+        self.assertEqual(ingest.archives_not_named(self.dir.name, []), [])
+
+
 if __name__ == "__main__":
     unittest.main()

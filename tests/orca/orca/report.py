@@ -7,6 +7,7 @@ import json
 import os
 import re
 from dataclasses import asdict
+from typing import NamedTuple
 
 from . import ingest, layout, outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
@@ -133,6 +134,16 @@ def run_log_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
     return found
 
 
+def run_logs_of(run_dir: str, extra_dirs: list | None = None,
+                stem: str | None = None) -> list:
+    """The logs of one run: every log of the directory, or only this run's when a stem says so."""
+    found = run_log_files(run_dir, extra_dirs)
+    if not stem:
+        return found
+
+    return [path for path in found if os.path.basename(path).startswith(stem)]
+
+
 def log_label(path: str, run_dir: str) -> str:
     """How a log is named in the report: its path within the run, else its file name alone.
 
@@ -152,13 +163,36 @@ def log_label(path: str, run_dir: str) -> str:
     return relative.replace("\\", "/")
 
 
-def build_errors_view(run_dir: str, extra_dirs: list | None = None) -> dict:
+OUTCOME_SUFFIX = "_Outcome.json"
+
+
+def log_stem(outcome_path: str) -> str | None:
+    """The name ORC gave this run's files: 'ORC_<host>_<stamp>_Outcome.json' -> the stem.
+
+    What lets a log be attributed to one collection when a directory holds several, which is
+    how a merged dump of a fleet arrives.
+    """
+    name = os.path.basename(outcome_path or "")
+    if not name.endswith(OUTCOME_SUFFIX):
+        return None
+
+    return name[:-len(OUTCOME_SUFFIX)]
+
+
+def build_errors_view(run_dir: str, extra_dirs: list | None = None,
+                      stem: str | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
-    could not read at all, which are a hole in the run rather than a message inside it."""
+    could not read at all, which are a hole in the run rather than a message inside it.
+
+    'stem' keeps a run to its own logs where the directory holds more than one collection.
+    Without it every log of the directory belongs to the run, which is what a run directory of
+    its own means: the collection's log, each command's log out of the expanded Errors
+    container, and ORC's console output are all one run's.
+    """
     if not os.path.isdir(run_dir):
         return {"available": False, "skipped": {}}
     logs = []
-    for path in run_log_files(run_dir, extra_dirs):
+    for path in run_logs_of(run_dir, extra_dirs, stem):
         size = os.path.getsize(path)
         if size == 0:
             continue
@@ -177,7 +211,7 @@ def build_errors_view(run_dir: str, extra_dirs: list | None = None) -> dict:
     # 'available' is whether there was a log to read, not whether the directory exists: a
     # sealed collection holds only '<name>.log.7z.p7b', and '0 log(s) with matches' would then
     # read as reassurance when nothing had been read at all.
-    return {"available": bool(run_log_files(run_dir, extra_dirs)), "logs": logs,
+    return {"available": bool(run_logs_of(run_dir, extra_dirs, stem)), "logs": logs,
             "skipped": layout.skipped(run_dir)}
 
 
@@ -198,13 +232,15 @@ def _hdur(seconds) -> str:
     return f"{s // 3600}h{(s % 3600) // 60}m" if s >= 3600 else f"{s // 60}m{s % 60}s"
 
 
-def host_of(run_dir: str, extra_dirs: list | None = None) -> str:
+def host_of(run_dir: str, extra_dirs: list | None = None,
+            outcome_path: str | None = None) -> str:
     """The machine the collection came from, by its Outcome; the directory name as a fallback.
 
     A sealed collection has no readable Outcome until its sidecars are unsealed, and would
-    otherwise be reported under the name of the folder it happens to sit in.
+    otherwise be reported under the name of the folder it happens to sit in. 'outcome_path' is
+    this run's own Outcome, which matters when the directory holds several.
     """
-    op = _outcome.outcome_file(run_dir, extra_dirs)
+    op = outcome_path or _outcome.outcome_file(run_dir, extra_dirs)
     if op:
         try:
             host = _outcome.parse_outcome(op).host
@@ -215,7 +251,8 @@ def host_of(run_dir: str, extra_dirs: list | None = None) -> str:
     return os.path.basename(os.path.normpath(run_dir))
 
 
-def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None) -> dict:
+def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None,
+                      outcome_path: str | None = None, stem: str | None = None) -> dict:
     """The four views of one run dir, each told whether its own input was there to read.
 
     Only 'ingest' writes the '.orca' directory, and report is pointed at a directory 'extract'
@@ -226,16 +263,16 @@ def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None)
     timing_available = os.path.exists(layout.timing_path(run_dir))
     manifest_available = bool(engine) and os.path.exists(layout.manifest_path(run_dir))
 
-    op = _outcome.outcome_file(run_dir, extra_dirs)
+    op = outcome_path or _outcome.outcome_file(run_dir, extra_dirs)
     oc = _outcome.parse_outcome(op) if op else None
     files = empty_output_files(engine, layout.manifest_path(run_dir)) if engine else []
     return {
-        "host": host_of(run_dir, extra_dirs),
+        "host": host_of(run_dir, extra_dirs, op),
         "run_dir": run_dir,
         "outcome": build_outcome_view(oc),
         "empty": build_empty_view(timing, files, timing_available, manifest_available),
         "stats": build_stats_view(timing, timing_available),
-        "errors": build_errors_view(run_dir, extra_dirs),
+        "errors": build_errors_view(run_dir, extra_dirs, stem),
     }
 
 
@@ -548,29 +585,130 @@ def render_command_lines(rows: list[dict], failed_only: bool = False) -> str:
     return "\n".join(lines + ["", summary])
 
 
-def holds_a_collection(directory: str) -> bool:
-    """True when 'directory' holds an ORC Outcome, plain or sealed.
-
-    What makes a directory worth reporting on before anything is ingested, which is how a
-    folder of collections as they arrive can be swept. The sealed case is recognised by the
-    name ORC gives it ('<name>_Outcome.json.7z.p7b') and never by decrypting: discovery has to
-    stay cheap and must not need a key. A sealed log on its own says nothing - only an Outcome
-    says this is a collection.
-    """
-    if not os.path.isdir(directory):
-        return False
-
-    if _outcome.outcome_file(directory):
-        return True
-
-    return any((ingest.sealed_name(path) or "").lower().endswith("outcome.json")
-               for path in ingest.sealed_sidecars(directory))
-
-
 def _extra(sealed: dict, run_dir: str) -> list | None:
     """The 'extra_dirs' for one run: where its sidecars were unsealed, if any were."""
     found = sealed.get(run_dir)
     return [found] if found else None
+
+
+class Run(NamedTuple):
+    """One collection to report on.
+
+    The Outcome, not the directory, is what identifies a run: a fleet dumped into a single
+    directory is one directory holding one Outcome per machine, and keying off the directory
+    reported the first of them and silently dropped the rest. 'outcome_path' is None for an
+    ingested run that carries no Outcome at all, which is still worth a report of its tables.
+    """
+    run_dir: str
+    outcome_path: str | None
+    extra_dirs: list
+
+
+def candidate_dirs(paths: list) -> list:
+    """The directories to look in: each path given, plus its immediate children.
+
+    One rule for both shapes a fleet arrives in - a directory of per-host folders, and one
+    directory holding every machine's files side by side. Not a deeper walk: an ingested run
+    and an expanded tree each hold a copy of the collection's Outcome, and depth would report
+    one collection two and three times over.
+    """
+    found = []
+    for path in paths:
+        if not os.path.isdir(path):
+            raise RuntimeError(f"no such run dir: '{path}'")
+
+        found.append(path)
+        found += [entry.path for entry in sorted(os.scandir(path), key=lambda e: e.name)
+                  if entry.is_dir() and os.path.basename(entry.path) != layout.ORCA_DIR]
+
+    return found
+
+
+def runs_in(directory: str, extra_dirs: list) -> list:
+    """Every collection whose Outcome is in 'directory' (or where its sidecars were unsealed).
+
+    An ingested run with no Outcome is one run all the same: its tables are worth reporting
+    even when ORC's own record of the collection never arrived.
+    """
+    outcomes = []
+    for place in [directory] + list(extra_dirs):
+        outcomes += ingest.find_outcome_jsons(place)
+
+    if not outcomes:
+        if os.path.isfile(layout.timing_path(directory)):
+            return [Run(directory, None, list(extra_dirs))]
+
+        return []
+
+    return [Run(directory, path, list(extra_dirs)) for path in outcomes]
+
+
+def archives_named_by(outcome_paths: list) -> list:
+    """Every archive name these Outcomes record."""
+    named = []
+    for path in outcome_paths:
+        outcome = _outcome.read_outcome(path) or {}
+        for command_set in outcome.get("command_set", []) or []:
+            archive = command_set.get("archive") or {}
+            if archive.get("name"):
+                named.append(archive["name"])
+
+    return named
+
+
+def orphan_rows(directory: str, extra_dirs: list | None = None) -> list:
+    """The archives of 'directory' that no Outcome of it accounts for, with their sizes.
+
+    A collection whose Outcome never arrived leaves exactly this: data sitting in the directory
+    that nothing in the report says a word about.
+
+    Every Outcome of the directory has its say, not just the runs that were reported: a
+    collection whose ingested run won the de-duplication still named its own archives, and
+    calling them orphans because the run directory is where the report came from would be a
+    false alarm.
+    """
+    named = []
+    for place in [directory] + list(extra_dirs or []):
+        named += archives_named_by(ingest.find_outcome_jsons(place))
+
+    rows = []
+    for path in ingest.archives_not_named(directory, named):
+        rows.append([os.path.basename(path), f"{os.path.getsize(path)} bytes"])
+
+    return rows
+
+
+def run_identity(run: Run) -> str:
+    """What makes two sightings of a run the same run: ORC's run id, else the Outcome's name.
+
+    'ingest' copies the Outcome into the run directory it writes inside the collection, so the
+    same collection is visible in both and must be reported once.
+    """
+    if not run.outcome_path:
+        return os.path.abspath(run.run_dir)
+
+    outcome = _outcome.read_outcome(run.outcome_path) or {}
+    return outcome.get("id") or os.path.basename(run.outcome_path)
+
+
+def find_runs(dirs: list, sealed: dict) -> list:
+    """Every run across 'dirs', one per Outcome, in host order and without duplicates.
+
+    Where the same run is seen twice, the sighting with an ingest timing beside it wins: that
+    is the ingested run, and it is the one with tables to report.
+    """
+    best = {}
+    for directory in dirs:
+        for run in runs_in(directory, _extra(sealed, directory) or []):
+            identity = run_identity(run)
+            current = best.get(identity)
+            if current is None or (not os.path.isfile(layout.timing_path(current.run_dir))
+                                   and os.path.isfile(layout.timing_path(run.run_dir))):
+                best[identity] = run
+
+    return sorted(best.values(), key=lambda run: (host_of(run.run_dir, run.extra_dirs,
+                                                          run.outcome_path),
+                                                  run.run_dir))
 
 
 def sidecar_dir(run_dir: str, work: str) -> str:
@@ -618,53 +756,69 @@ def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=N
     return mapped
 
 
-def discover_run_dirs(run_dirs: list, root) -> list:
-    """The run dirs to report on: the ones named, plus every ingested run under 'root'.
+def shared_dirs(runs: list) -> set:
+    """The directories holding more than one run, where a log has to be attributed."""
+    counts: dict = {}
+    for run in runs:
+        key = os.path.abspath(run.run_dir)
+        counts[key] = counts.get(key, 0) + 1
 
-    A named directory that is not there is an error rather than a report about nothing - it
-    used to come back as a host with no Outcome and no tables, which reads like a finding.
+    return {directory for directory, count in counts.items() if count > 1}
+
+
+def orphan_lines(dirs: list, sealed: dict) -> list:
+    """One block per directory holding an archive no Outcome accounts for.
+
+    Said once per directory rather than under each of its collections: it is a fact about the
+    directory, and a fleet's worth of hosts repeating it would bury it.
     """
-    for path in (run_dirs or []):
-        if not os.path.isdir(path):
-            raise RuntimeError(f"no such run dir: '{path}'")
+    blocks = []
+    for directory in dirs:
+        rows = orphan_rows(directory, _extra(sealed, directory))
+        if rows:
+            blocks.append("\n".join([directory]
+                                    + section(f"archives no Outcome names ({len(rows)})",
+                                              rows, "<>")))
 
-    found = list(run_dirs or [])
-    if root:
-        for path in sorted(glob.glob(os.path.join(root, "*"))):
-            if os.path.isfile(layout.timing_path(path)) or holds_a_collection(path):
-                found.append(path)
-    seen, result = set(), []
-    for d in found:
-        key = os.path.normpath(d)
-        if key not in seen:
-            seen.add(key)
-            result.append(d)
-    return result
+    return blocks
 
 
-def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
-               list_commands=False, failed_only=False, private_key=None, cms_backend=None,
-               work_dir=None, refresh=False, engine_name="duckdb") -> None:
-    dirs = discover_run_dirs(run_dirs, root)
-    if not dirs:
-        raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
+def run_report(run_dirs, views=None, one_line=False, as_json=False, list_commands=False,
+               failed_only=False, private_key=None, cms_backend=None, work_dir=None,
+               refresh=False, engine_name="duckdb") -> None:
+    """Report on every collection in every directory given.
 
+    A directory is read for what it holds rather than taken for one run: a fleet arrives either
+    as a directory of per-host folders or as one directory holding every machine's files side
+    by side, and the second shape used to report the first Outcome and drop the rest.
+    """
     if failed_only and not list_commands:
         raise RuntimeError("--failed filters the --list output; add --list")
+
+    dirs = candidate_dirs(list(run_dirs or []))
 
     scratch.use(work_dir)
     sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
                                    private_key, cms_backend, refresh)
+    runs = find_runs(dirs, sealed)
+    if not runs:
+        raise RuntimeError(f"no collection in {', '.join(run_dirs)}: need an ingested run, a "
+                           f"collection, or a directory holding either")
+
+    orphans = orphan_lines(dirs, sealed)
 
     if list_commands:
         # The same rows 'orca report outcome' writes to parquet, so the text and the table can
         # never disagree - and no engine is needed to print them.
-        print(render_command_lines(_outcome.collect_command_rows(dirs, sealed), failed_only))
-        without = [d for d in dirs if not _outcome.outcome_file(d, _extra(sealed, d))]
+        paths = [run.outcome_path for run in runs if run.outcome_path]
+        print(render_command_lines(_outcome.command_rows_from(paths), failed_only))
+        without = [run.run_dir for run in runs if not run.outcome_path]
         if without:
             # Named, not raised: one machine missing an Outcome must not cost you the other
             # eight, and a silent gap in a fleet sweep is worse than a short note.
             print(f'  no Outcome in {len(without)} run dir(s): {", ".join(without)}')
+        for block in orphans:
+            print("\n" + block)
         return
 
     # The manifest needs the engine to read; a report still prints without one, just without
@@ -673,7 +827,12 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
         engine = get_engine(engine_name, single_process_memory_limit())
     except RuntimeError:
         engine = None
-    reports = [build_host_report(d, engine, _extra(sealed, d)) for d in dirs]
+
+    shared = shared_dirs(runs)
+    reports = [build_host_report(
+        run.run_dir, engine, run.extra_dirs, run.outcome_path,
+        log_stem(run.outcome_path) if os.path.abspath(run.run_dir) in shared else None)
+        for run in runs]
 
     if as_json:
         print(render_json([host_json(r) for r in reports]))
@@ -682,6 +841,7 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
         for r in reports:
             print(render_one_line(summary_of(r)))
         return
+
     explicit = bool(views)
     views = views or ["outcome", "empty", "stats", "errors"]
-    print("\n\n".join(render_human(r, views, explicit) for r in reports))
+    print("\n\n".join([render_human(r, views, explicit) for r in reports] + orphans))
