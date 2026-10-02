@@ -58,6 +58,57 @@ class TestBuild(unittest.TestCase):
         self.assertEqual([e.text for e in root.findall("disable_key")], ["Hives"])
         self.assertEqual([e.text for e in root.findall("key")], ["NTFSInfo"])
 
+    def test_upload_keeps_a_port(self):
+        # '[Uri].Host' drops it, so New-OrcLocalConfig silently sent uploads to the default
+        # port. Copying that bug would send a collection to the wrong place with no warning.
+        spec = localconfig.UploadSpec(uri="https://srv:8443/orc")
+        upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+        self.assertEqual(upload.get("server"), "https://srv:8443")
+        self.assertEqual(upload.get("path"), "/orc")
+
+    def test_upload_attribute_order_matches_new_orclocalconfig(self):
+        spec = localconfig.UploadSpec(uri="file://h/s")
+        upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+        self.assertEqual(list(upload.keys()),
+                         ["job", "method", "server", "path", "mode", "operation"])
+
+    def test_a_bare_unc_path_is_accepted_like_system_uri_does(self):
+        # tools/ci/README.md documents '-Upload \\192.168.0.1\orc_results', and [System.Uri]
+        # turns that into file://192.168.0.1/orc_results. urlsplit does not, so without this
+        # the documented common case would be refused.
+        spec = localconfig.UploadSpec(uri=r"\\192.168.0.1\orc_results")
+        upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+        self.assertEqual(upload.get("server"), "file://192.168.0.1")
+        self.assertEqual(upload.get("path"), "/orc_results")
+
+    def test_a_unc_path_with_subdirectories_keeps_them(self):
+        spec = localconfig.UploadSpec(uri=r"\\srv\Bits\Orc\Current")
+        upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+        self.assertEqual(upload.get("server"), "file://srv")
+        self.assertEqual(upload.get("path"), "/Bits/Orc/Current")
+
+    def test_the_upload_path_is_passed_through_verbatim(self):
+        # NOT percent-encoded, unlike PowerShell's '[Uri].PathAndQuery'. ORC joins the path
+        # into '\\server\path\file' for filecopy and BITS/SMB, where '%20' would be a literal
+        # '%20' in the share path, and it expands '%VARIABLE%' in the attribute, which
+        # encoding would turn into '%25VARIABLE%25'.
+        spec = localconfig.UploadSpec(uri=r"\\srv\Orc Results\%COMPUTERNAME%")
+        upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+        self.assertEqual(upload.get("path"), "/Orc Results/%COMPUTERNAME%")
+
+    def test_an_unusable_upload_uri_names_the_escape_hatch(self):
+        # 'file://%COMPUTERNAME%/Orc' has no parsable host; without --allow-invalid-uri it
+        # would become server="://" and the upload would fail at run time instead of here.
+        spec = localconfig.UploadSpec(uri="just-a-path/orc")
+        with self.assertRaises(RuntimeError) as caught:
+            localconfig.build(upload=spec)
+        self.assertIn("--allow-invalid-uri", str(caught.exception))
+
+    def test_a_missing_public_key_is_refused_by_name(self):
+        with self.assertRaises(RuntimeError) as caught:
+            localconfig.build(public_key=os.path.join("no", "such", "contoso.pem"))
+        self.assertIn("contoso.pem", str(caught.exception))
+
     def test_element_order_matches_new_orclocalconfig(self):
         spec = localconfig.UploadSpec(uri="file://h/s")
         with tempfile.TemporaryDirectory() as d:
@@ -133,6 +184,14 @@ class TestMerge(unittest.TestCase):
             root = ET.fromstring(localconfig.merge_file(path, localconfig.build(output="O")))
         self.assertEqual(root.find("output").text, "O")
         self.assertEqual(root.get("altitude"), "Highest")
+
+    def test_a_comment_in_the_base_survives_the_merge(self):
+        # The merged file is kept beside the results as the record of the run, so a comment
+        # explaining why the caller configured something must not be dropped from it.
+        base = ("<dfir-orc>\n  <!-- the lab share, not production -->\n"
+                "  <output>D:\\old</output>\n</dfir-orc>")
+        merged = localconfig.merge(base, localconfig.build(output="O"))
+        self.assertIn("the lab share, not production", merged)
 
     def test_merge_file_names_a_missing_file(self):
         with self.assertRaises(RuntimeError) as caught:

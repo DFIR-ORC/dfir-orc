@@ -137,9 +137,12 @@ def _build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--bits", action="store_true", help="upload with BITS instead of filecopy")
     cl.add_argument("--allow-invalid-uri", action="store_true",
                     help="emit the upload URI as one attribute, for %%VARIABLE%% values")
-    cl.add_argument("--enable-key", nargs="*", default=None, dest="enable_keys")
-    cl.add_argument("--disable-key", nargs="*", default=None, dest="disable_keys")
-    cl.add_argument("--key", nargs="*", default=None, dest="keys")
+    cl.add_argument("--enable-key", nargs="*", default=None, dest="enable_keys",
+                    help="ORC keyword(s) to enable on top of the embedded configuration")
+    cl.add_argument("--disable-key", nargs="*", default=None, dest="disable_keys",
+                    help="ORC keyword(s) to disable")
+    cl.add_argument("--key", nargs="*", default=None, dest="keys",
+                    help="run only these ORC keyword(s)")
     cl.add_argument("--local-config", default=None, help="a local.xml to merge over")
     cl.add_argument("--force", action="store_true",
                     help="collect into a non-empty --out, and pass /overwrite to ORC")

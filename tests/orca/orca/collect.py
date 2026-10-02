@@ -10,7 +10,6 @@ from dataclasses import dataclass
 
 from . import hyperv, localconfig, scratch, vhd
 
-VHD_EXTENSIONS = (".vhd", ".vhdx")
 RECORD_NAME = "collect.json"
 
 
@@ -32,7 +31,7 @@ def classify_offline_target(path: str) -> Target:
     if os.path.isdir(path):
         return Target("directory", os.path.abspath(path))
 
-    if os.path.splitext(path)[1].lower() in VHD_EXTENSIONS:
+    if vhd.is_vhd(path):
         return Target("vhd", os.path.abspath(path))
 
     return Target("image", os.path.abspath(path))
@@ -59,11 +58,20 @@ def prepare_out_dir(path: str, force: bool) -> str:
     mixed in one directory, which would make the result set undiffable.
     """
     absolute = os.path.abspath(path)
+    if os.path.exists(absolute) and not os.path.isdir(absolute):
+        raise RuntimeError(f"--out '{absolute}' is a file, not a directory")
+
     if os.path.isdir(absolute) and os.listdir(absolute) and not force:
         raise RuntimeError(f"'{absolute}' is not empty; pass --force to collect into it anyway")
 
     os.makedirs(absolute, exist_ok=True)
     return absolute
+
+
+def printable_argv(argv: list[str]) -> str:
+    """The command line as something that can be copied and re-run: an argument carrying a
+    space has to come back quoted, or what is printed is not what ran."""
+    return subprocess.list2cmdline(argv)
 
 
 def file_sha256(path: str) -> str:
@@ -72,6 +80,11 @@ def file_sha256(path: str) -> str:
         for block in iter(lambda: source.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _timestamp(epoch: float) -> str:
+    return (datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).astimezone()
+            .isoformat(timespec="seconds"))
 
 
 def collect_record(*, target: Target, orc: str, argv: list[str], out_dir: str, temp_dir: str,
@@ -91,8 +104,10 @@ def collect_record(*, target: Target, orc: str, argv: list[str], out_dir: str, t
         "argv": argv,
         "out": out_dir,
         "temp": temp_dir,
-        "started": datetime.datetime.fromtimestamp(started).isoformat(timespec="seconds"),
-        "ended": datetime.datetime.fromtimestamp(ended).isoformat(timespec="seconds"),
+        # Local time WITH its offset: two sides of a comparison can come from different hosts
+        # or straddle a DST change, and a naive timestamp cannot be ordered across either.
+        "started": _timestamp(started),
+        "ended": _timestamp(ended),
         "duration_s": round(ended - started, 3),
         "exit_code": exit_code,
         "pulled": pulled,
@@ -165,6 +180,13 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
             if value:
                 raise RuntimeError(f"{name} applies to --vm, not to --offline")
 
+    # Everything that can reject the run is checked BEFORE --out or a temp directory is
+    # created: a run that never started must not leave a local.xml behind, or the corrected
+    # retry is refused for a directory holding nothing but the failed attempt's leftovers.
+    target = classify_offline_target(offline) if offline else Target("vm", vm)
+    if vm:
+        _check_vm_credential(credential)
+
     out_dir = prepare_out_dir(out, force)
     extra = list(orc_args or [])
 
@@ -173,7 +195,7 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
         # host side only needs somewhere to drop the guest result json.
         guest = hyperv.GuestPaths(temp=temp) if temp else hyperv.GuestPaths()
         return _collect_vm(orc=orc, vm=vm, checkpoint=checkpoint, out_dir=out_dir,
-                           temp_dir=scratch.directory("collect_"), guest=guest,
+                           temp_dir=scratch.directory("collect_"), guest=guest, target=target,
                            public_key=public_key, upload=upload, bits=bits,
                            allow_invalid_uri=allow_invalid_uri, enable_keys=enable_keys,
                            disable_keys=disable_keys, keys=keys, local_config=local_config,
@@ -182,17 +204,16 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
 
     temp_dir = os.path.abspath(temp) if temp else scratch.directory("collect_")
     os.makedirs(temp_dir, exist_ok=True)
-    return _collect_offline(orc=orc, offline=offline, out_dir=out_dir, temp_dir=temp_dir,
+    return _collect_offline(orc=orc, target=target, out_dir=out_dir, temp_dir=temp_dir,
                             public_key=public_key, upload=upload, bits=bits,
                             allow_invalid_uri=allow_invalid_uri, enable_keys=enable_keys,
                             disable_keys=disable_keys, keys=keys, local_config=local_config,
                             force=force, extra=extra, run_process=run_process)
 
 
-def _collect_offline(*, orc, offline, out_dir, temp_dir, public_key, upload, bits,
+def _collect_offline(*, orc, target, out_dir, temp_dir, public_key, upload, bits,
                      allow_invalid_uri, enable_keys, disable_keys, keys, local_config, force,
                      extra, run_process) -> int:
-    target = classify_offline_target(offline)
     config_text = build_local_config(temp_dir=temp_dir,
                                      public_key=public_key, upload=upload, bits=bits,
                                      allow_invalid_uri=allow_invalid_uri,
@@ -220,7 +241,7 @@ def _run_orc(*, orc, target, location, out_dir, temp_dir, config_path, force, ex
              run_process, target_detail=None) -> int:
     argv = orc_argv(os.path.abspath(orc), out=out_dir, temp=temp_dir,
                     local_config=config_path, extra=extra, overwrite=force, offline=location)
-    print(" ".join(argv))
+    print(printable_argv(argv))
     started = time.time()
     completed = run_process(argv)
     ended = time.time()
@@ -237,18 +258,22 @@ def _run_orc(*, orc, target, location, out_dir, temp_dir, config_path, force, ex
     return completed.returncode
 
 
-def _collect_vm(*, orc, vm, checkpoint, out_dir, temp_dir, guest, public_key, upload, bits,
-                allow_invalid_uri, enable_keys, disable_keys, keys, local_config, credential,
-                pull, force, extra, vm_runner=None) -> int:
-    # Get-Credential prompts on a console. Without one and without a credential file the run
-    # would hang where nobody can answer, so say why now instead.
+def _check_vm_credential(credential: str | None) -> None:
+    """Both ways a VM run can be unusable before anything is started.
+
+    Get-Credential prompts on a console: without one and without a credential file the run
+    would hang where nobody can answer. And an unsupported credential format must be rejected
+    before a checkpoint is restored and the guest booted, not after.
+    """
     if not credential and not sys.stdin.isatty():
         raise RuntimeError("collect --vm has no console to prompt on; pass --credential")
 
-    # Rejects an unsupported credential format before the VM is touched, rather than after a
-    # checkpoint has been restored and the guest started.
     hyperv.credential_expression(credential)
 
+
+def _collect_vm(*, orc, vm, checkpoint, out_dir, temp_dir, guest, target, public_key, upload,
+                bits, allow_invalid_uri, enable_keys, disable_keys, keys, local_config,
+                credential, pull, force, extra, vm_runner=None) -> int:
     # ORC must write where orca can find it: the generated <output> names a guest directory,
     # which is what makes pulling the results possible at all. 'Invoke-OrcVM' did not need
     # this because it never brought anything back.
@@ -274,7 +299,7 @@ def _collect_vm(*, orc, vm, checkpoint, out_dir, temp_dir, guest, public_key, up
     ended = time.time()
 
     exit_code = int(result.get("exit_code") or 0)
-    record = collect_record(target=Target("vm", vm), orc=orc, argv=argv, out_dir=out_dir,
+    record = collect_record(target=target, orc=orc, argv=argv, out_dir=out_dir,
                             temp_dir=temp_dir, started=started, ended=ended,
                             exit_code=exit_code, pulled=list(result.get("pulled") or []),
                             target_detail={"checkpoint": checkpoint, "pulled_from_guest": pull})

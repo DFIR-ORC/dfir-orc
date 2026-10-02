@@ -13,23 +13,51 @@ class UploadSpec:
     allow_invalid_uri: bool = False
 
 
+def unc_to_file_uri(value: str) -> str:
+    r"""'\\host\share\dir' -> 'file://host/share/dir', anything else unchanged.
+
+    '[System.Uri]' in New-OrcLocalConfig does this, so a bare UNC path is what the test
+    harness documentation passes to -Upload; urlsplit alone reads it as a path with no host.
+    """
+    if not value.startswith("\\\\"):
+        return value
+
+    return "file://" + value[2:].replace("\\", "/")
+
+
 def upload_attributes(spec: UploadSpec) -> dict[str, str]:
-    """The attribute set 'New-OrcLocalConfig' emits, so either tool reads the other's file."""
-    attributes = {
-        "job": "orc",
-        "method": "bits" if spec.bits else "filecopy",
-        "mode": "async" if spec.bits else "sync",
-        "operation": "move",
-    }
+    """The attribute set 'New-OrcLocalConfig' emits, in its order, so either tool reads the
+    other's file and a diff between them shows content rather than formatting."""
+    method = "bits" if spec.bits else "filecopy"
+    mode = "async" if spec.bits else "sync"
 
     if spec.allow_invalid_uri:
-        attributes["uri"] = spec.uri
-        return attributes
+        return {"job": "orc", "method": method, "uri": spec.uri, "mode": mode,
+                "operation": "move"}
 
-    parts = urlsplit(spec.uri)
-    attributes["server"] = f"{parts.scheme}://{parts.hostname or ''}"
-    attributes["path"] = parts.path + (f"?{parts.query}" if parts.query else "")
-    return attributes
+    parts = urlsplit(unc_to_file_uri(spec.uri))
+    if not parts.scheme or not parts.hostname:
+        raise RuntimeError(f"cannot split '{spec.uri}' into a server and a path; pass "
+                           f"--allow-invalid-uri to send it to ORC as one attribute")
+
+    # The port is kept, unlike '[Uri].Host' in New-OrcLocalConfig: dropping it sends the
+    # collection to the default port instead of the one asked for, and says nothing.
+    #
+    # The path is passed through verbatim, unlike '[Uri].PathAndQuery', which percent-encodes
+    # it. ORC joins it into '\\server\path\file' for filecopy and BITS/SMB, where '%20' would
+    # be a literal '%20' in the share path, and it environment-expands the attribute, so
+    # encoding would turn '%COMPUTERNAME%' into '%25COMPUTERNAME%25'. HTTP and REST do not
+    # encode a path either (see IsSafeRequestPath): they validate it and send it as it is, so
+    # a path needing escapes carries them from the caller.
+    port = f":{parts.port}" if parts.port else ""
+    return {
+        "job": "orc",
+        "method": method,
+        "server": f"{parts.scheme}://{parts.hostname}{port}",
+        "path": parts.path + (f"?{parts.query}" if parts.query else ""),
+        "mode": mode,
+        "operation": "move",
+    }
 
 
 def build(*, output: str | None = None, temporary: str | None = None,
@@ -44,9 +72,14 @@ def build(*, output: str | None = None, temporary: str | None = None,
     root = ET.Element("dfir-orc")
 
     if public_key:
-        with open(public_key, "r", encoding="utf-8") as source:
-            recipient = ET.SubElement(root, "recipient", {"name": "test", "archive": "*"})
-            recipient.text = source.read().strip()
+        try:
+            with open(public_key, "r", encoding="utf-8") as source:
+                certificate = source.read().strip()
+        except OSError as error:
+            raise RuntimeError(f"cannot read the public key '{public_key}': {error}") from error
+
+        recipient = ET.SubElement(root, "recipient", {"name": "test", "archive": "*"})
+        recipient.text = certificate
 
     if upload:
         ET.SubElement(root, "upload", upload_attributes(upload))
@@ -80,8 +113,11 @@ def merge(base_xml: str | bytes, override_xml: str) -> str:
     Fail closed on a foreign document: silently merging into one would hand ORC a '/local='
     file it ignores or rejects at run time, and the run would look configured when it is not.
     """
+    # Comments are kept: the merged file is the record stored beside the results, and a
+    # caller's note about why something is configured the way it is belongs in it.
     try:
-        base = ET.fromstring(base_xml)
+        base = ET.fromstring(
+            base_xml, parser=ET.XMLParser(target=ET.TreeBuilder(insert_comments=True)))
     except ET.ParseError as error:
         raise RuntimeError(f"local configuration is not valid XML: {error}") from error
 

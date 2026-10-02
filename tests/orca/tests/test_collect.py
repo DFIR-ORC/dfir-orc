@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import json
 import os
 import tempfile
@@ -89,6 +90,25 @@ class TestPrepareOutDir(unittest.TestCase):
                 os.chdir(here)
 
 
+class TestPrepareOutDirRejections(unittest.TestCase):
+    def test_an_existing_file_is_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "results")
+            open(path, "wb").close()
+            with self.assertRaises(RuntimeError) as caught:
+                collect.prepare_out_dir(path, force=False)
+            self.assertIn("results", str(caught.exception))
+            self.assertIn("file", str(caught.exception))
+
+
+class TestCommandLine(unittest.TestCase):
+    def test_the_printed_command_line_is_quoted(self):
+        # It reads as something to copy and re-run, so an unquoted path with a space would
+        # print a command line that does not work.
+        printed = collect.printable_argv(["orc.exe", "/key=Get This"])
+        self.assertIn('"/key=Get This"', printed)
+
+
 class TestRecord(unittest.TestCase):
     def test_record_holds_what_ran(self):
         with tempfile.TemporaryDirectory() as d:
@@ -107,6 +127,18 @@ class TestRecord(unittest.TestCase):
         self.assertEqual(record["exit_code"], 0)
         self.assertEqual(record["duration_s"], 2.5)
         self.assertEqual(record["argv"], [orc, "/Out=x"])
+
+    def test_timestamps_carry_their_offset(self):
+        # Two sides of a comparison collected on different hosts, or across a DST change, are
+        # not orderable from a naive local timestamp.
+        with tempfile.TemporaryDirectory() as d:
+            orc = os.path.join(d, "orc.exe")
+            open(orc, "wb").close()
+            record = collect.collect_record(
+                target=collect.Target("image", "x"), orc=orc, argv=[], out_dir=d, temp_dir=d,
+                started=1.0, ended=2.0, exit_code=0, pulled=[])
+        parsed = datetime.datetime.fromisoformat(record["started"])
+        self.assertIsNotNone(parsed.tzinfo)
 
     def test_write_record_is_readable_json(self):
         with tempfile.TemporaryDirectory() as d:
@@ -181,6 +213,16 @@ class TestRunCollectOffline(unittest.TestCase):
         collect.run_collect(orc=self.orc, out=self.out, offline=self.dir.name,
                             run_process=process)
         self.assertIn(f"/Offline={os.path.abspath(self.dir.name)}", process.argv)
+
+    def test_a_rejected_run_leaves_no_output_directory_behind(self):
+        # The target is checked before --out is created, so a run that never started does not
+        # leave a local.xml that makes the corrected retry demand --force.
+        out = os.path.join(self.dir.name, "fresh")
+        with self.assertRaises(RuntimeError):
+            collect.run_collect(orc=self.orc, out=out,
+                                offline=os.path.join(self.dir.name, "absent.dd"),
+                                run_process=FakeProcess())
+        self.assertFalse(os.path.exists(out))
 
     def test_neither_offline_nor_vm_is_refused(self):
         with self.assertRaises(RuntimeError):
