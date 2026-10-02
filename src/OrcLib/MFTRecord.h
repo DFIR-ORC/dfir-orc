@@ -27,6 +27,11 @@ namespace Orc {
 class MFTWalker;
 class MFTRecordFileInfo;
 
+namespace Test {
+// Drives ParseRecord() over forged record bytes: the attribute walk has no other entry point.
+class MFTRecordParseTest;
+}  // namespace Test
+
 typedef HRESULT(MFTRecordEnumDataCallBack)(ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data, PVOID pContext);
 
 class MFTRecord
@@ -35,6 +40,7 @@ class MFTRecord
     friend class MFTRecordFileInfo;
     friend class AttributeList;
     friend class MFTOnline;
+    friend class Test::MFTRecordParseTest;
 
 public:
     const std::vector<std::pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>>& GetChildRecords() const

@@ -24,10 +24,27 @@ using namespace Orc;
 
 namespace {
 
+// Bytes an attribute record must span before the fields of the form it declares can be read. The caller only
+// guarantees the fixed header, which stops at Form, so a record too short for its own form is rejected before any
+// Form field is touched.
+DWORD MinimumAttributeLength(UCHAR formCode)
+{
+    if (formCode == RESIDENT_FORM)
+        return RTL_SIZEOF_THROUGH_FIELD(ATTRIBUTE_RECORD_HEADER, Form.Resident.Reserved);
+
+    if (formCode == NONRESIDENT_FORM)
+        return RTL_SIZEOF_THROUGH_FIELD(ATTRIBUTE_RECORD_HEADER, Form.Nonresident.TotalAllocated);
+
+    return FIELD_OFFSET(ATTRIBUTE_RECORD_HEADER, Form);
+}
+
 bool IsAttributeInBounds(const ATTRIBUTE_RECORD_HEADER* pAttribute, DWORD dwAttributeLen)
 {
     const DWORD recordLength = pAttribute->RecordLength;
     if (recordLength > dwAttributeLen)
+        return false;
+
+    if (recordLength < MinimumAttributeLength(pAttribute->FormCode))
         return false;
 
     if (pAttribute->NameLength != 0)
@@ -153,11 +170,16 @@ HRESULT MFTRecord::ParseRecord(
     PATTRIBUTE_RECORD_HEADER pCurAttr = pFirstAttr;
     DWORD dwAttrLeftToParse = dwAllAttrLength;
 
-    while (dwAttrLeftToParse >= sizeof(ATTRIBUTE_RECORD_HEADER))
+    while (dwAttrLeftToParse > 0)
     {
 
         shared_ptr<MftRecordAttribute> pNewAttr;
 
+        // Only the fixed part of the header has to be readable: it carries the TypeCode and RecordLength the walk
+        // needs, and IsAttributeInBounds() validates the attribute's own extents. Demanding a whole
+        // sizeof(ATTRIBUTE_RECORD_HEADER) would require the Form union too, which an attribute chain filling the
+        // segment exactly has no room for - a large directory's trailing resident $BITMAP ends up unparsed and its
+        // whole $I30 index is then dropped.
         const DWORD dwBytesToRecordEnd = (DWORD)((LPBYTE)pFirstAttr + dwAllAttrLength - (LPBYTE)pCurAttr);
         if (dwBytesToRecordEnd < FIELD_OFFSET(ATTRIBUTE_RECORD_HEADER, Form))
         {
@@ -281,7 +303,8 @@ HRESULT MFTRecord::ParseRecord(
 
         dwAttrLeftToParse -= dwCurrentRecordLength;
 
-        // The loop condition now guarantees a whole ATTRIBUTE_RECORD_HEADER is readable at the new cursor.
+        // dwAttrLeftToParse and the distance to the end of the segment stay equal, so the guard at the top of the loop
+        // is what decides whether a header is readable at the new cursor.
         pCurAttr = (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pCurAttr + dwCurrentRecordLength);
     }
 

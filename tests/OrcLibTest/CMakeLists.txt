@@ -33,6 +33,7 @@ source_group(Disk\\Volume FILES ${SRC_DISK_VOLUME})
 
 set(SRC_DISK_FS_NTFS_MFT
     "mft_reccord_test.cpp"
+    "mft_record_parse_test.cpp"
     "mft_walker_test.cpp"
 )
 
