@@ -79,6 +79,28 @@ class TestCli(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 cli._build_parser().parse_args(argv)
 
+    def test_report_takes_the_keys_it_needs_to_unseal_a_collection(self):
+        # A collection arrives with its Outcome, Outline and log each sealed.
+        args = cli._build_parser().parse_args(
+            ["report", "E:/dumps/ORC_HOST", "--private-key", "k.pem",
+             "--cms-backend", "cng", "--work-dir", "E:/work", "--refresh"])
+
+        self.assertEqual(args.private_key, "k.pem")
+        self.assertEqual(args.cms_backend, "cng")
+        self.assertEqual(args.work_dir, "E:/work")
+        self.assertTrue(args.refresh)
+
+    def test_both_table_modes_take_them_too(self):
+        for mode in cli.REPORT_TABLE_MODES:
+            args = cli._build_mode_parser(mode).parse_args(
+                ["E:/dumps/ORC_HOST", "--private-key", "k.pem", "--work-dir", "E:/work",
+                 "--refresh", "--cms-backend", "libcrypto"])
+
+            self.assertEqual(args.private_key, "k.pem", mode)
+            self.assertEqual(args.work_dir, "E:/work", mode)
+            self.assertEqual(args.cms_backend, "libcrypto", mode)
+            self.assertTrue(args.refresh, mode)
+
     def test_ingest_without_out_defaults_beside_the_archive(self):
         args = cli._build_parser().parse_args(["ingest", "arch.7z"])
         self.assertIsNone(args.out)

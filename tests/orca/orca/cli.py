@@ -46,6 +46,14 @@ def _build_mode_parser(mode: str) -> argparse.ArgumentParser:
                         help=f"output parquet (default: <run>/{mode}.parquet)")
     parser.add_argument("--json", action="store_true",
                         help="print the rows instead (no parquet)")
+    parser.add_argument("--private-key", default=None,
+                        help="PEM key to unseal a sealed Outcome or Outline")
+    parser.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
+                        help="pin the .p7b decryption backend")
+    parser.add_argument("--work-dir", default=None,
+                        help="keep the unsealed sidecars here instead of throwing them away")
+    parser.add_argument("--refresh", action="store_true",
+                        help="unseal again even if the sidecars are already there")
     parser.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
     return parser
 
@@ -134,6 +142,14 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="one line per command, every host, no headers")
     rp.add_argument("--failed", action="store_true",
                     help="with --list: only the commands that did not exit 0")
+    rp.add_argument("--private-key", default=None,
+                    help="PEM key to unseal a sealed Outcome, Outline or log")
+    rp.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
+                    help="pin the .p7b decryption backend")
+    rp.add_argument("--work-dir", default=None,
+                    help="keep the unsealed sidecars here instead of throwing them away")
+    rp.add_argument("--refresh", action="store_true",
+                    help="unseal again even if the sidecars are already there")
     rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
@@ -214,7 +230,8 @@ def main(argv=None) -> int:
         args = _build_mode_parser(mode).parse_args(items[2:])
         runner = outcome.run_outcome if mode == "outcome" else outline.run_outline
         runner(args.run_dirs, root=args.root, out=args.out, engine_name=args.engine,
-               as_json=args.json)
+               as_json=args.json, private_key=args.private_key,
+               cms_backend=args.cms_backend, work_dir=args.work_dir, refresh=args.refresh)
         return 0
 
     args = _build_parser().parse_args(items)
@@ -252,6 +269,8 @@ def main(argv=None) -> int:
         report.run_report(args.run_dirs, root=args.root, views=args.view,
                           one_line=args.one_line, as_json=args.json,
                           list_commands=args.list, failed_only=args.failed,
+                          private_key=args.private_key, cms_backend=args.cms_backend,
+                          work_dir=args.work_dir, refresh=args.refresh,
                           engine_name=args.engine)
     elif args.command == "diff":
         pa, pb = (args.paths + [None, None])[:2]

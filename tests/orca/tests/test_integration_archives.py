@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
-from orca import check, cli, cms, engine, journal, layout, sevenzip
+from orca import check, cli, cms, engine, journal, layout, report, sevenzip
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CI_DIR = os.path.abspath(os.path.join(HERE, "..", "..", "..", "tools", "ci"))
@@ -183,6 +183,101 @@ class TestCheckCollection(OrcFixtures, unittest.TestCase):
 
         self.assertEqual(code, 1)
         self.assertIn(check.FAILED, output)
+
+
+@unittest.skipUnless(SEVEN_ZIP and OPENSSL and os.path.exists(PRIVATE_KEY),
+                     "needs 7z, openssl and the CI test key")
+class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
+    """'orca report' over a collection whose Outcome, Outline and log are all sealed.
+
+    The state a collection arrives in. Nothing is ingested and nothing is extracted: report
+    unseals what it needs into its work dir and reads it from there.
+    """
+
+    OUTCOME = {"dfir-orc": {"outcome": {
+        "computer_name": "SEALEDHOST",
+        "start": "2026-09-25T14:41:27Z", "end": "2026-09-25T14:48:14Z",
+        "command_set": [{"name": "ORC_General",
+                         "statistics": {"process_memory_peak": 1325150208},
+                         "commands": [
+                             {"name": "USNInfo", "tool": "USNInfo", "exit_code": 18,
+                              "start": "2026-09-25T14:41:29Z", "end": "2026-09-25T14:41:51Z"},
+                             {"name": "NTFSInfo", "tool": "NTFSInfo", "exit_code": 0,
+                              "start": "2026-09-25T14:41:29Z", "end": "2026-09-25T14:42:31Z"}]}]}}}
+
+    OUTLINE = {"dfir-orc": {"outline": {"version": "v10.3.4-62-g48af8529a-x64-xp",
+                                        "computer_name": "SEALEDHOST", "id": "{SEALED}"}}}
+
+    def sealed_collection(self) -> str:
+        """Archive, Outcome, Outline and log, every one of them sealed, as ORC leaves them."""
+        self.encrypt(self.build_archive("SEALED", "200", "aaaa"))
+        self.seal("ORC_SEALED_Outcome.json", json.dumps(self.OUTCOME))
+        self.seal("ORC_SEALED_Outline.json", json.dumps(self.OUTLINE))
+        self.seal("ORC_SEALED.log", "a clean start\nFAILED to read the journal\nan Error here\n")
+        return self.dumps
+
+    def report(self, *extra) -> str:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cli.main(["report", self.sealed_collection(), "--private-key", PRIVATE_KEY,
+                      "--work-dir", self.work, *extra])
+        return out.getvalue()
+
+    def test_the_outcome_is_unsealed_and_read(self):
+        output = self.report()
+
+        self.assertIn("SEALEDHOST", output)
+        self.assertIn("FAIL ORC_General/USNInfo", output)
+        self.assertIn("code=18", output)
+
+    def test_the_log_is_unsealed_so_the_errors_view_works(self):
+        output = self.report()
+
+        self.assertIn("1 log(s) with matches", output)
+        self.assertIn("2 error-line(s)", output)
+
+    def test_the_host_is_the_machine_not_the_folder_name(self):
+        # Without the Outcome, a sealed collection is reported under its directory name.
+        self.assertIn("SEALEDHOST:", self.report("--one-line"))
+
+    def test_list_works_on_a_sealed_collection(self):
+        output = self.report("--list", "--failed")
+
+        self.assertIn("SEALEDHOST", output)
+        self.assertIn("USNInfo", output)
+        self.assertIn("2 command(s), 1 failed", output)
+
+    def test_the_outline_mode_reads_the_sealed_outline(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cli.main(["report", "outline", self.sealed_collection(), "--json",
+                      "--private-key", PRIVATE_KEY, "--work-dir", self.work])
+
+        self.assertIn("v10.3.4-62-g48af8529a-x64-xp", out.getvalue())
+
+    def test_the_outcome_mode_reads_the_sealed_outcome(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cli.main(["report", "outcome", self.sealed_collection(), "--json",
+                      "--private-key", PRIVATE_KEY, "--work-dir", self.work])
+
+        self.assertIn("SEALEDHOST", out.getvalue())
+
+    def test_nothing_is_written_into_the_collection(self):
+        source = self.sealed_collection()
+        before = sorted(os.listdir(source))
+
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cli.main(["report", source, "--private-key", PRIVATE_KEY, "--work-dir", self.work])
+
+        self.assertEqual(sorted(os.listdir(source)), before)
+
+    def test_root_finds_the_sealed_collection_without_a_key(self):
+        # Discovery is by name, so it works before anything is decrypted.
+        self.sealed_collection()
+
+        self.assertIn(self.dumps, report.discover_run_dirs([], self.dir.name))
 
 
 @unittest.skipUnless(SEVEN_ZIP and DUCKDB and OPENSSL and os.path.exists(PRIVATE_KEY),

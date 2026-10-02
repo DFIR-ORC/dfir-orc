@@ -161,35 +161,54 @@ def command_rows(outcome: dict, source: str) -> list[dict]:
     return rows
 
 
-def outcome_file(run_dir: str) -> str | None:
+def outcome_file(run_dir: str, extra_dirs: list | None = None) -> str | None:
     """The Outcome ingest captured for a run, if it had one.
 
     Found by content, not by name: it sits in the run under the name ORC gave it, beside the
     Outline, which is also a '*.json' carrying the collection's name.
+
+    'extra_dirs' is where else to look - where a sealed Outcome was unsealed to, since a report
+    must not write into the collection. The run dir wins: the collection as it is beats a
+    stand-in made from it.
     """
     from .ingest import find_outcome_json
-    return find_outcome_json(run_dir)
+    for directory in [run_dir] + list(extra_dirs or []):
+        found = find_outcome_json(directory)
+        if found:
+            return found
+
+    return None
 
 
-def collect_command_rows(run_dirs) -> list[dict]:
+def collect_command_rows(run_dirs, extra_dirs: dict | None = None) -> list[dict]:
+    """Every command of every run. 'extra_dirs' maps a run dir to a directory holding its
+    unsealed sidecars, for a collection whose Outcome is encrypted."""
     rows = []
     for run_dir in run_dirs:
-        path = outcome_file(run_dir)
+        extra = (extra_dirs or {}).get(run_dir)
+        path = outcome_file(run_dir, [extra] if extra else None)
         outcome = read_outcome(path) if path else None
         if outcome is not None:
             rows.extend(command_rows(outcome, path))
     return rows
 
 
-def run_outcome(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False) -> None:
+def run_outcome(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False,
+               private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
+    from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
-    from .report import discover_run_dirs
+    from .report import discover_run_dirs, unsealed_sidecar_dirs
 
     dirs = discover_run_dirs(list(run_dirs or []), root)
     if not dirs:
         raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
 
-    rows = collect_command_rows(dirs)
+    # A collection arrives with its sidecars sealed, and this table is read from one of them.
+    scratch.use(work_dir)
+    sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
+                                   private_key, cms_backend, refresh)
+
+    rows = collect_command_rows(dirs, sealed)
     if not rows:
         raise RuntimeError(f"no Outcome captured in {len(dirs)} run dir(s)")
 

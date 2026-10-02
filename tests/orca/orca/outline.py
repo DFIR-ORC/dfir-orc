@@ -108,22 +108,34 @@ def collect_rows(paths: list[str]) -> list[dict]:
     return rows
 
 
-def outline_files(run_dir: str) -> list[str]:
+def outline_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
     """The Outlines ingest captured for a run. A collection can hold several - a run that was
-    restarted leaves one per attempt, and only the last may have an Outcome."""
+    restarted leaves one per attempt, and only the last may have an Outcome.
+
+    'extra_dirs' is where a sealed collection's Outlines were unsealed to.
+    """
     from .ingest import find_outlines
-    return find_outlines([run_dir])
+    return find_outlines([run_dir] + list(extra_dirs or []))
 
 
-def run_outline(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False) -> None:
+def run_outline(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False,
+               private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
+    from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
-    from .report import discover_run_dirs
+    from .report import discover_run_dirs, unsealed_sidecar_dirs
 
     dirs = discover_run_dirs(list(run_dirs or []), root)
     if not dirs:
         raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
 
-    paths = [path for run_dir in dirs for path in outline_files(run_dir)]
+    # A collection arrives with its sidecars sealed, and this table is read from one of them.
+    scratch.use(work_dir)
+    sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
+                                   private_key, cms_backend, refresh)
+
+    paths = [path for run_dir in dirs
+             for path in outline_files(run_dir,
+                                       [sealed[run_dir]] if run_dir in sealed else None)]
     rows = collect_rows(paths)
     if not rows:
         raise RuntimeError(f"no Outline captured in {len(dirs)} run dir(s); "

@@ -2,12 +2,13 @@
 Stdlib only. View builders are pure over parsed inputs."""
 import csv
 import glob
+import hashlib
 import json
 import os
 import re
 from dataclasses import asdict
 
-from . import layout, outcome as _outcome
+from . import ingest, layout, outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
@@ -98,26 +99,49 @@ def build_outcome_view(outcome_obj) -> dict:
     }
 
 
-def run_log_files(run_dir: str) -> list[str]:
+def run_log_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
     """The logs of a run: the ones ingest put in it, plus the expanded 'Errors' container.
 
     Deliberately not a walk of the whole run directory - it may hold a tree 'orca extract'
     expanded, whose every command log would drown the ones this run is about.
+
+    'extra_dirs' is where a sealed collection's log was unsealed to.
     """
-    found = sorted(glob.glob(os.path.join(run_dir, "*.log")))
-    errors = os.path.join(run_dir, "Errors")
-    for root, _dirs, files in os.walk(errors):
-        found += sorted(os.path.join(root, name) for name in files)
+    found = []
+    for directory in [run_dir] + list(extra_dirs or []):
+        found += sorted(glob.glob(os.path.join(directory, "*.log")))
+        for root, _dirs, files in os.walk(os.path.join(directory, "Errors")):
+            found += sorted(os.path.join(root, name) for name in files)
+
     return found
 
 
-def build_errors_view(run_dir: str) -> dict:
+def log_label(path: str, run_dir: str) -> str:
+    """How a log is named in the report: its path within the run, else its file name alone.
+
+    An unsealed sidecar sits in the work dir, which is routinely on another volume than the
+    collection - a UNC share and a local temp dir, say - and relpath across mounts raises on
+    Windows rather than returning a path. Even on one volume it would return a line of '..'
+    segments, which names nothing useful.
+    """
+    try:
+        relative = os.path.relpath(path, run_dir)
+    except ValueError:
+        return os.path.basename(path)
+
+    if relative.startswith(".."):
+        return os.path.basename(path)
+
+    return relative.replace("\\", "/")
+
+
+def build_errors_view(run_dir: str, extra_dirs: list | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
     could not read at all, which are a hole in the run rather than a message inside it."""
     if not os.path.isdir(run_dir):
         return {"available": False, "skipped": {}}
     logs = []
-    for path in run_log_files(run_dir):
+    for path in run_log_files(run_dir, extra_dirs):
         size = os.path.getsize(path)
         if size == 0:
             continue
@@ -130,10 +154,14 @@ def build_errors_view(run_dir: str) -> dict:
                         count += 1
         except OSError:
             count = -1
-        logs.append({"log": os.path.relpath(path, run_dir).replace("\\", "/"),
-                     "bytes": size, "error_lines": count})
+        logs.append({"log": log_label(path, run_dir), "bytes": size, "error_lines": count})
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
-    return {"available": True, "logs": logs, "skipped": layout.skipped(run_dir)}
+
+    # 'available' is whether there was a log to read, not whether the directory exists: a
+    # sealed collection holds only '<name>.log.7z.p7b', and '0 log(s) with matches' would then
+    # read as reassurance when nothing had been read at all.
+    return {"available": bool(run_log_files(run_dir, extra_dirs)), "logs": logs,
+            "skipped": layout.skipped(run_dir)}
 
 
 def _hsize(n) -> str:
@@ -153,8 +181,13 @@ def _hdur(seconds) -> str:
     return f"{s // 3600}h{(s % 3600) // 60}m" if s >= 3600 else f"{s // 60}m{s % 60}s"
 
 
-def host_of(run_dir: str) -> str:
-    op = _outcome.outcome_file(run_dir)
+def host_of(run_dir: str, extra_dirs: list | None = None) -> str:
+    """The machine the collection came from, by its Outcome; the directory name as a fallback.
+
+    A sealed collection has no readable Outcome until its sidecars are unsealed, and would
+    otherwise be reported under the name of the folder it happens to sit in.
+    """
+    op = _outcome.outcome_file(run_dir, extra_dirs)
     if op:
         try:
             host = _outcome.parse_outcome(op).host
@@ -165,7 +198,7 @@ def host_of(run_dir: str) -> str:
     return os.path.basename(os.path.normpath(run_dir))
 
 
-def build_host_report(run_dir: str, engine=None) -> dict:
+def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None) -> dict:
     """The four views of one run dir, each told whether its own input was there to read.
 
     Only 'ingest' writes the '.orca' directory, and report is pointed at a directory 'extract'
@@ -176,16 +209,16 @@ def build_host_report(run_dir: str, engine=None) -> dict:
     timing_available = os.path.exists(layout.timing_path(run_dir))
     manifest_available = bool(engine) and os.path.exists(layout.manifest_path(run_dir))
 
-    op = _outcome.outcome_file(run_dir)
+    op = _outcome.outcome_file(run_dir, extra_dirs)
     oc = _outcome.parse_outcome(op) if op else None
     files = empty_output_files(engine, layout.manifest_path(run_dir)) if engine else []
     return {
-        "host": host_of(run_dir),
+        "host": host_of(run_dir, extra_dirs),
         "run_dir": run_dir,
         "outcome": build_outcome_view(oc),
         "empty": build_empty_view(timing, files, timing_available, manifest_available),
         "stats": build_stats_view(timing, timing_available),
-        "errors": build_errors_view(run_dir),
+        "errors": build_errors_view(run_dir, extra_dirs),
     }
 
 
@@ -387,6 +420,76 @@ def render_command_lines(rows: list[dict], failed_only: bool = False) -> str:
     return "\n".join(lines + ["", summary])
 
 
+def holds_a_collection(directory: str) -> bool:
+    """True when 'directory' holds an ORC Outcome, plain or sealed.
+
+    What makes a directory worth reporting on before anything is ingested, which is how a
+    folder of collections as they arrive can be swept. The sealed case is recognised by the
+    name ORC gives it ('<name>_Outcome.json.7z.p7b') and never by decrypting: discovery has to
+    stay cheap and must not need a key. A sealed log on its own says nothing - only an Outcome
+    says this is a collection.
+    """
+    if not os.path.isdir(directory):
+        return False
+
+    if _outcome.outcome_file(directory):
+        return True
+
+    return any((ingest.sealed_name(path) or "").lower().endswith("outcome.json")
+               for path in ingest.sealed_sidecars(directory))
+
+
+def _extra(sealed: dict, run_dir: str) -> list | None:
+    """The 'extra_dirs' for one run: where its sidecars were unsealed, if any were."""
+    found = sealed.get(run_dir)
+    return [found] if found else None
+
+
+def sidecar_dir(run_dir: str, work: str) -> str:
+    """Where one run's unsealed sidecars go: a directory of its own under the work dir.
+
+    Named after the collection plus a digest of its path, following the convention the run
+    cache uses, because two machines' collections routinely share a folder name under one work
+    dir and must not unseal over each other.
+    """
+    digest = hashlib.sha256(os.path.abspath(run_dir).encode("utf-8")).hexdigest()[:12]
+    return os.path.join(work, f"{os.path.basename(os.path.normpath(run_dir))}-{digest}")
+
+
+def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=None,
+                          refresh: bool = False) -> dict:
+    """Unseal the sealed sidecars of every collection in 'dirs'; map run dir -> where they went.
+
+    A collection arrives with its Outcome, Outlines and log each sealed into a '.7z.p7b', and
+    without them a report can say almost nothing: not the machine's name, not which command
+    failed. They are unsealed into the work dir and never beside the collection - 'ingest' and
+    'extract' do that on purpose, to be reused, but a report only reads and must leave what it
+    reads as it was. They are a few KB, so paying for the decryption again next time is nothing.
+
+    Collections with nothing sealed are absent from the map, so the common case creates no
+    directory at all.
+    """
+    mapped = {}
+    seven = None
+    for run_dir in dirs:
+        if not ingest.sealed_sidecars(run_dir):
+            continue
+
+        if seven is None:
+            seven = sevenzip.find_7z() or ""
+        if not seven:
+            # Not fatal: the views that read ORC's own files go quiet, the rest still print.
+            print(f"cannot unseal the sidecars of '{run_dir}': 7z.exe not found")
+            continue
+
+        target = sidecar_dir(run_dir, work)
+        os.makedirs(target, exist_ok=True)
+        ingest.unseal_sidecars(run_dir, seven, target, private_key, cms_backend, refresh)
+        mapped[run_dir] = target
+
+    return mapped
+
+
 def discover_run_dirs(run_dirs: list, root) -> list:
     """The run dirs to report on: the ones named, plus every ingested run under 'root'.
 
@@ -400,7 +503,7 @@ def discover_run_dirs(run_dirs: list, root) -> list:
     found = list(run_dirs or [])
     if root:
         for path in sorted(glob.glob(os.path.join(root, "*"))):
-            if os.path.isfile(layout.timing_path(path)):
+            if os.path.isfile(layout.timing_path(path)) or holds_a_collection(path):
                 found.append(path)
     seen, result = set(), []
     for d in found:
@@ -412,7 +515,8 @@ def discover_run_dirs(run_dirs: list, root) -> list:
 
 
 def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
-               list_commands=False, failed_only=False, engine_name="duckdb") -> None:
+               list_commands=False, failed_only=False, private_key=None, cms_backend=None,
+               work_dir=None, refresh=False, engine_name="duckdb") -> None:
     dirs = discover_run_dirs(run_dirs, root)
     if not dirs:
         raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
@@ -420,11 +524,15 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
     if failed_only and not list_commands:
         raise RuntimeError("--failed filters the --list output; add --list")
 
+    scratch.use(work_dir)
+    sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
+                                   private_key, cms_backend, refresh)
+
     if list_commands:
         # The same rows 'orca report outcome' writes to parquet, so the text and the table can
         # never disagree - and no engine is needed to print them.
-        print(render_command_lines(_outcome.collect_command_rows(dirs), failed_only))
-        without = [d for d in dirs if not _outcome.outcome_file(d)]
+        print(render_command_lines(_outcome.collect_command_rows(dirs, sealed), failed_only))
+        without = [d for d in dirs if not _outcome.outcome_file(d, _extra(sealed, d))]
         if without:
             # Named, not raised: one machine missing an Outcome must not cost you the other
             # eight, and a silent gap in a fleet sweep is worse than a short note.
@@ -437,7 +545,7 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
         engine = get_engine(engine_name, single_process_memory_limit())
     except RuntimeError:
         engine = None
-    reports = [build_host_report(d, engine) for d in dirs]
+    reports = [build_host_report(d, engine, _extra(sealed, d)) for d in dirs]
 
     if as_json:
         print(render_json([host_json(r) for r in reports]))
