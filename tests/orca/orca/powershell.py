@@ -34,7 +34,10 @@ def quote_argument(value: str) -> str:
     carrying whitespace would reach the process as several arguments. Wrapping it in embedded
     double quotes makes CommandLineToArgvW put it back together as one.
     """
-    inner = f'"{value}"' if any(character.isspace() for character in value) else value
+    # A double quote inside the value is escaped as \" because that is what
+    # CommandLineToArgvW reads back as a literal quote; left bare it would end the argument.
+    escaped = value.replace('"', '\\"')
+    inner = f'"{escaped}"' if any(character.isspace() for character in value) else escaped
     return quote(inner)
 
 
@@ -67,6 +70,12 @@ def run(script: str, *, step: str, interactive: bool = False, result_path: str |
     if completed.returncode != 0:
         detail = (getattr(completed, "stderr", "") or getattr(completed, "stdout", "")
                   or "").strip()
+        # An interactive step inherits stdio so that Get-Credential can prompt, which means
+        # its error text went to the terminal and cannot be quoted back here. Say where it is
+        # rather than ending the message in an empty colon.
+        if not detail:
+            detail = ("see the PowerShell output on the console above" if interactive
+                      else "no output")
         raise RuntimeError(f"{step}: PowerShell exited {completed.returncode}: {detail}")
 
     if not result_path:

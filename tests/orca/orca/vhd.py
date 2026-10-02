@@ -142,6 +142,28 @@ def wait_for_drive_letter(number: int, *, logical_drives, device_number, volume_
     raise RuntimeError(f"no mounted volume found on disk {number}")
 
 
+def _describe(status: int) -> str:
+    """The system's own message for a Win32 status, empty where there is none to ask.
+
+    ctypes.FormatError exists only on Windows, and this module has to import on Linux.
+    """
+    formatter = getattr(ctypes, "FormatError", None)
+    if not formatter:
+        return ""
+
+    try:
+        return formatter(status).strip()
+    except (OSError, ValueError):
+        return ""
+
+
+def error_text(status: int, describe=_describe) -> str:
+    """'32: The process cannot access the file...' rather than a bare number, which is the
+    difference between a one-line diagnosis and a web search."""
+    message = describe(status)
+    return f"{status}: {message}" if message else str(status)
+
+
 def _virtdisk():
     return ctypes.WinDLL("virtdisk.dll", use_last_error=True)
 
@@ -163,7 +185,7 @@ def open_disk(path: str) -> HANDLE:
                                          VIRTUAL_DISK_ACCESS_NONE, 0,
                                          ctypes.byref(parameters), ctypes.byref(handle))
     if status != 0:
-        raise RuntimeError(f"OpenVirtualDisk('{path}') failed with {status}")
+        raise RuntimeError(f"OpenVirtualDisk('{path}') failed with {error_text(status)}")
 
     return handle
 
@@ -177,7 +199,7 @@ def attach_disk(handle: HANDLE) -> bool:
         return False
 
     if status != 0:
-        raise RuntimeError(f"AttachVirtualDisk failed with {status}")
+        raise RuntimeError(f"AttachVirtualDisk failed with {error_text(status)}")
 
     return True
 
@@ -187,7 +209,7 @@ def physical_path(handle: HANDLE) -> str:
     buffer = ctypes.create_unicode_buffer(MAX_PATH)
     status = _virtdisk().GetVirtualDiskPhysicalPath(handle, ctypes.byref(size), buffer)
     if status != 0:
-        raise RuntimeError(f"GetVirtualDiskPhysicalPath failed with {status}")
+        raise RuntimeError(f"GetVirtualDiskPhysicalPath failed with {error_text(status)}")
 
     return buffer.value
 

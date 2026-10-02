@@ -96,6 +96,17 @@ class TestWaitForDriveLetter(unittest.TestCase):
         self.assertEqual(len(slept), 2)   # slept between attempts, not after the last
 
 
+class TestErrorText(unittest.TestCase):
+    def test_a_status_carries_the_system_message_when_there_is_one(self):
+        # "failed with 32" sends the reader to a search engine; "The process cannot access
+        # the file because it is being used by another process" is the diagnosis.
+        self.assertEqual(vhd.error_text(32, describe=lambda status: "in use by another"),
+                         "32: in use by another")
+
+    def test_it_falls_back_to_the_number_alone(self):
+        self.assertEqual(vhd.error_text(32, describe=lambda status: ""), "32")
+
+
 class TestImportsOnAnyPlatform(unittest.TestCase):
     def test_module_imports_without_windows(self):
         # The suite runs on Linux; ctypes/DLL lookups must be inside the functions.

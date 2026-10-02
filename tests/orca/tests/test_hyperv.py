@@ -1,3 +1,6 @@
+import json
+import os
+import tempfile
 import unittest
 from orca import hyperv
 
@@ -52,7 +55,7 @@ class TestScripts(unittest.TestCase):
 
     def test_guest_script_runs_waits_pulls_and_reports(self):
         script = hyperv.guest_script(
-            "w10", credential=None, guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
+            "w10", credential_expr="Get-Credential", guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
             orc_args=["/overwrite", r"/Out=C:\Windows\Temp\orc-out"], out_dir=r"C:\r",
             result_path=r"C:\r\res.json", pull=True)
         self.assertIn("New-PSSession", script)
@@ -67,7 +70,7 @@ class TestScripts(unittest.TestCase):
 
     def test_guest_script_copies_the_generated_config_in(self):
         script = hyperv.guest_script(
-            "w10", credential=None, guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
+            "w10", credential_expr="Get-Credential", guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
             orc_args=[], out_dir=r"C:\r", result_path=r"C:\r\res.json", pull=True)
         self.assertIn(r"'C:\r\local.xml'", script)
         self.assertIn(r"'C:\Windows\Temp\local.xml'", script)
@@ -77,7 +80,7 @@ class TestScripts(unittest.TestCase):
         # would reach ORC as two arguments. The offline target keeps it whole (subprocess
         # quotes it), and the two targets must not disagree.
         script = hyperv.guest_script(
-            "w10", credential=None, guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
+            "w10", credential_expr="Get-Credential", guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
             orc_args=["/key=Get This", "/utf8"], out_dir=r"C:\r",
             result_path=r"C:\r\res.json", pull=True)
         self.assertIn("'\"/key=Get This\"'", script)
@@ -87,7 +90,7 @@ class TestScripts(unittest.TestCase):
         # Enumerating the host --out counts local.xml, and with --force a previous run's
         # archives too, so collect.json would claim files that were never pulled.
         script = hyperv.guest_script(
-            "w10", credential=None, guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
+            "w10", credential_expr="Get-Credential", guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
             orc_args=[], out_dir=r"C:\r", result_path=r"C:\r\res.json", pull=True)
         enumerate_at = script.index("Get-ChildItem")
         self.assertIn(r"'C:\Windows\Temp\orc-out'", script[enumerate_at:])
@@ -96,9 +99,33 @@ class TestScripts(unittest.TestCase):
 
     def test_no_pull_does_not_copy_results_back(self):
         script = hyperv.guest_script(
-            "w10", credential=None, guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
+            "w10", credential_expr="Get-Credential", guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
             orc_args=[], out_dir=r"C:\r", result_path=r"C:\r\res.json", pull=False)
         self.assertNotIn("-FromSession", script)
+
+
+class TestTheSecretNeverLeaves(unittest.TestCase):
+    def test_a_json_credential_puts_the_path_in_the_script_not_the_password(self):
+        # The script is passed to PowerShell through '-Command', so it IS the command line:
+        # anything embedded in it is readable by every other process on the box. PowerShell
+        # reads the file itself, which is the whole reason orca never parses it.
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "vm.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"user": "LAB\\tester", "password": "SuperSecret1"}, f)
+            script = hyperv.guest_script(
+                "w10", credential_expr=hyperv.credential_expression(path),
+                guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml", orc_args=[],
+                out_dir=r"C:\r", result_path=r"C:\r\res.json", pull=True)
+        self.assertNotIn("SuperSecret1", script)
+        self.assertIn(path, script)
+
+    def test_no_credential_file_means_no_credential_text_at_all(self):
+        script = hyperv.guest_script(
+            "w10", credential_expr=hyperv.credential_expression(None),
+            guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml", orc_args=[],
+            out_dir=r"C:\r", result_path=r"C:\r\res.json", pull=True)
+        self.assertIn("Get-Credential", script)
 
 
 class FakeRunner:

@@ -62,7 +62,7 @@ def copy_exe_script(vm: str, local_exe: str, guest_exe: str) -> str:
             f"-DestinationPath {powershell.quote(guest_exe)} -FileSource Host")
 
 
-def guest_script(vm: str, *, credential: str | None, guest: GuestPaths, local_config: str,
+def guest_script(vm: str, *, credential_expr: str, guest: GuestPaths, local_config: str,
                  orc_args: list[str], out_dir: str, result_path: str, pull: bool) -> str:
     """One script, because a PSSession does not outlive the process that created it.
 
@@ -90,7 +90,7 @@ def guest_script(vm: str, *, credential: str | None, guest: GuestPaths, local_co
 
     return (
         f"$ErrorActionPreference = 'Stop';\n"
-        f"$cred = {credential or 'Get-Credential'};\n"
+        f"$cred = {credential_expr};\n"
         f"$s = New-PSSession -VMName {powershell.quote(vm)} -Credential $cred;\n"
         f"$pulled = @();\n"
         f"try {{\n"
@@ -117,6 +117,8 @@ def run_vm_collect(*, vm: str, checkpoint: str | None, local_exe: str, local_con
                    result_path: str, pull: bool, guest: GuestPaths = GuestPaths(),
                    run_step=powershell.run) -> dict:
     """The whole VM sequence. 'run_step' is the seam the tests replace."""
+    # Also called by collect before the VM is touched, so an unsupported format is refused
+    # without having restored a checkpoint. Keep both: this one is what the script uses.
     expression = credential_expression(credential)
 
     if checkpoint:
@@ -125,7 +127,7 @@ def run_vm_collect(*, vm: str, checkpoint: str | None, local_exe: str, local_con
     run_step(start_script(vm), step="start-vm")
     run_step(copy_exe_script(vm, local_exe, guest.exe), step="copy-exe")
 
-    script = guest_script(vm, credential=expression, guest=guest, local_config=local_config,
-                          orc_args=orc_args, out_dir=out_dir, result_path=result_path,
-                          pull=pull)
+    script = guest_script(vm, credential_expr=expression, guest=guest,
+                          local_config=local_config, orc_args=orc_args, out_dir=out_dir,
+                          result_path=result_path, pull=pull)
     return run_step(script, step="guest-run", interactive=True, result_path=result_path) or {}

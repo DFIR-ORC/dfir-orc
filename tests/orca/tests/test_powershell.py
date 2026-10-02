@@ -17,6 +17,23 @@ class TestQuote(unittest.TestCase):
         self.assertEqual(powershell.quote(r"C:\it's\k.json"), r"'C:\it''s\k.json'")
 
 
+class TestQuoteArgument(unittest.TestCase):
+    def test_a_plain_value_is_just_a_literal(self):
+        self.assertEqual(powershell.quote_argument("/utf8"), "'/utf8'")
+
+    def test_whitespace_is_wrapped_so_it_stays_one_argument(self):
+        self.assertEqual(powershell.quote_argument("/key=Get This"), "'\"/key=Get This\"'")
+
+    def test_an_embedded_double_quote_is_escaped_for_the_target(self):
+        # CommandLineToArgvW reads \" as a literal quote; an unescaped one would end the
+        # argument and the rest would arrive as separate ones.
+        self.assertEqual(powershell.quote_argument('/key="Get Evt"'),
+                         r"""'"/key=\"Get Evt\""'""")
+
+    def test_a_quote_without_whitespace_needs_no_wrapper(self):
+        self.assertEqual(powershell.quote_argument('/key="GetEvt"'), r"'/key=\"GetEvt\"'")
+
+
 class TestCommandArgv(unittest.TestCase):
     def test_captured_run_is_non_interactive(self):
         argv = powershell.command_argv("pwsh.exe", "Get-VM", interactive=False)
@@ -37,6 +54,18 @@ class TestRun(unittest.TestCase):
                 powershell.run("Get-VM x", step="start-vm")
         self.assertIn("start-vm", str(caught.exception))
         self.assertIn("not found", str(caught.exception))
+
+    def test_an_interactive_failure_points_at_the_console(self):
+        # Its stdio is inherited so nothing can be captured; the message has to say where the
+        # real error went instead of ending in an empty colon.
+        completed = mock.Mock(returncode=1)
+        del completed.stderr
+        del completed.stdout
+        with mock.patch.object(powershell, "find_powershell", return_value="pwsh"), \
+             mock.patch("subprocess.run", return_value=completed):
+            with self.assertRaises(RuntimeError) as caught:
+                powershell.run("x", step="guest-run", interactive=True)
+        self.assertIn("console", str(caught.exception))
 
     def test_missing_powershell_is_refused_before_running(self):
         with mock.patch.object(powershell, "find_powershell", return_value=None):

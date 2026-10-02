@@ -511,6 +511,21 @@ python runtests.py            # from tests\orca (bytecode is relocated to %TEMP%
 
 DuckDB-backed integration tests auto-skip when `duckdb` is not on `PATH`.
 
+`collect`'s integration tests run a real ORC collection, so they skip unless the host names
+their inputs in the environment (the VHDX one needs an elevated shell for the attach):
+
+```powershell
+$env:ORCA_IT_ORC   = "build\orc.exe"      # a configured ORC executable
+$env:ORCA_IT_IMAGE = "E:\dumps\w10.dd"    # raw disk image
+$env:ORCA_IT_VHDX  = "E:\vm\w10.vhdx"     # .vhd(x), attached read-only
+$env:ORCA_IT_KEYWORD = "SystemInfo"       # keep it small; this is the default
+python runtests.py
+```
+
+They are the only tests that exercise the ORC command line for real, prove ORC accepts the
+UTF-8 `local.xml`, and cover the `ctypes` attach plus the drive-letter matching. The VM target
+is verified by hand.
+
 ---
 
 ## Notes
