@@ -311,42 +311,47 @@ bool IsWellFormedOsTag(const std::wstring& entry)
     return single && close == entry.size() - 1;
 }
 
+// What an https_security value parses to. Field for field what RestConfig stores, so ApplyHttpsSecurity
+// is left with the one decision that is not parsing: what to keep when the value names no baseline.
+struct HttpsSecurityPolicy
+{
+    // False when nothing usable was parsed: the caller then keeps its defaults. 'invalid' is still
+    // filled in that case, so a value that only holds unreadable entries is still refused by Validate.
+    bool parsedAny = false;
+
+    uint8_t versions = 0;
+    std::map<OutputSpec::Upload::OsTarget, uint8_t> osExceptions;
+    bool osDefault = false;
+    bool osMax = false;
+    std::vector<std::wstring> invalid;
+};
+
 // Parses an https_security value. Grammar: comma list of "tlsX.Y" tokens, each optionally tagged
 // with an OS target ("[xp]"/"[seven]") meaning "applies only on that OS". Untagged versions go to
 // `versions`; tagged ones to `osExceptions[target]`. "os-default"/"none" => osDefault, "os-max" => osMax. An entry
 // that cannot be read - a malformed tag, an unknown OS target, an unknown version - is never applied and is listed
-// in `invalid`, which Validate refuses: whatever it meant, the value would not do it. Returns false when nothing
-// usable was parsed.
-bool ParseHttpsSecurity(
-    const std::wstring& value,
-    uint8_t& versions,
-    std::map<OutputSpec::Upload::OsTarget, uint8_t>& osExceptions,
-    bool& osDefault,
-    bool& osMax,
-    std::vector<std::wstring>& invalid)
+// in `invalid`, which Validate refuses: whatever it meant, the value would not do it.
+HttpsSecurityPolicy ParseHttpsSecurity(const std::wstring& value)
 {
-    versions = 0;
-    osExceptions.clear();
-    osDefault = false;
-    osMax = false;
-    invalid.clear();
+    HttpsSecurityPolicy policy;
 
     if (equalCaseInsensitive(value, L"os-default"sv) || equalCaseInsensitive(value, L"none"sv))
     {
-        osDefault = true;
-        return true;
+        policy.osDefault = true;
+        policy.parsedAny = true;
+        return policy;
     }
 
     if (equalCaseInsensitive(value, L"os-max"sv))
     {
-        osMax = true;
-        return true;
+        policy.osMax = true;
+        policy.parsedAny = true;
+        return policy;
     }
 
     std::vector<std::wstring> entries;
     boost::split(entries, value, boost::is_any_of(L","));
 
-    bool parsedAny = false;
     for (auto& entry : entries)
     {
         boost::trim(entry);
@@ -358,7 +363,7 @@ bool ParseHttpsSecurity(
         if (!IsWellFormedOsTag(entry))
         {
             Log::Warn(L"Ignoring https_security entry '{}': malformed OS tag", entry);
-            invalid.push_back(entry);
+            policy.invalid.push_back(entry);
             continue;  // fail-closed
         }
 
@@ -370,7 +375,7 @@ bool ParseHttpsSecurity(
             if (!target.has_value())
             {
                 Log::Warn(L"Ignoring https_security entry with unknown OS target '[{}]'", *modifier);
-                invalid.push_back(original);
+                policy.invalid.push_back(original);
                 continue;  // fail-closed
             }
         }
@@ -379,23 +384,23 @@ bool ParseHttpsSecurity(
         if (version == 0)
         {
             Log::Warn(L"Ignoring unknown https_security version '{}'", entry);
-            invalid.push_back(original);
+            policy.invalid.push_back(original);
             continue;
         }
 
         if (target.has_value())
         {
-            osExceptions[*target] |= version;
+            policy.osExceptions[*target] |= version;
         }
         else
         {
-            versions |= version;
+            policy.versions |= version;
         }
 
-        parsedAny = true;
+        policy.parsedAny = true;
     }
 
-    return parsedAny;
+    return policy;
 }
 
 // Build one RESTStep from a <rest> node: method/path/query/accept_status, body/offset/chunk_size,
@@ -648,6 +653,19 @@ bool IsDeclaredCaptureName(const std::wstring& name, const std::vector<RESTStep>
     }
 
     return false;
+}
+
+// Read a boolean opt-in attribute: "true"/"yes" engages it, any other value does not. An absent
+// attribute leaves `value` at the default the field was declared with.
+void ReadBoolAttribute(const ConfigItem& item, DWORD dwIndex, bool& value)
+{
+    if (!::HasValue(item, dwIndex))
+    {
+        return;
+    }
+
+    const std::wstring& text = item.SubItems[dwIndex];
+    value = boost::iequals(text, L"true") || boost::iequals(text, L"yes");
 }
 
 // Read one non-negative integer attribute in base 10. Returns false when the attribute is absent, and
@@ -1476,17 +1494,8 @@ void OutputSpec::Upload::ParseRestSteps(const ConfigItem& item)
 void OutputSpec::Upload::ParseProxyAndSecurity(const ConfigItem& item)
 {
     // Security opt-in flags (validated by Validate()).
-    if (::HasValue(item, CONFIG_UPLOAD_INSECURE))
-    {
-        const auto str = item.SubItems[CONFIG_UPLOAD_INSECURE].c_str();
-        rest.Insecure = boost::iequals(str, L"true") || boost::iequals(str, L"yes");
-    }
-
-    if (::HasValue(item, CONFIG_UPLOAD_FOLLOW_REDIRECTS))
-    {
-        const auto str = item.SubItems[CONFIG_UPLOAD_FOLLOW_REDIRECTS].c_str();
-        rest.FollowRedirects = boost::iequals(str, L"true") || boost::iequals(str, L"yes");
-    }
+    ReadBoolAttribute(item, CONFIG_UPLOAD_INSECURE, rest.Insecure);
+    ReadBoolAttribute(item, CONFIG_UPLOAD_FOLLOW_REDIRECTS, rest.FollowRedirects);
 
     // Pinned server certificates (X.509 PEM or base64), comma/semicolon-separated (see SplitServerCertPins).
     if (::HasValue(item, CONFIG_UPLOAD_SERVER_CERT_PIN))
@@ -1715,24 +1724,19 @@ void Orc::ApplyHttpsSecurity(const std::wstring& rawValue, OutputSpec::Upload::R
     std::wstring value = rawValue;
     boost::trim(value);
 
-    uint8_t versions = 0;
-    std::map<OutputSpec::Upload::OsTarget, uint8_t> osExceptions;
-    bool osDefault = false;
-    bool osMax = false;
-    std::vector<std::wstring> invalid;
-    const bool parsed = ParseHttpsSecurity(value, versions, osExceptions, osDefault, osMax, invalid);
+    HttpsSecurityPolicy policy = ParseHttpsSecurity(value);
 
     // Recorded whether or not anything else parsed: Validate refuses an entry it could not read, so ToolEmbed
     // rejects the configuration instead of embedding a value that does not do what was written.
-    rest.HttpsSecurityInvalid = std::move(invalid);
+    rest.HttpsSecurityInvalid = std::move(policy.invalid);
 
-    if (!parsed)
+    if (!policy.parsedAny)
     {
         Log::Warn(L"No valid https_security value parsed from '{}'; keeping default", value);
         return;
     }
 
-    if (!osDefault && !osMax && versions == 0)
+    if (!policy.osDefault && !policy.osMax && policy.versions == 0)
     {
         Log::Warn(
             L"https_security '{}' sets no baseline TLS version (every entry is OS-tagged); keeping the default floor "
@@ -1741,12 +1745,12 @@ void Orc::ApplyHttpsSecurity(const std::wstring& rawValue, OutputSpec::Upload::R
     }
     else
     {
-        rest.TlsVersions = versions;
+        rest.TlsVersions = policy.versions;
     }
 
-    rest.TlsOsExceptions = std::move(osExceptions);
-    rest.TlsOsDefault = osDefault;
-    rest.TlsOsMax = osMax;
+    rest.TlsOsExceptions = std::move(policy.osExceptions);
+    rest.TlsOsDefault = policy.osDefault;
+    rest.TlsOsMax = policy.osMax;
 }
 
 // Map the config TLS version bits (OutputSpec::Upload::kTls*) onto the HTTP-layer bits. Done explicitly, bit by
@@ -2249,17 +2253,17 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestStep(co
     // step" (it counts as the file's body), so EstablishSession would send it with no file handle: a
     // bodiless request to the destination path, creating or truncating the remote object to zero bytes
     // before the real body step ever runs.
-    if (step.runOnce && step.hasBody)
-    {
-        return {
-            Verdict::Refuse,
-            L"a session=\"once\" step cannot also carry 'body=' (the real body step must not run once)"};
-    }
-
-    // Same rule for the rest of a once-step: it runs before any file exists, so no template of it
-    // may name a per-file value (UsesPerFilePlaceholder; see the comment above).
     if (step.runOnce)
     {
+        if (step.hasBody)
+        {
+            return {
+                Verdict::Refuse,
+                L"a session=\"once\" step cannot also carry 'body=' (the real body step must not run once)"};
+        }
+
+        // Same rule for the rest of a once-step: it runs before any file exists, so no template of it
+        // may name a per-file value (UsesPerFilePlaceholder; see the comment above).
         std::vector<std::wstring> templates = {step.path, step.query, step.bodySource, step.offsetExpr};
         templates.insert(templates.end(), step.headers.begin(), step.headers.end());
 
@@ -2333,9 +2337,13 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
     // failure to diagnose.
     if (isRest && AuthScheme == UploadAuthScheme::AWSv4)
     {
+        // Collected once: AllRestHeaders copies every upload-level and per-step header line, and both
+        // checks below read the same list.
+        const std::vector<std::wstring> restHeaders = ::AllRestHeaders(rest);
+
         // A literal Authorization header would compete with the one the signer computes, with the
         // outcome depending on header ordering - a configuration whose meaning is accidental.
-        for (const auto& header : ::AllRestHeaders(rest))
+        for (const auto& header : restHeaders)
         {
             if (equalCaseInsensitive(::HeaderName(header), L"authorization"sv))
             {
@@ -2346,7 +2354,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
 
         // host/x-amz-date/x-amz-content-sha256/x-amz-security-token are owned by the signer (see
         // MakeAwsV4Headers, which already refuses this collision at request time).
-        for (const auto& header : ::AllRestHeaders(rest))
+        for (const auto& header : restHeaders)
         {
             const std::wstring name = ::HeaderName(header);
             for (const auto& reserved : kAwsSignerOwnedHeaders)
@@ -2414,7 +2422,12 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
 
 Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() const
 {
-    const bool isRest = (Method == UploadMethod::REST);
+    // Every rule here is REST-only: proxy_* settings reach no other uploader, and EmitProxyAdvisories
+    // already says so once for the other methods.
+    if (Method != UploadMethod::REST)
+    {
+        return {Verdict::Ok, {}};
+    }
 
     // Proxy (REST). Explicit proxy credentials are only usable if a proxy is actually configured.
     // Refuse a credentials-without-proxy config rather than silently ignoring the credentials. The
@@ -2426,7 +2439,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     // from a 407. So the credential check demands an explicit, non-DIRECT value, not just any live source.
     const ProxySettings proxyCfg = ClassifyProxy(*this);
     const bool hasProxySource = rest.Proxy.has_value() && proxyCfg.mode != ProxyMode::Direct;
-    if (isRest && (!rest.ProxyUser.empty() || !rest.ProxyPassword.empty()) && !hasProxySource)
+    if ((!rest.ProxyUser.empty() || !rest.ProxyPassword.empty()) && !hasProxySource)
     {
         return {
             Verdict::Refuse,
@@ -2435,8 +2448,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     }
 
     // An authenticating proxy must name its scheme (we never learn it from a 407).
-    if (isRest && (!rest.ProxyUser.empty() || !rest.ProxyPassword.empty())
-        && rest.ProxyAuthScheme == UploadAuthScheme::Anonymous)
+    if ((!rest.ProxyUser.empty() || !rest.ProxyPassword.empty()) && rest.ProxyAuthScheme == UploadAuthScheme::Anonymous)
     {
         return {
             Verdict::Refuse, L"an authenticating proxy requires 'proxy_authscheme' set to Basic, NTLM, or Negotiate"};
@@ -2444,7 +2456,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
 
     // A proxy password with no user can never be presented (ApplyProxyCredentials no-ops on an empty user,
     // silently dropping the password); refuse it at embed instead of uploading unauthenticated by surprise.
-    if (isRest && !rest.ProxyPassword.empty() && rest.ProxyUser.empty())
+    if (!rest.ProxyPassword.empty() && rest.ProxyUser.empty())
     {
         return {Verdict::Refuse, L"'proxy_password' requires a 'proxy_user'"};
     }
@@ -2452,7 +2464,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     // server_cert_pin only has meaning over TLS: the pin is matched against the server certificate, which a
     // plain-HTTP connection never presents. Refuse at embed rather than failing every request at runtime
     // (on HTTP the cert query yields no certificate, so the pin can neither pass nor protect the body).
-    if (isRest && !rest.ServerCertPins.empty() && bitsMode != BITSMode::HTTPS)
+    if (!rest.ServerCertPins.empty() && bitsMode != BITSMode::HTTPS)
     {
         return {
             Verdict::Refuse, L"'server_cert_pin' requires an https 'server' (pinning is meaningless over plain HTTP)"};
@@ -2461,18 +2473,15 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     // Every pin must be a certificate the agent can read. One that is not could only ever be skipped, and a
     // mistyped rotation pin would then go unnoticed until the server key rotates onto it. 'insecure' does not
     // authorize it: an unreadable pin is a broken configuration, not a weaker transport.
-    if (isRest)
+    for (size_t i = 0; i < rest.ServerCertPins.size(); ++i)
     {
-        for (size_t i = 0; i < rest.ServerCertPins.size(); ++i)
+        if (CertBlobToSpkiSha256(rest.ServerCertPins[i]).has_error())
         {
-            if (CertBlobToSpkiSha256(rest.ServerCertPins[i]).has_error())
-            {
-                return {
-                    Verdict::Refuse,
-                    L"'server_cert_pin' entry " + std::to_wstring(i + 1) + L" of "
-                        + std::to_wstring(rest.ServerCertPins.size())
-                        + L" is not an X.509 certificate (PEM or base64 DER), so it could never be matched"};
-            }
+            return {
+                Verdict::Refuse,
+                L"'server_cert_pin' entry " + std::to_wstring(i + 1) + L" of "
+                    + std::to_wstring(rest.ServerCertPins.size())
+                    + L" is not an X.509 certificate (PEM or base64 DER), so it could never be matched"};
         }
     }
 
