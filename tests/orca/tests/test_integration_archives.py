@@ -227,14 +227,18 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
         output = self.report()
 
         self.assertIn("SEALEDHOST", output)
-        self.assertIn("FAIL ORC_General/USNInfo", output)
-        self.assertIn("code=18", output)
+        self.assertIn("failed commands (1)", output)
+        # set, command, tool, duration, exit code - the columns a --list line uses.
+        line = next(l for l in output.splitlines() if "USNInfo" in l and "ORC_General" in l)
+        self.assertEqual(line.split(), ["ORC_General", "USNInfo", "USNInfo", "0m22s", "18"])
 
     def test_the_log_is_unsealed_so_the_errors_view_works(self):
         output = self.report()
 
-        self.assertIn("1 log(s) with matches", output)
-        self.assertIn("2 error-line(s)", output)
+        self.assertIn("logs with errors (1 of 1)", output)
+        # The section row, not the 'decrypted ...' progress line that names the same file.
+        rows = [l.split() for l in output.splitlines() if l.startswith("    ")]
+        self.assertIn(["ORC_SEALED.log", "2"], rows)
 
     def test_the_host_is_the_machine_not_the_folder_name(self):
         # Without the Outcome, a sealed collection is reported under its directory name.

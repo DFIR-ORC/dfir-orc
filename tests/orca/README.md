@@ -214,6 +214,68 @@ orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed col
 
 `report` also holds the two row tables: `orca report outcome` and `orca report outline` (below).
 
+#### The default report
+
+A header line naming the host and where it came from, the run's scalars, then one counted
+section per thing worth looking at, every row of it in columns:
+
+```
+DESKTOP-U9N26B0  E:/runs/DESKTOP-U9N26B0
+  ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
+
+  failed commands (12)
+    ORC_General  Azure_Identity            -         0m22s   1
+    ORC_General  GetThis_Additional        GetThis   0m51s   9
+    ORC_General  USNInfo                   USNInfo   0m22s  18
+    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
+    ORC_General  GetThis_Default           GetThis   0m45s   9
+    ORC_General  GetThis_Protected         GetThis   0m51s   9
+    ORC_General  GetBrowsers_History       GetThis   0m28s   9
+    ORC_General  GetResidents              GetThis   0m29s   9
+    ORC_General  Autoruns                  -          0m0s   1
+    ORC_General  Azure_Attested            -         0m22s   1
+    ORC_General  Azure_Instance            -         0m22s   1
+    ORC_General  Azure_ScheduledEvents     -         0m21s   1
+
+  tables (26, 1598014 rows, 64.4MB)
+    NTFSInfo_00000001_Volume_C_                 29.0MB  415398 rows  1.95s
+    I30Info_00000001_Volume_C_                  20.8MB  798432 rows  1.23s
+    USNInfo_00000001_Volume_C_                   7.8MB  323566 rows  0.68s
+    GetThis_Residents                            5.6MB   41220 rows  0.40s
+    SecDescr_00000001_Volume_C_                371.6KB    2385 rows  0.26s
+    GetThis_GetThis_Protected                  267.1KB    3148 rows  0.31s
+
+  empty tables (2)
+    USNInfo_00000000_DiskInterface_0x9e1e94d71e94aa33_
+    VSS_list
+  empty outputs (9)
+    Azure_Attested.json
+    Azure_Identity.json
+
+  logs with errors (33 of 35)
+    USNInfo.dev.log              2398
+    Residents.dev.log            1288
+
+  unread tables (1)
+    autoruns  duckdb failed: Invalid Input Error: Error when sniffing file "C:/Users/...
+```
+
+The real run continues from there: all 26 tables, all 9 empty outputs and all 33 logs are
+printed, and the sample above is shortened for the README, not by `report`. **Nothing is
+folded away.** A report that hid rows behind a `... N more` would be one you have to run again
+with another flag to finish reading; the count in each heading is there to tell you how long
+the list is, not to excuse not printing it. One real host comes to 95 lines.
+
+A failure carries the columns a `--list` line does - set, command, tool, duration, exit code
+last - so the two read the same way. The `tables` section is one list of every table with its
+size, rows and time, replacing the old `big` and `slow` pair, which on that run named the same
+four tables twice.
+
+**A section with nothing in it is left out.** The scalars already say `fails=0`, and a healthy
+run should read as a short report rather than a page of zeros. Naming a view does print its
+heading even when it is empty (`--view empty` on a clean run says `empty tables (0)`), since
+asking for a view and getting nothing back cannot be told from a broken report.
+
 #### A collection as it arrives, with everything sealed
 
 ```powershell
@@ -235,14 +297,20 @@ said. `report` now unseals what it needs, which makes a sealed collection report
 anything has been ingested or extracted:
 
 ```
-=== DESKTOP-U9N26B0  (\\host\dumps\ORC_HOST) ===
-outcome: ok=False, duration=6m47s, mem_peak=1.2GB (ORC_General)
-  FAIL ORC_General/USNInfo code=18 dur=0m22s
-  ... 12 failures
-empty: (no ingest timing: not an ingested run)
-stats: (no ingest timing: not an ingested run)
-errors: 1 log(s) with matches
-  ORC_..._144127.log: 106 error-line(s)
+DESKTOP-U9N26B0  //host/dumps/ORC_HOST
+  ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
+
+  failed commands (12)
+    ORC_General  USNInfo                   USNInfo   0m22s  18
+    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
+    ORC_General  Autoruns                  -          0m0s   1
+
+  tables: (no ingest timing: not an ingested run)
+
+  empty tables: (no ingest timing: not an ingested run)
+
+  logs with errors (1 of 1)
+    ORC_..._144127.log  106
 ```
 
 **Into the work dir, never beside the collection.** `ingest` and `extract` unseal in place on
@@ -317,13 +385,20 @@ built from an extracted tree - `outcome` and `errors` read ORC's files; `stats` 
 read `.orca\ingest-timing.csv` and `.orca\manifest.parquet`, which only `ingest` writes:
 
 ```
-outcome: ok=False, duration=6m47s, mem_peak=1.2GB (ORC_General)
-  FAIL ORC_General/USNInfo code=18 dur=0m22s
-  ... 12 failures
-empty: (no ingest timing: not an ingested run)
-stats: (no ingest timing: not an ingested run)
-errors: 1 log(s) with matches
-  ORC_..._144127.log: 106 error-line(s)
+DESKTOP-U9N26B0  //host/dumps/ORC_HOST
+  ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
+
+  failed commands (12)
+    ORC_General  USNInfo                   USNInfo   0m22s  18
+    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
+    ORC_General  Autoruns                  -          0m0s   1
+
+  tables: (no ingest timing: not an ingested run)
+
+  empty tables: (no ingest timing: not an ingested run)
+
+  logs with errors (1 of 1)
+    ORC_..._144127.log  106
 ```
 
 That used to read `empty: 0 table(s) -> (none)` and `stats: 0 tables, 0 rows, 0.0B`, which is

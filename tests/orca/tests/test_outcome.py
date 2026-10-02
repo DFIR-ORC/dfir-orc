@@ -39,6 +39,18 @@ class TestOutcome(unittest.TestCase):
         self.assertEqual(o.failures[0].set, "SetB")
         self.assertEqual(o.failures[0].duration_seconds, 180.0)
 
+    def test_a_failure_carries_the_tool_that_ran(self):
+        # So a failure line can read the way a --list line does.
+        doc = {"dfir-orc": {"outcome": {"command_set": [
+            {"name": "SetA", "commands": [
+                {"name": "USNInfo", "tool": "USNInfo", "exit_code": 18},
+                {"name": "Azure_Identity", "exit_code": 1}]}]}}}
+
+        o = outcome.parse_outcome(self._write(doc))
+
+        self.assertEqual([(f.command, f.tool) for f in o.failures],
+                         [("USNInfo", "USNInfo"), ("Azure_Identity", "")])
+
     def test_counts_every_command_it_ran(self):
         # 'fails=1' cannot tell 1 of 2 from 1 of 300, so the summary needs the denominator.
         o = outcome.parse_outcome(self._write(DOC))

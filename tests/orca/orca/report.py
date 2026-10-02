@@ -67,11 +67,27 @@ def empty_output_files(engine, manifest_path: str) -> list[str]:
         return []
 
 
-def build_stats_view(timing: list[dict], available: bool = True) -> dict:
+def top_tables(timing: list[dict]) -> list[dict]:
+    """Every table, with its size, rows and time together, ordered by size.
+
+    One list rather than the 'biggest' and 'slowest' pair, which on a real run named the same
+    four tables twice. Not a selection: the report folds nothing away, so there is no reason to
+    choose which tables the reader is allowed to see.
+    """
+    return [{"name": t["name"], "bytes": t["bytes"], "rows": t["rows"],
+             "seconds": round(t["seconds"], 2)}
+            for t in sorted(timing, key=lambda t: t["bytes"], reverse=True)]
+
+
+def build_stats_view(timing: list[dict], available: bool = True, limit: int = 5) -> dict:
     """Table count, rows and bytes. 'available' is False when there was no timing to read at
-    all, which is not the same as an ingest that produced no tables."""
-    biggest = sorted(timing, key=lambda t: t["bytes"], reverse=True)[:5]
-    slowest = sorted(timing, key=lambda t: t["seconds"], reverse=True)[:5]
+    all, which is not the same as an ingest that produced no tables.
+
+    'biggest' and 'slowest' are what the JSON carries, each sorted on its own metric; 'top' is
+    the merged list the human report prints as one table.
+    """
+    biggest = sorted(timing, key=lambda t: t["bytes"], reverse=True)[:limit]
+    slowest = sorted(timing, key=lambda t: t["seconds"], reverse=True)[:limit]
     return {
         "available": available,
         "tables": len(timing),
@@ -79,6 +95,7 @@ def build_stats_view(timing: list[dict], available: bool = True) -> dict:
         "total_bytes": sum(t["bytes"] for t in timing),
         "biggest": [{"name": t["name"], "bytes": t["bytes"]} for t in biggest],
         "slowest": [{"name": t["name"], "seconds": round(t["seconds"], 2)} for t in slowest],
+        "top": top_tables(timing),
     }
 
 
@@ -300,58 +317,169 @@ def render_json(summaries: list) -> str:
     return json.dumps(summaries, indent=2)
 
 
-def render_human(hr: dict, views: list) -> str:
-    lines = [f'=== {hr["host"]}  ({hr["run_dir"]}) ===']
-    if "outcome" in views:
-        o = hr["outcome"]
-        if not o.get("available"):
-            lines.append("outcome: (no Outcome captured)")
-        else:
-            lines.append(f'outcome: ok={o["ok"]}, duration={_hdur(o["duration_seconds"])}, '
-                         f'mem_peak={_hsize(o["memory_peak_bytes"])} ({o["memory_peak_set"]})')
-            for fl in o["failures"]:
-                lines.append(f'  FAIL {fl["set"]}/{fl["command"]} '
-                             f'code={fl["exit_code"]} dur={_hdur(fl["duration_seconds"])}')
-    if "empty" in views:
-        e = hr["empty"]
-        if not e.get("available", True):
-            lines.append("empty: (no ingest timing: not an ingested run)")
-        else:
-            lines.append(f'empty: {e["count"]} table(s) -> '
-                         f'{", ".join(e["empty_tables"]) or "(none)"}')
-            if not e.get("files_available", True):
-                lines.append("  empty output files: (not read: no manifest or no duckdb)")
-            elif e.get("file_count"):
-                lines.append(f'  {e["file_count"]} empty output file(s):')
-                lines.extend(f"    {name}" for name in e["empty_files"])
-    if "stats" in views:
-        s = hr["stats"]
-        if not s.get("available", True):
-            lines.append("stats: (no ingest timing: not an ingested run)")
-        else:
-            lines.append(f'stats: {s["tables"]} tables, {s["total_rows"]} rows, '
-                         f'{_hsize(s["total_bytes"])}')
-            for b in s["biggest"]:
-                lines.append(f'  big  {b["name"]}: {_hsize(b["bytes"])}')
-            for sl in s["slowest"]:
-                lines.append(f'  slow {sl["name"]}: {sl["seconds"]}s')
-    if "errors" in views:
-        er = hr["errors"]
-        if not er.get("available"):
-            lines.append("errors: (no logs captured)")
-        else:
-            with_err = [x for x in er["logs"] if x["error_lines"]]
-            lines.append(f'errors: {len(with_err)} log(s) with matches')
-            for x in with_err:
-                lines.append(f'  {x["log"]}: {x["error_lines"]} error-line(s)')
+MAX_WIDTH = 100
 
-        # A hole in the run rather than a message inside it, so it is said separately and
-        # whether or not there were logs to read.
-        skipped = er.get("skipped") or {}
-        if skipped:
-            lines.append(f'unread tables: {len(skipped)} (skipped at ingest)')
-            for name, reason in sorted(skipped.items()):
-                lines.append(f'  {name}: {reason}')
+
+def short_path(path: str, width: int) -> str:
+    """A path trimmed from the left, keeping the tail - which is the part that names the run."""
+    if len(path) <= width or width < 8:
+        return path
+
+    return "..." + path[-(width - 3):]
+
+
+def columns(rows: list, align: str) -> list:
+    """Aligned columns: each column as wide as its widest value, '<' left, '>' right."""
+    if not rows:
+        return []
+
+    widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
+    return ["  ".join(f"{value:{how}{width}}" for value, how, width
+                      in zip(row, align, widths)).rstrip()
+            for row in rows]
+
+
+def section(heading: str, rows: list, align: str) -> list:
+    """A counted heading and every one of its rows, indented and in columns.
+
+    Nothing is truncated. A report that hides rows behind a '... N more' is a report you have
+    to run again with another flag to finish reading, and the count in the heading is there to
+    say how long the list is, not to excuse not printing it.
+    """
+    return [f"  {heading}"] + [f"    {line}" for line in columns(rows, align)]
+
+
+def failure_rows(outcome: dict) -> list:
+    """The failed commands, with the columns a '--list' line uses: set, command, tool,
+    duration, and the exit code last."""
+    return [[failure["set"], failure["command"], failure.get("tool") or "-",
+             _hdur(failure["duration_seconds"]), str(failure["exit_code"])]
+            for failure in outcome.get("failures", [])]
+
+
+def table_rows(stats: dict) -> list:
+    """The tables worth looking at, size and rows and time on one line each."""
+    return [[table["name"], _hsize(table["bytes"]), f'{table["rows"]} rows',
+             f'{table["seconds"]:.2f}s']
+            for table in stats.get("top", [])]
+
+
+def log_rows(errors: dict) -> list:
+    """Only the logs that carried something: a log read and found clean needs no line."""
+    return [[log["log"], str(log["error_lines"])]
+            for log in errors.get("logs", []) if log["error_lines"]]
+
+
+def skipped_rows(skipped: dict, width: int = MAX_WIDTH) -> list:
+    """The tables an ingest could not read, and why, with the reason cut to fit one line."""
+    rows = []
+    for name, reason in sorted(skipped.items()):
+        room = width - len(name) - 6
+        rows.append([name, reason if len(reason) <= room else reason[:room - 3] + "..."])
+
+    return rows
+
+
+def header_lines(hr: dict) -> list:
+    """The host, where it came from, and the run's scalars."""
+    host = hr["host"]
+    path = short_path(hr["run_dir"], MAX_WIDTH - len(host) - 2)
+    return [f"{host}  {path}"]
+
+
+def outcome_lines(hr: dict, explicit: bool) -> list:
+    outcome = hr["outcome"]
+    if not outcome.get("available"):
+        return ["  (no Outcome captured)"]
+
+    lines = [f'  ok={outcome["ok"]}  cmds={_opt(outcome.get("commands"))}  '
+             f'fails={len(outcome.get("failures", []))}  '
+             f'dur={_hdur(outcome["duration_seconds"])}  '
+             f'mem={_hsize(outcome["memory_peak_bytes"])} ({outcome["memory_peak_set"]})']
+
+    rows = failure_rows(outcome)
+    if rows or explicit:
+        lines.append("")
+        lines += section(f"failed commands ({len(rows)})", rows, "<<<>>")
+
+    return lines
+
+
+def stats_lines(hr: dict, explicit: bool) -> list:
+    stats = hr["stats"]
+    if not stats.get("available", True):
+        return ["  tables: (no ingest timing: not an ingested run)"]
+
+    rows = table_rows(stats)
+    if not rows and not explicit:
+        return []
+
+    heading = (f'tables ({stats["tables"]}, {stats["total_rows"]} rows, '
+               f'{_hsize(stats["total_bytes"])})')
+    return section(heading, rows, "<>>>")
+
+
+def empty_lines(hr: dict, explicit: bool) -> list:
+    empty = hr["empty"]
+    if not empty.get("available", True):
+        return ["  empty tables: (no ingest timing: not an ingested run)"]
+
+    lines = []
+    tables = [[name] for name in empty.get("empty_tables", [])]
+    if tables or explicit:
+        lines += section(f"empty tables ({len(tables)})", tables, "<")
+
+    if not empty.get("files_available", True):
+        return lines + ["  empty outputs: (not read: no manifest or no duckdb)"]
+
+    files = [[name] for name in empty.get("empty_files", [])]
+    if files or explicit:
+        lines += section(f"empty outputs ({len(files)})", files, "<")
+
+    return lines
+
+
+def errors_lines(hr: dict, explicit: bool) -> list:
+    errors = hr["errors"]
+    lines = []
+    if not errors.get("available", True):
+        lines.append("  logs: (no logs captured)")
+    else:
+        rows = log_rows(errors)
+        if rows or explicit:
+            read = len(errors.get("logs", []))
+            lines += section(f"logs with errors ({len(rows)} of {read})", rows, "<>")
+
+    # A hole in the run rather than a message inside it, so it is said separately and whether
+    # or not there were logs to read.
+    skipped = skipped_rows(errors.get("skipped") or {})
+    if skipped or explicit:
+        lines += section(f"unread tables ({len(skipped)})", skipped, "<<")
+
+    return lines
+
+
+def render_human(hr: dict, views: list, explicit: bool = False) -> str:
+    """The default report: the host, its scalars, then one counted section per finding.
+
+    Every row of every section is printed. Sections with nothing in them are left out - the
+    scalars already say 'fails=0', and a run with no findings should read as a short report
+    rather than a page of zeros - but a view named explicitly prints its heading even when it
+    is empty, because asking for a view and getting nothing back cannot be told from a broken
+    report.
+    """
+    lines = header_lines(hr)
+    if "outcome" in views:
+        lines += outcome_lines(hr, explicit)
+    for name, builder in (("stats", stats_lines), ("empty", empty_lines),
+                          ("errors", errors_lines)):
+        if name not in views:
+            continue
+
+        built = builder(hr, explicit)
+        if built:
+            lines += [""] + built
+
     return "\n".join(lines)
 
 
@@ -554,5 +682,6 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
         for r in reports:
             print(render_one_line(summary_of(r)))
         return
+    explicit = bool(views)
     views = views or ["outcome", "empty", "stats", "errors"]
-    print("\n\n".join(render_human(r, views) for r in reports))
+    print("\n\n".join(render_human(r, views, explicit) for r in reports))

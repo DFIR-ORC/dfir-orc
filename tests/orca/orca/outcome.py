@@ -13,6 +13,9 @@ class Failure:
     exit_code: str
     duration_seconds: float
     start: str
+    # The ORC subtool that ran, empty for a command running a packaged binary, so a failure
+    # reads with the same columns as a '--list' line.
+    tool: str = ""
 
 
 @dataclass
@@ -74,6 +77,7 @@ def parse_outcome(path: str) -> Outcome:
                     exit_code=str(cmd["exit_code"]),
                     duration_seconds=_seconds(cmd.get("start", ""), cmd.get("end", "")),
                     start=cmd.get("start", ""),
+                    tool=cmd.get("tool") or "",
                 ))
 
     start, end = o.get("start", ""), o.get("end", "")

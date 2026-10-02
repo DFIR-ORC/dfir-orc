@@ -19,6 +19,48 @@ def host_report() -> dict:
     }
 
 
+def full_host_report() -> dict:
+    """A run with something in every section, shaped as the view builders produce it."""
+    return {
+        "host": "DESKTOP-U9N26B0",
+        "run_dir": "E:/runs/DESKTOP-U9N26B0",
+        "outcome": {
+            "available": True, "ok": False, "commands": 35,
+            "duration_seconds": 407.0, "memory_peak_bytes": 1325150208,
+            "memory_peak_set": "ORC_General",
+            "failures": [
+                {"set": "ORC_General", "command": f"Command{i}", "tool": "GetThis",
+                 "exit_code": "9", "duration_seconds": 51.0, "start": ""}
+                for i in range(7)
+            ] + [{"set": "ORC_General", "command": "Autoruns", "tool": "",
+                  "exit_code": "1", "duration_seconds": 0.0, "start": ""}],
+        },
+        "empty": {
+            "available": True, "files_available": True,
+            "empty_tables": ["USNInfo_00000000_DiskInterface_0x9e1e94d71e94aa33_", "VSS_list"],
+            "count": 2,
+            "empty_files": [f"Empty{i}.json" for i in range(9)], "file_count": 9,
+        },
+        "stats": {
+            "available": True, "tables": 26, "total_rows": 1598014, "total_bytes": 67541237,
+            "biggest": [], "slowest": [],
+            "top": [{"name": "NTFSInfo_00000001_Volume_C_", "bytes": 30408704,
+                     "rows": 415398, "seconds": 1.95},
+                    {"name": "I30Info_00000001_Volume_C_", "bytes": 21810380,
+                     "rows": 798432, "seconds": 1.23},
+                    {"name": "SlowButSmall", "bytes": 2048, "rows": 20, "seconds": 9.0}],
+        },
+        "errors": {
+            "available": True,
+            "logs": ([{"log": f"Command{i}.dev.log", "bytes": 100, "error_lines": 2398 - i}
+                      for i in range(8)]
+                     + [{"log": "Quiet.dev.log", "bytes": 100, "error_lines": 0}]),
+            "skipped": {"autoruns": "duckdb failed: Invalid Input Error: it was not possible "
+                                    "to detect the CSV dialect"},
+        },
+    }
+
+
 def host_report_not_ingested() -> dict:
     """An extracted tree: the Outcome and the logs are real, nothing from '.orca' is."""
     hr = host_report()
@@ -60,7 +102,7 @@ class TestRender(unittest.TestCase):
 
         text = report.render_human(hr, ["empty"])
 
-        self.assertIn("1 table(s)", text)
+        self.assertIn("empty tables (1)", text)
         self.assertIn("no manifest", text)
 
     def test_one_line_prints_a_question_mark_rather_than_a_zero(self):
@@ -100,8 +142,9 @@ class TestRender(unittest.TestCase):
 
     def test_the_errors_view_names_the_unread_table_and_why(self):
         text = report.render_human(self._hr_with_skips(), ["errors"])
-        self.assertIn("unread tables: 1", text)
-        self.assertIn("autoruns: duckdb said no", text)
+        self.assertIn("unread tables (1)", text)
+        self.assertIn("autoruns", text)
+        self.assertIn("duckdb said no", text)
 
     def test_the_errors_view_says_nothing_when_the_run_is_complete(self):
         self.assertNotIn("unread", report.render_human(self._hr(), ["errors"]))
@@ -282,6 +325,130 @@ class TestRenderCommandLines(unittest.TestCase):
 
     def test_nothing_to_list_says_so(self):
         self.assertIn("0 command(s)", report.render_command_lines([], False))
+
+
+class TestRenderSections(unittest.TestCase):
+    """The default report: a header, then a counted section per thing worth seeing.
+
+    Lists are capped so that one host stays on a screen - the real run printed 72 lines, 33 of
+    them logs - and the count in the heading still says how many there really are.
+    """
+
+    def render(self, hr=None, views=None, explicit=False) -> str:
+        return report.render_human(hr or full_host_report(),
+                                   views or ["outcome", "empty", "stats", "errors"],
+                                   explicit=explicit)
+
+    def lines(self, **kwargs) -> list:
+        return self.render(**kwargs).splitlines()
+
+    def test_the_header_is_the_host_and_where_it_came_from(self):
+        first = self.lines()[0]
+
+        self.assertTrue(first.startswith("DESKTOP-U9N26B0"), first)
+        self.assertIn("DESKTOP-U9N26B0", first)
+        self.assertIn("runs/DESKTOP-U9N26B0", first)
+
+    def test_the_scalars_follow_on_one_line(self):
+        second = self.lines()[1]
+
+        for field in ("ok=False", "cmds=35", "fails=8", "dur=6m47s", "mem=1.2GB"):
+            self.assertIn(field, second)
+        self.assertIn("ORC_General", second)
+
+    def test_a_failure_is_columnised_with_the_code_last(self):
+        line = next(l for l in self.lines() if "Autoruns" in l)
+
+        self.assertEqual(line.split(), ["ORC_General", "Autoruns", "-", "0m0s", "1"])
+
+    def test_the_failure_columns_line_up(self):
+        failures = [l for l in self.lines() if "Command" in l and "dev.log" not in l]
+
+        starts = {l.index("ORC_General") for l in failures}
+        self.assertEqual(len(starts), 1, failures)
+
+    def test_each_section_counts_what_it_holds(self):
+        text = self.render()
+
+        self.assertIn("failed commands (8)", text)
+        self.assertIn("empty tables (2)", text)
+        self.assertIn("empty outputs (9)", text)
+        self.assertIn("unread tables (1)", text)
+
+    def test_the_tables_section_shows_size_rows_and_time_together(self):
+        line = next(l for l in self.lines() if "NTFSInfo_00000001_Volume_C_" in l)
+
+        self.assertIn("29.0MB", line)
+        self.assertIn("415398", line)
+        self.assertIn("1.95", line)
+
+    def test_the_tables_heading_carries_the_totals(self):
+        self.assertIn("tables (26, 1598014 rows, 64.4MB)", self.render())
+
+    def test_the_logs_heading_says_how_many_of_how_many(self):
+        # Eight logs were read, one of them quiet.
+        self.assertIn("logs with errors (8 of 9)", self.render())
+
+    def test_a_quiet_log_is_not_listed(self):
+        self.assertNotIn("Quiet.dev.log", self.render())
+
+    def test_every_failure_is_listed(self):
+        # Eight of them, Autoruns last: a report that hides rows makes you run it again.
+        failures = [l for l in self.lines() if "ORC_General" in l and "fails=" not in l]
+
+        self.assertEqual(len(failures), 8)
+
+    def test_every_empty_output_is_listed(self):
+        text = self.render()
+
+        for index in range(9):
+            self.assertIn(f"Empty{index}.json", text)
+
+    def test_nothing_is_folded_away(self):
+        self.assertNotIn("more", self.render())
+
+    def test_every_log_that_carried_something_is_listed(self):
+        logs = [l for l in self.lines() if "dev.log" in l]
+
+        self.assertEqual(len(logs), 8)
+
+    def test_a_section_with_nothing_in_it_is_left_out(self):
+        hr = full_host_report()
+        hr["outcome"]["failures"] = []
+        hr["empty"].update({"empty_tables": [], "count": 0, "empty_files": [],
+                            "file_count": 0})
+
+        text = self.render(hr)
+
+        self.assertNotIn("failed commands", text)
+        self.assertNotIn("empty tables", text)
+        self.assertIn("fails=0", text)
+
+    def test_an_explicitly_named_view_shows_its_heading_even_at_zero(self):
+        # Asking for a view and getting nothing back cannot be told from a broken report.
+        hr = full_host_report()
+        hr["empty"].update({"empty_tables": [], "count": 0, "empty_files": [],
+                            "file_count": 0})
+
+        text = self.render(hr, views=["empty"], explicit=True)
+
+        self.assertIn("empty tables (0)", text)
+
+    def test_a_view_whose_input_is_missing_still_says_so(self):
+        text = self.render(host_report_not_ingested())
+
+        self.assertIn("no ingest timing", text)
+
+    def test_the_unread_table_names_the_reason(self):
+        line = next(l for l in self.lines() if "autoruns" in l)
+
+        self.assertIn("autoruns", line)
+        self.assertIn("duckdb failed", line)
+        self.assertLessEqual(len(line), 100)
+
+    def test_no_line_runs_past_a_hundred_columns(self):
+        for line in self.lines():
+            self.assertLessEqual(len(line), 100, line)
 
 
 if __name__ == "__main__":

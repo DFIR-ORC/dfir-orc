@@ -72,6 +72,45 @@ class TestReportViews(unittest.TestCase):
         self.assertEqual(rows[0]["bytes"], 5000)
 
 
+class TestStatsTableList(unittest.TestCase):
+    """One list of every table, with size, rows and time together.
+
+    'biggest' and 'slowest' said the same thing twice - on a real run four of the five biggest
+    were also the five slowest - and since the report folds nothing away there is no reason to
+    choose which tables to show at all.
+    """
+
+    TIMING = [
+        {"name": "Big", "rows": 400, "bytes": 9000, "seconds": 0.2},
+        {"name": "Middling", "rows": 300, "bytes": 5000, "seconds": 0.1},
+        {"name": "Small", "rows": 10, "bytes": 100, "seconds": 0.05},
+        {"name": "SlowButSmall", "rows": 20, "bytes": 200, "seconds": 9.0},
+    ]
+
+    def test_the_list_carries_size_rows_and_time_together(self):
+        top = report.build_stats_view(self.TIMING)["top"]
+
+        self.assertEqual(top[0]["name"], "Big")
+        self.assertEqual(top[0]["bytes"], 9000)
+        self.assertEqual(top[0]["rows"], 400)
+        self.assertEqual(top[0]["seconds"], 0.2)
+
+    def test_every_table_is_there(self):
+        names = [t["name"] for t in report.build_stats_view(self.TIMING)["top"]]
+
+        self.assertEqual(sorted(names), ["Big", "Middling", "SlowButSmall", "Small"])
+
+    def test_no_table_is_listed_twice(self):
+        names = [t["name"] for t in report.build_stats_view(self.TIMING)["top"]]
+
+        self.assertEqual(len(names), len(set(names)))
+
+    def test_the_list_is_ordered_by_size(self):
+        top = report.build_stats_view(self.TIMING)["top"]
+
+        self.assertEqual([t["bytes"] for t in top], [9000, 5000, 200, 100])
+
+
 class TestViewAvailability(unittest.TestCase):
     """A missing input must not read as a zero.
 
