@@ -82,6 +82,16 @@ class TestCollectParsing(unittest.TestCase):
             cli._build_parser().parse_args(["collect", "--orc", "orc.exe", "--out", "r",
                                             "--offline", "d.dd", "--vm", "w10"])
 
+    def test_upload_operation_defaults_to_unset_and_only_takes_known_values(self):
+        # Unset, not "copy": collect refuses --upload-operation without --upload, which it
+        # could not tell from the default if the default were a value.
+        base = ["collect", "--orc", "orc.exe", "--out", "r", "--offline", "d.dd"]
+        self.assertIsNone(cli._build_parser().parse_args(base).upload_operation)
+        parsed = cli._build_parser().parse_args(base + ["--upload-operation", "move"])
+        self.assertEqual(parsed.upload_operation, "move")
+        with self.assertRaises(SystemExit):
+            cli._build_parser().parse_args(base + ["--upload-operation", "delete"])
+
     def test_double_dash_arguments_reach_orc_args(self):
         args = cli._build_parser().parse_args(
             ["collect", "--orc", "orc.exe", "--out", "r", "--offline", "d.dd",

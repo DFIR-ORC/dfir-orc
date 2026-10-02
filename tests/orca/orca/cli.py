@@ -2,7 +2,8 @@
 import argparse
 import sys
 
-from . import cms, collect, extract, ingest, merge, outcome, outline, report, diff, getthis
+from . import (cms, collect, extract, ingest, localconfig, merge, outcome, outline, report,
+               diff, getthis)
 
 
 def orc_passthrough(remainder: list[str]) -> list[str]:
@@ -135,6 +136,8 @@ def _build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--public-key", default=None, help="PEM certificate: encrypt to .p7b")
     cl.add_argument("--upload", default=None, help="upload URI for the collected archives")
     cl.add_argument("--bits", action="store_true", help="upload with BITS instead of filecopy")
+    cl.add_argument("--upload-operation", default=None, choices=list(localconfig.UPLOAD_OPERATIONS),
+                    help="keep the uploaded archives locally, or delete them (default: copy)")
     cl.add_argument("--allow-invalid-uri", action="store_true",
                     help="emit the upload URI as one attribute, for %%VARIABLE%% values")
     cl.add_argument("--enable-key", nargs="*", default=None, dest="enable_keys",
@@ -208,5 +211,6 @@ def main(argv=None) -> int:
             enable_keys=args.enable_keys, disable_keys=args.disable_keys, keys=args.keys,
             local_config=args.local_config, credential=args.credential,
             pull=not args.no_pull, force=args.force, copy_orc=not args.no_orc_copy,
+            upload_operation=args.upload_operation,
             orc_args=orc_passthrough(args.orc_args))
     return 0

@@ -149,7 +149,8 @@ def write_record(out_dir: str, record: dict) -> str:
 
 def build_local_config(*, temp_dir: str, public_key: str | None, upload: str | None,
                        bits: bool, allow_invalid_uri: bool, enable_keys, disable_keys, keys,
-                       local_config: str | None, output: str | None = None) -> str:
+                       local_config: str | None, output: str | None = None,
+                       upload_operation: str = "copy") -> str:
     """The configuration text ORC will run with.
 
     'output' sets the <output> element, which only the VM target needs: a run whose results
@@ -159,7 +160,8 @@ def build_local_config(*, temp_dir: str, public_key: str | None, upload: str | N
     spec = None
     if upload:
         spec = localconfig.UploadSpec(uri=upload, bits=bits,
-                                      allow_invalid_uri=allow_invalid_uri)
+                                      allow_invalid_uri=allow_invalid_uri,
+                                      operation=upload_operation)
 
     generated = localconfig.build(output=output, temporary=temp_dir, public_key=public_key,
                                   upload=spec, enable_keys=enable_keys,
@@ -183,7 +185,8 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
                 public_key: str | None = None, upload: str | None = None, bits: bool = False,
                 allow_invalid_uri: bool = False, enable_keys=None, disable_keys=None,
                 keys=None, local_config: str | None = None, credential: str | None = None,
-                pull: bool = True, force: bool = False, copy_orc: bool = True, orc_args=None,
+                pull: bool = True, force: bool = False, copy_orc: bool = True,
+                upload_operation: str | None = None, orc_args=None,
                 run_process=subprocess.run, vm_runner=None) -> int:
     """Run a collection and leave a result directory 'orca diff' can read.
 
@@ -205,6 +208,10 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
                             ("--no-pull", not pull)):
             if value:
                 raise RuntimeError(f"{name} applies to --vm, not to --offline")
+
+    # Same reason: an upload operation with nothing to upload configures nothing.
+    if upload_operation and not upload:
+        raise RuntimeError("--upload-operation applies to --upload")
 
     # Everything that can reject the run is checked BEFORE --out or a temp directory is
     # created: a run that never started must not leave a local.xml behind, or the corrected
@@ -232,6 +239,7 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
                            allow_invalid_uri=allow_invalid_uri, enable_keys=enable_keys,
                            disable_keys=disable_keys, keys=keys, local_config=local_config,
                            credential=credential, pull=pull, force=force, extra=extra,
+                           upload_operation=upload_operation or "copy",
                            vm_runner=vm_runner)
 
     temp_dir = os.path.abspath(temp) if temp else scratch.directory("collect_")
@@ -241,17 +249,20 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
                             public_key=public_key, upload=upload, bits=bits,
                             allow_invalid_uri=allow_invalid_uri, enable_keys=enable_keys,
                             disable_keys=disable_keys, keys=keys, local_config=local_config,
-                            force=force, extra=extra, run_process=run_process)
+                            force=force, extra=extra,
+                            upload_operation=upload_operation or "copy",
+                            run_process=run_process)
 
 
 def _collect_offline(*, orc, orc_to_run, copied_to, target, out_dir, temp_dir, public_key,
                      upload, bits, allow_invalid_uri, enable_keys, disable_keys, keys,
-                     local_config, force, extra, run_process) -> int:
+                     local_config, force, extra, upload_operation, run_process) -> int:
     config_text = build_local_config(temp_dir=temp_dir,
                                      public_key=public_key, upload=upload, bits=bits,
                                      allow_invalid_uri=allow_invalid_uri,
                                      enable_keys=enable_keys, disable_keys=disable_keys,
-                                     keys=keys, local_config=local_config)
+                                     keys=keys, local_config=local_config,
+                                     upload_operation=upload_operation)
     config_path = write_local_config(out_dir, config_text)
 
     if target.kind != "vhd":
@@ -310,7 +321,7 @@ def _check_vm_credential(credential: str | None) -> None:
 def _collect_vm(*, orc, orc_to_run, copied_to, vm, checkpoint, out_dir, temp_dir, guest,
                 target, public_key, upload, bits, allow_invalid_uri, enable_keys,
                 disable_keys, keys, local_config, credential, pull, force, extra,
-                vm_runner=None) -> int:
+                upload_operation, vm_runner=None) -> int:
     # ORC must write where orca can find it: the generated <output> names a guest directory,
     # which is what makes pulling the results possible at all. 'Invoke-OrcVM' did not need
     # this because it never brought anything back.
@@ -319,7 +330,7 @@ def _collect_vm(*, orc, orc_to_run, copied_to, vm, checkpoint, out_dir, temp_dir
                                      allow_invalid_uri=allow_invalid_uri,
                                      enable_keys=enable_keys, disable_keys=disable_keys,
                                      keys=keys, local_config=local_config,
-                                     output=guest.out)
+                                     output=guest.out, upload_operation=upload_operation)
     config_path = write_local_config(out_dir, config_text)
 
     runner = vm_runner or hyperv.run_vm_collect

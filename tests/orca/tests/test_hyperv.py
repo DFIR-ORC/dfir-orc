@@ -101,7 +101,108 @@ class TestScripts(unittest.TestCase):
         script = hyperv.guest_script(
             "w10", credential_expr="Get-Credential", guest=hyperv.GuestPaths(), local_config=r"C:\r\local.xml",
             orc_args=[], out_dir=r"C:\r", result_path=r"C:\r\res.json", pull=False)
-        self.assertNotIn("-FromSession", script)
+        self.assertNotIn(r"'C:\Windows\Temp\orc-out\*'", script)
+
+
+class TestAGuestThatProducedNothing(unittest.TestCase):
+    """'Copy-Item -FromSession -Path <dir>\\*' resolves the wildcard in the guest and fails
+    when it matches nothing, with the same message for an empty directory as for an absent
+    one. A collection that produced no file is not orca failing."""
+
+    def script(self, **overrides):
+        base = dict(credential_expr="Get-Credential", guest=hyperv.GuestPaths(),
+                    local_config=r"C:\r\local.xml", orc_args=[], out_dir=r"C:\r",
+                    result_path=r"C:\r\res.json", pull=True)
+        base.update(overrides)
+        return hyperv.guest_script("w10", **base)
+
+    def test_the_copy_is_guarded_by_what_the_enumeration_found(self):
+        script = self.script()
+        guard = script.index("if ($pulled.Count -gt 0)")
+        self.assertLess(guard, script.index(r"-Path 'C:\Windows\Temp\orc-out\*'"))
+
+    def test_an_empty_output_directory_is_reported_not_thrown(self):
+        script = self.script()
+        self.assertIn("Write-Warning", script[script.index("if ($pulled.Count -gt 0)"):])
+        self.assertNotIn("throw", script)
+
+    def test_the_warning_names_the_directory_and_where_to_look(self):
+        # The two things the failure never said: which directory was empty, and that what ORC
+        # printed is now on disk.
+        script = self.script()
+        warning = script[script.index("else {"):]
+        self.assertIn(r"'C:\Windows\Temp\orc-out'", warning)
+        self.assertIn(r"'C:\r\stdout.log'", warning)
+
+
+class TestConsoleCapture(unittest.TestCase):
+    """What ORC printed. Start-Process in a remote session sends it nowhere, so a guest run
+    that produced no results could only report that the results were missing."""
+
+    def script(self, **overrides):
+        base = dict(credential_expr="Get-Credential", guest=hyperv.GuestPaths(),
+                    local_config=r"C:\r\local.xml", orc_args=[], out_dir=r"C:\r",
+                    result_path=r"C:\r\res.json", pull=True)
+        base.update(overrides)
+        return hyperv.guest_script("w10", **base)
+
+    def test_both_streams_are_redirected_to_their_own_file(self):
+        # Start-Process refuses one path for both, so they cannot be merged into one file.
+        script = self.script()
+        self.assertIn(r"-RedirectStandardOutput 'C:\Windows\Temp\orc-console\stdout.log'",
+                      script)
+        self.assertIn(r"-RedirectStandardError 'C:\Windows\Temp\orc-console\stderr.log'",
+                      script)
+
+    def test_the_capture_directory_is_created_before_orc_starts(self):
+        script = self.script()
+        self.assertLess(script.index(r"Directory -Force 'C:\Windows\Temp\orc-console'"),
+                        script.index("Start-Process"))
+
+    def test_it_is_not_written_under_the_output_directory(self):
+        # An upload with operation="move" empties that directory, and the capture is also
+        # kept out of the pulled result set 'orca diff' compares file by file.
+        guest = hyperv.GuestPaths()
+        self.assertFalse(guest.console.lower().startswith(guest.out.lower() + "\\"))
+
+    def test_it_comes_back_before_the_results(self):
+        # The results pull is what fails when ORC produced nothing, which is exactly when the
+        # capture is the answer: pulled afterwards it would be lost to that failure.
+        script = self.script()
+        self.assertLess(script.index(r"-Path 'C:\Windows\Temp\orc-console\*'"),
+                        script.index(r"-Path 'C:\Windows\Temp\orc-out\*'"))
+
+    def test_it_comes_back_even_without_pull(self):
+        # '--no-pull' is about the collected artifacts, not about what ORC said.
+        script = self.script(pull=False)
+        self.assertIn(r"-Path 'C:\Windows\Temp\orc-console\*'", script)
+
+    def test_failing_to_bring_it_back_does_not_fail_the_run(self):
+        # A diagnostic must never be the step that fails the collection.
+        script = self.script()
+        copy_at = script.index(r"-Path 'C:\Windows\Temp\orc-console\*'")
+        self.assertIn("try {", script[:copy_at])
+        self.assertIn("catch {", script[copy_at:])
+
+    def test_the_destination_is_named_on_the_console(self):
+        # The file, not a directory: it is where to look, so say where to look.
+        self.assertIn(r"'C:\r\stdout.log'", self.script())
+
+    def test_the_two_files_land_directly_in_the_result_directory(self):
+        # One directory holds a collection: the archives, the local.xml it ran with, the run
+        # record, and what ORC printed. A directory of its own for two files buys nothing.
+        script = self.script()
+
+        self.assertIn(r"-Path 'C:\Windows\Temp\orc-console\*' -Destination 'C:\r'", script)
+        self.assertNotIn(r"'C:\r\orc-console'", script)
+
+    def test_the_exit_code_is_cast_before_it_is_reported(self):
+        # Invoke-Command decorates everything it returns with PSComputerName, RunspaceId and
+        # PSShowComputerName, and ConvertTo-Json writes those out, so without the cast the
+        # exit code reaches orca as an object instead of a number.
+        script = self.script()
+        self.assertIn("$code = [int]$code", script)
+        self.assertLess(script.index("$code = [int]$code"), script.index("exit_code = $code"))
 
 
 class TestTheSecretNeverLeaves(unittest.TestCase):

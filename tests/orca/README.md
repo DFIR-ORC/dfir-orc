@@ -126,6 +126,12 @@ copied in and run from there, so the result directory holds the exact binary tha
 and your build output is free to be rebuilt while a collection runs. `--no-orc-copy` runs it
 where it is instead. A VHD(X) attach needs an elevated shell.
 
+**`--upload` keeps the local archives.** orca writes `operation="copy"` on the generated
+`<upload>`, ORC's own default: a result set that has been moved away cannot be ingested or
+diffed, and on the VM target `move` empties the very directory the results are pulled from, so
+a run that uploaded perfectly would end on a pull with nothing to copy. `--upload-operation
+move` asks for the other behaviour, when sending the collection away IS the test.
+
 **`--offline` needs a config that defines `ORC_Offline`.** Passing `/Offline=` makes
 WolfLauncher explicitly select that keyword, so a configuration without such an `<archive>`
 stops with `Key not found: ORC_Offline`. Production configurations have one; a minimal test
@@ -134,7 +140,28 @@ without `--credential` it prompts, and `--credential` reads `.clixml`/`.xml`
 (`Get-Credential | Export-Clixml`) or `.json` (`{"user": ..., "password": ...}`).
 
 ORC's own non-zero exit is not treated as a failed collect: the archives it did produce are
-kept and the code is returned, because a partial collection is still diffable.
+kept and the code is returned, because a partial collection is still diffable. A VM run that
+produced **no** file is reported the same way: the pull warns which guest directory held
+nothing instead of failing on it, `collect.json` records an empty `pulled`, and ORC's exit code
+is still what `collect` returns. An `operation="move"` upload reaches that state on purpose.
+
+On the VM target, **what ORC printed comes back as `--out\stdout.log` and `--out\stderr.log`**,
+beside the archives. ORC runs there under `Start-Process` in a remote session, so nothing it
+prints reaches your console: without those files a guest run that collected nothing can only
+report that the results are missing, not why. They are brought back before the archives and
+whatever `--no-pull` says, since they are the diagnosis for a run that produced nothing.
+
+In the **guest** they are written outside ORC's output directory, which is what keeps them out
+of an `operation="move"` upload and out of the pulled result set that `orca diff` compares file
+by file; only the two files are copied out of there, into `--out` itself. A capture directory
+that stayed empty because ORC never started comes back as a warning rather than a failure -
+`Copy-Item -FromSession` cannot resolve a wildcard that matches nothing, and a diagnostic must
+never be the step that fails the collection.
+
+Note that `--out` is then a directory holding `stdout.log`, so `orca report --out` counts those
+two among the run's logs, and `orca ingest` copies them into the run beside WolfLauncher's own
+log. That is usually what you want from a collection directory; it is a change from them being
+tucked away in a subdirectory.
 
 ### Ingest
 

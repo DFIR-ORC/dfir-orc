@@ -261,6 +261,27 @@ class TestRunCollectOffline(unittest.TestCase):
         with open(os.path.join(self.out, "collect.json"), "r", encoding="utf-8") as f:
             self.assertIsNone(json.load(f)["orc"].get("copied_to"))
 
+    def test_an_upload_keeps_the_local_archive_by_default(self):
+        collect.run_collect(orc=self.orc, out=self.out, offline=self.image,
+                            upload=r"\\srv\share\results", run_process=FakeProcess())
+        with open(os.path.join(self.out, "local.xml"), "r", encoding="utf-8") as f:
+            self.assertIn('operation="copy"', f.read())
+
+    def test_upload_operation_move_is_passed_on(self):
+        collect.run_collect(orc=self.orc, out=self.out, offline=self.image,
+                            upload=r"\\srv\share\results", upload_operation="move",
+                            run_process=FakeProcess())
+        with open(os.path.join(self.out, "local.xml"), "r", encoding="utf-8") as f:
+            self.assertIn('operation="move"', f.read())
+
+    def test_an_upload_operation_without_an_upload_is_refused(self):
+        # Like --checkpoint on an offline run: it would configure nothing, and accepting it
+        # would read as a run that did what was asked.
+        with self.assertRaises(RuntimeError) as caught:
+            collect.run_collect(orc=self.orc, out=self.out, offline=self.image,
+                                upload_operation="move", run_process=FakeProcess())
+        self.assertIn("--upload-operation", str(caught.exception))
+
     def test_a_rejected_run_leaves_no_output_directory_behind(self):
         # The target is checked before --out is created, so a run that never started does not
         # leave a local.xml that makes the corrected retry demand --force.
@@ -355,6 +376,25 @@ class TestRunCollectVm(unittest.TestCase):
                             credential=os.path.join(self.dir.name, "k.clixml"),
                             vm_runner=self.runner())
         self.assertFalse(self.calls[0]["pull"])
+
+    def test_an_upload_does_not_empty_the_directory_the_results_are_pulled_from(self):
+        # operation="move" has ORC delete every file it uploaded, including the run
+        # artifacts, so the guest output directory the pull reads is left empty and the pull
+        # fails on a run that otherwise succeeded.
+        collect.run_collect(orc=self.orc, out=self.out, vm="w10",
+                            upload=r"\\srv\share\results",
+                            credential=os.path.join(self.dir.name, "k.clixml"),
+                            vm_runner=self.runner())
+        with open(os.path.join(self.out, "local.xml"), "r", encoding="utf-8") as f:
+            self.assertIn('operation="copy"', f.read())
+
+    def test_upload_operation_move_reaches_the_guest_config(self):
+        collect.run_collect(orc=self.orc, out=self.out, vm="w10",
+                            upload=r"\\srv\share\results", upload_operation="move",
+                            credential=os.path.join(self.dir.name, "k.clixml"),
+                            vm_runner=self.runner())
+        with open(os.path.join(self.out, "local.xml"), "r", encoding="utf-8") as f:
+            self.assertIn('operation="move"', f.read())
 
     def test_a_failing_guest_run_propagates_its_code(self):
         code = collect.run_collect(orc=self.orc, out=self.out, vm="w10",

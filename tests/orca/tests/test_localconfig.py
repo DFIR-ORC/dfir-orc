@@ -33,10 +33,36 @@ class TestBuild(unittest.TestCase):
         self.assertEqual(upload.get("job"), "orc")
         self.assertEqual(upload.get("method"), "filecopy")
         self.assertEqual(upload.get("mode"), "sync")
-        self.assertEqual(upload.get("operation"), "move")
+        self.assertEqual(upload.get("operation"), "copy")
         self.assertEqual(upload.get("server"), "file://192.168.0.1")
         self.assertEqual(upload.get("path"), "/Orc/Current")
         self.assertIsNone(upload.get("uri"))
+
+    def test_the_uploaded_archive_is_kept_locally_by_default(self):
+        # operation="move" has ORC delete what it uploaded. A result set that is gone cannot
+        # be ingested or diffed, and for the VM target it empties the directory the results
+        # are pulled from, so 'copy' is the default on both shapes of the element.
+        for spec in (localconfig.UploadSpec(uri="file://h/s"),
+                     localconfig.UploadSpec(uri="file://h/s", allow_invalid_uri=True)):
+            upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+            self.assertEqual(upload.get("operation"), "copy")
+
+    def test_move_is_available_on_both_shapes(self):
+        for spec in (localconfig.UploadSpec(uri="file://h/s", operation="move"),
+                     localconfig.UploadSpec(uri="file://h/s", allow_invalid_uri=True,
+                                            operation="move")):
+            upload = ET.fromstring(localconfig.build(upload=spec)).find("upload")
+            self.assertEqual(upload.get("operation"), "move")
+
+    def test_an_unknown_operation_is_refused(self):
+        # ORC reads an unrecognized value as 'copy' and says nothing, so a typo would quietly
+        # not do what was asked.
+        with self.assertRaises(RuntimeError) as caught:
+            localconfig.UploadSpec(uri="file://h/s", operation="delete")
+        message = str(caught.exception)
+        self.assertIn("delete", message)
+        self.assertIn("copy", message)
+        self.assertIn("move", message)
 
     def test_upload_bits_is_async(self):
         spec = localconfig.UploadSpec(uri="http://srv/orc", bits=True)

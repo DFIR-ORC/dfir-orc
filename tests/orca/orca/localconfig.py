@@ -4,13 +4,30 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 
+UPLOAD_OPERATIONS = ("copy", "move")
+
+
 @dataclass(frozen=True)
 class UploadSpec:
     """An <upload> destination. 'bits' selects BITS (and async), 'allow_invalid_uri' emits a
-    single 'uri' attribute so the value can carry environment variables ORC expands itself."""
+    single 'uri' attribute so the value can carry environment variables ORC expands itself.
+
+    'operation' is ORC's own: 'copy' leaves the archive where it was written, 'move' deletes
+    it once the upload reports success. 'copy' is the default, as it is in ORC, because a
+    result set that is gone cannot be ingested or diffed, and for the VM target 'move' empties
+    the very directory the results are pulled from.
+    """
     uri: str
     bits: bool = False
     allow_invalid_uri: bool = False
+    operation: str = "copy"
+
+    def __post_init__(self):
+        # ORC reads an unrecognized 'operation' as 'copy' and says nothing, so a typo would
+        # quietly not do what was asked. Refuse it here instead.
+        if self.operation not in UPLOAD_OPERATIONS:
+            raise RuntimeError(f"unknown upload operation '{self.operation}'; known "
+                               f"operations are {' and '.join(UPLOAD_OPERATIONS)}")
 
 
 def unc_to_file_uri(value: str) -> str:
@@ -33,7 +50,7 @@ def upload_attributes(spec: UploadSpec) -> dict[str, str]:
 
     if spec.allow_invalid_uri:
         return {"job": "orc", "method": method, "uri": spec.uri, "mode": mode,
-                "operation": "move"}
+                "operation": spec.operation}
 
     parts = urlsplit(unc_to_file_uri(spec.uri))
     if not parts.scheme or not parts.hostname:
@@ -56,7 +73,7 @@ def upload_attributes(spec: UploadSpec) -> dict[str, str]:
         "server": f"{parts.scheme}://{parts.hostname}{port}",
         "path": parts.path + (f"?{parts.query}" if parts.query else ""),
         "mode": mode,
-        "operation": "move",
+        "operation": spec.operation,
     }
 
 
