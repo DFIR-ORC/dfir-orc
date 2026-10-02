@@ -10,6 +10,29 @@ class TestCli(unittest.TestCase):
         self.assertEqual(args.archive, "arch.7z")
         self.assertEqual(args.out, "run")
 
+    def test_check_takes_the_archive_options_extract_takes(self):
+        args = cli._build_parser().parse_args(
+            ["check", "ORC.7z.p7b", "--private-key", "k.pem", "--depth", "2",
+             "--work-dir", "E:/work"])
+
+        self.assertEqual(args.command, "check")
+        self.assertEqual(args.archive, "ORC.7z.p7b")
+        self.assertEqual(args.private_key, "k.pem")
+        self.assertEqual(args.depth, 2)
+        self.assertEqual(args.work_dir, "E:/work")
+
+    def test_check_reads_the_outcome_unless_told_not_to(self):
+        parser = cli._build_parser()
+
+        self.assertFalse(parser.parse_args(["check", "a.7z"]).no_outcome)
+        self.assertTrue(parser.parse_args(["check", "a.7z", "--no-outcome"]).no_outcome)
+
+    def test_check_has_the_two_summary_shapes_the_other_commands_have(self):
+        args = cli._build_parser().parse_args(["check", "a.7z", "--json", "--one-line"])
+
+        self.assertTrue(args.json)
+        self.assertTrue(args.one_line)
+
     def test_ingest_without_out_defaults_beside_the_archive(self):
         args = cli._build_parser().parse_args(["ingest", "arch.7z"])
         self.assertIsNone(args.out)

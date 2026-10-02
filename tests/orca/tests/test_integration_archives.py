@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
-from orca import cli, cms, engine, journal, layout, sevenzip
+from orca import check, cli, cms, engine, journal, layout, sevenzip
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CI_DIR = os.path.abspath(os.path.join(HERE, "..", "..", "..", "tools", "ci"))
@@ -41,9 +41,10 @@ def journaled(payload: bytes) -> bytes:
             + struct.pack("<4sIQ", journal.OP_CLOSE, 0, 0))
 
 
-@unittest.skipUnless(SEVEN_ZIP and DUCKDB and OPENSSL and os.path.exists(PRIVATE_KEY),
-                     "needs 7z, duckdb, openssl and the CI test key")
-class TestArchiveDiff(unittest.TestCase):
+class OrcFixtures:
+    """Builds the collections these tests read: ORC-shaped archives, the '.p7b' envelope over a
+    journaled stream, and the sealed sidecars WolfLauncher leaves beside them."""
+
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.dir.cleanup)
@@ -118,6 +119,75 @@ class TestArchiveDiff(unittest.TestCase):
                        check=True, capture_output=True)
         return sealed
 
+
+@unittest.skipUnless(SEVEN_ZIP and OPENSSL and os.path.exists(PRIVATE_KEY),
+                     "needs 7z, openssl and the CI test key")
+class TestCheckCollection(OrcFixtures, unittest.TestCase):
+    """'orca check' over a real encrypted collection.
+
+    No duckdb in the skip list: a check reads archives rather than tables, so it must not skip
+    on an engine it never loads."""
+
+    def sealed_collection(self) -> str:
+        """An encrypted collection as ORC leaves it: a '.p7b' archive and a sealed Outcome
+        naming it, with the size and sha1 of the sealed file - which is what ORC hashes."""
+        sealed = self.encrypt(self.build_archive("HOST", "200", "aaaa"))
+        outcome = {"dfir-orc": {"outcome": {"computer_name": "HOST", "command_set": [
+            {"name": "General", "archive": {"name": os.path.basename(sealed),
+                                            "size": os.path.getsize(sealed),
+                                            "sha1": check.file_sha1(sealed)}}]}}}
+        self.seal("ORC_HOST_Outcome.json", json.dumps(outcome))
+        return self.dumps
+
+    def check(self, source: str, *extra) -> tuple:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = cli.main(["check", source, "--private-key", PRIVATE_KEY,
+                             "--work-dir", self.work, *extra])
+        return code, out.getvalue()
+
+    def test_check_verifies_an_encrypted_collection_end_to_end(self):
+        code, output = self.check(self.sealed_collection())
+
+        self.assertEqual(code, 0, output)
+        # The sealed Outcome had to be unsealed to be read, the '.p7b' hashed, the CMS envelope
+        # and the journal replayed, and the nested container tested inside the archive.
+        self.assertIn("sha1 ok", output)
+        self.assertIn("GetThis.7z", output)
+        self.assertIn("0 failed", output)
+
+    def test_check_writes_nothing_into_the_collection(self):
+        source = self.sealed_collection()
+        before = sorted(os.listdir(source))
+
+        self.check(source)
+
+        self.assertEqual(sorted(os.listdir(source)), before)
+
+    def test_check_depth_one_opens_the_envelope_and_stops(self):
+        code, output = self.check(self.sealed_collection(), "--depth", "1")
+
+        self.assertEqual(code, 0, output)
+        self.assertIn("envelope opened", output)
+        self.assertNotIn("GetThis.7z", output)
+
+    def test_check_fails_when_the_envelope_cannot_be_opened(self):
+        source = self.sealed_collection()
+        sealed = os.path.join(source, "DFIR-ORC_HOST.p7b")
+        with open(sealed, "rb") as f:
+            whole = f.read()
+        with open(sealed, "wb") as f:
+            f.write(whole[:len(whole) // 2])
+
+        code, output = self.check(source, "--no-outcome")
+
+        self.assertEqual(code, 1)
+        self.assertIn(check.FAILED, output)
+
+
+@unittest.skipUnless(SEVEN_ZIP and DUCKDB and OPENSSL and os.path.exists(PRIVATE_KEY),
+                     "needs 7z, duckdb, openssl and the CI test key")
+class TestArchiveDiff(OrcFixtures, unittest.TestCase):
     def diff(self, new: str, reference: str, *extra) -> str:
         out = io.StringIO()
         with redirect_stdout(out):

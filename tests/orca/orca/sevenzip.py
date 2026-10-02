@@ -71,6 +71,52 @@ def parse_listing(lines: list[str]) -> list[ArchiveEntry]:
     return entries
 
 
+@dataclass(frozen=True)
+class ArchiveTest:
+    """What '7z t' said about one archive: its exit code and what it complained about."""
+    code: int
+    problems: list[str]
+
+    @property
+    def ok(self) -> bool:
+        return self.code == 0
+
+
+def parse_test_output(lines: list[str]) -> list[str]:
+    """What '7z t' complained about, one string per problem, in the order 7-Zip printed them.
+
+    Three shapes carry a finding: 'ERROR: <kind> : <entry>' for an entry that did not decode,
+    'Open ERROR: <reason>' for an archive that could not be opened at all, and the lines of the
+    trailing 'ERRORS:' block, which is where the reason for an unopenable archive ends up. A
+    bare 'ERROR: <name>' is 7-Zip restating the file it is working on - no " : " and no finding
+    - so it is dropped: a report quoting the archive's own name back says nothing.
+    """
+    problems: list[str] = []
+    in_block = False
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            in_block = False
+            continue
+
+        if line == "ERRORS:":
+            in_block = True
+            continue
+
+        if in_block:
+            problems.append(line)
+            continue
+
+        if line.startswith("Open ERROR: "):
+            problems.append(line[len("Open ERROR: "):].strip())
+            continue
+
+        if line.startswith("ERROR: ") and " : " in line[len("ERROR: "):]:
+            problems.append(line[len("ERROR: "):].strip())
+
+    return problems
+
+
 def find_7z() -> str | None:
     found = shutil.which("7z")
     if found:
@@ -86,6 +132,28 @@ def list_entries(seven_zip: str, archive: str, password: str | None = None) -> l
     args.append(archive)
     result = subprocess.run(args, capture_output=True, text=True)
     return parse_listing(result.stdout.splitlines())
+
+
+def test_archive(seven_zip: str, archive: str, password: str | None = None) -> ArchiveTest:
+    """Decompress every entry of 'archive' to nothing, verifying each stored CRC on the way.
+
+    The only layer that reads the payload: a listing reports the CRC the archive claims for an
+    entry, this recomputes it. Nothing is written, so it costs a read and some CPU, not space.
+
+    '-p' is passed even with no password, and stdin is closed: an encrypted entry would
+    otherwise make 7-Zip prompt on the console, and a verification pass that hangs waiting for
+    a password nobody is there to type is worse than one that reports the archive as failed.
+    """
+    args = [seven_zip, "t", archive, "-y", "-bsp0", "-p" + (password or "")]
+    result = subprocess.run(args, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    problems = parse_test_output(result.stdout.splitlines() + result.stderr.splitlines())
+    if result.returncode and not problems:
+        # Fail closed: a non-zero 7-Zip whose output held nothing quotable still has to read
+        # as a failure, and with whatever it did say rather than an empty list.
+        message = (result.stderr or result.stdout or "").strip()
+        problems = [message or f"7z exited {result.returncode}"]
+
+    return ArchiveTest(result.returncode, problems)
 
 
 def extract_entry(seven_zip: str, archive: str, entry_path: str, dest_dir: str,

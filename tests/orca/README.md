@@ -37,6 +37,13 @@ orca report E:\runs\host
 `ingest` accepts either a single `.7z` archive or a directory containing an ORC Outcome JSON and
 its top-level archives.
 
+**Before trusting a collection, verify it** - no expansion, bounded disk, non-zero exit if
+anything is wrong:
+
+```powershell
+orca check E:\dumps\DFIR-ORC_HOST.7z            # see "Check" below
+```
+
 ---
 
 ## What a run directory contains
@@ -378,6 +385,82 @@ archive is decrypted again and the sidecars unsealed again, whatever is already 
 reuse check is deliberately cheap - the file exists and looks like a 7z - so a copy left behind
 by an interrupted run passes it and then fails as `Unexpected end of archive` on every
 subsequent run. `--refresh` is how you get out of that without deleting the file by hand.
+
+### Check (is this collection intact?)
+
+```powershell
+# every layer: the Outcome's sha1, the .p7b envelope, then every container
+orca check E:\dumps\DFIR-ORC_HOST.7z.p7b --private-key contoso.com.key
+
+# a whole collection directory, and a work dir to keep the decrypted archive in
+orca check \\host\share\ORC_WS_H2ODEV_20260921_172528 --private-key contoso.com.key `
+    --work-dir E:\orca-work
+
+# just the envelope (decrypts, replays the journal, stops)
+orca check E:\dumps\HOST.7z.p7b --private-key contoso.com.key --depth 1
+
+# summary shapes, and the exit code is what a pipeline reads
+orca check E:\dumps\HOST.7z --one-line
+orca check E:\dumps\HOST.7z --json
+```
+
+`check` answers one question - *is this collection still what ORC wrote?* - and answers it
+**without expanding the tree**. `extract` on the real collection writes 1.6 GB; `check` on the
+same one peaks at the decrypted archive plus **one container at a time**, and verifies more than
+a listing can, because it decompresses every entry and recomputes its CRC.
+
+Three layers, cheapest first:
+
+| layer | what it proves | cost |
+|:---|:---|:---|
+| Outcome | the file ORC recorded is on disk, at the recorded size, with the recorded sha1 | one read per top archive |
+| envelope | the CMS envelope decrypts and the journal replays into a real archive | the decrypt (kept and reused) |
+| container | every entry of every archive decompresses and its CRC still matches | CPU, one container on disk at a time |
+
+The sha1 layer matters because it is the only one that can see a **truncated** collection: a
+short archive whose headers are gone is unopenable, but a short archive can also be internally
+consistent, and then `7z t` has nothing to complain about. ORC records the sha1 of the file it
+wrote - for an encrypted run the hash stream sits below the CMS encoder, so it is the `.p7b`'s
+own hash - which is why this layer needs no key at all. Turn it off with `--no-outcome`.
+
+On the real 158 MB encrypted collection, 14 checks in 8.5 s:
+
+```
+  ok  ORC_WorkStation_DESKTOP-U9N26B0_General.7z.p7b  sha1 ok, 158444878 bytes
+  ok  ORC_WorkStation_DESKTOP-U9N26B0_General.7z      88 entries, 157808210 bytes
+  ok    USNInfo.7z                                    2 entries, 3885063 bytes
+  ok    GetThis_Protected.7z                          1655 entries, 46844872 bytes
+  ok    Residents.7z                                  41222 entries, 10791279 bytes
+  ...
+  14 checked, 14 ok, 0 failed
+```
+
+and with one byte of those 157 MB flipped, `check` names the container it landed in and exits 1:
+
+```
+  FAILED  ORC_DAMAGED_General.7z  CRC Failed : GetThis_Default.7z
+
+  1 checked, 0 ok, 1 failed
+```
+
+**The verdicts.** `ok`, and six ways to be unhappy: `FAILED` (7-Zip could not read an entry
+through), `MISSING` (the Outcome names an archive the directory lacks), `SHORT` / `size differs`,
+`sha1 differs`. Three more are reported without failing the run, because none of them means
+anything was lost: `empty` (a 0-byte archive, which ORC does write, and which the Outcome agrees
+is 0), `warnings` (7-Zip's exit code 1), and `unsealed` (only the decrypted copy is on disk, so
+the Outcome's sha1 - taken over the sealed file - has nothing to compare against). The exit code
+is 1 if anything failed, which is the point of the command in CI.
+
+**Nothing is written to the collection.** `ingest` and `extract` unseal sidecars beside the
+archives on purpose, to be reused; a verification pass must leave the evidence as it found it,
+so `check` unseals what it needs into the work dir instead. `--work-dir` is a keep dir as it is
+everywhere else: the decrypted archive lands there and the next `check`, `ingest` or `extract`
+of the same collection reuses it rather than paying for the decrypt again.
+
+**What it does not do.** An archive that fails is not recursed into - its containers would be
+extracted out of an archive 7-Zip has just said it cannot read through, and the entry that
+failed is already named. So a partially damaged top archive tells you *what* broke, not which of
+its undamaged containers are still sound; run `extract` when you need to know that.
 
 ### Where orca writes
 

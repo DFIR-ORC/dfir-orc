@@ -2,8 +2,8 @@
 import argparse
 import sys
 
-from . import (cms, collect, extract, ingest, localconfig, merge, outcome, outline, report,
-               diff, getthis)
+from . import (check, cms, collect, extract, ingest, localconfig, merge, outcome, outline,
+               report, diff, getthis)
 
 
 def orc_passthrough(remainder: list[str]) -> list[str]:
@@ -54,6 +54,26 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="stop after this many layers of container: 1 decrypts the .p7b, "
                          "2 also expands the archive, 3 also expands its containers "
                          "(default: all of them)")
+
+    ck = sub.add_parser("check", help="verify an archive's integrity without expanding it")
+    ck.add_argument("archive", help="ORC .7z/.p7b file or a dir of results")
+    ck.add_argument("--password", default=None, help="archive password")
+    ck.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
+    ck.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
+                    help="pin the .p7b decryption backend")
+    ck.add_argument("--work-dir", default=None,
+                    help="keep the decrypted archive here instead of throwing it away, and "
+                         "hold the one container at a time the walk needs on disk")
+    ck.add_argument("--refresh", action="store_true",
+                    help="re-decrypt and re-unseal even if the products are already there")
+    ck.add_argument("--depth", type=int, default=None,
+                    help="stop after this many layers of container: 1 opens the .p7b envelope, "
+                         "2 also tests the archive, 3 also tests its containers "
+                         "(default: all of them)")
+    ck.add_argument("--no-outcome", action="store_true",
+                    help="skip the size/sha1 check against the Outcome json")
+    ck.add_argument("--one-line", action="store_true", help="one summary line")
+    ck.add_argument("--json", action="store_true", help="summary JSON")
 
     mg = sub.add_parser("merge", help="run dir -> wide dfir-orc.parquet")
     mg.add_argument("--run", required=True, help="an ingested run dir")
@@ -171,6 +191,12 @@ def main(argv=None) -> int:
         extract.run_extract(args.archive, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
                             work_dir=args.work_dir, depth=args.depth, refresh=args.refresh)
+    elif args.command == "check":
+        return check.run_check(args.archive, password=args.password,
+                               private_key=args.private_key, cms_backend=args.cms_backend,
+                               work_dir=args.work_dir, depth=args.depth, refresh=args.refresh,
+                               outcome=not args.no_outcome, one_line=args.one_line,
+                               as_json=args.json)
     elif args.command == "merge":
         overrides = {}
         for item in (args.ts_col or []):

@@ -1,8 +1,12 @@
 import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
 from orca import sevenzip
+
+SEVEN_ZIP = sevenzip.find_7z()
 
 LISTING = """
 7-Zip 24.09
@@ -110,6 +114,136 @@ class TestIsArchive(unittest.TestCase):
 
     def test_a_missing_file_is_not_an_archive(self):
         self.assertFalse(sevenzip.is_archive(os.path.join(self.dir.name, "absent")))
+
+
+# '7z t' output, verbatim from 7-Zip 26.03: a data error names every entry it could not
+# decode, while an archive that cannot be opened at all says so in a trailing 'ERRORS:' block.
+TEST_DATA_ERROR = """
+7-Zip (r) 26.03 (x86) : Igor Pavlov : Public domain : 2026-09-03
+
+Testing archive: crc.7z
+--
+Path = crc.7z
+Type = 7z
+
+ERROR: Data Error : src\\a.txt
+ERROR: Data Error : src\\b.txt
+
+Sub items Errors: 2
+
+Archives with Errors: 1
+
+Sub items Errors: 2
+"""
+
+TEST_CANNOT_OPEN = """
+7-Zip (r) 26.03 (x86) : Igor Pavlov : Public domain : 2026-09-03
+
+Testing archive: trunc.7z
+ERROR: trunc.7z
+trunc.7z
+Open ERROR: Cannot open the file as [7z] archive
+
+
+ERRORS:
+Unexpected end of archive
+
+Can't open as archive: 1
+Files: 0
+"""
+
+TEST_OK = """
+7-Zip (r) 26.03 (x86) : Igor Pavlov : Public domain : 2026-09-03
+
+Testing archive: ok.7z
+--
+Path = ok.7z
+Type = 7z
+
+Everything is Ok
+
+Folders: 1
+Files: 2
+"""
+
+
+class TestParseTestOutput(unittest.TestCase):
+    def test_a_clean_test_reports_no_problem(self):
+        self.assertEqual(sevenzip.parse_test_output(TEST_OK.splitlines()), [])
+
+    def test_a_data_error_names_every_entry_that_failed(self):
+        self.assertEqual(sevenzip.parse_test_output(TEST_DATA_ERROR.splitlines()),
+                         ["Data Error : src\\a.txt", "Data Error : src\\b.txt"])
+
+    def test_an_unopenable_archive_reports_the_reason_not_its_own_name(self):
+        # 'ERROR: trunc.7z' is 7-Zip restating the file it is on; the finding is in the two
+        # lines after it, and a report that quoted the name instead would say nothing.
+        self.assertEqual(sevenzip.parse_test_output(TEST_CANNOT_OPEN.splitlines()),
+                         ["Cannot open the file as [7z] archive", "Unexpected end of archive"])
+
+
+@unittest.skipUnless(SEVEN_ZIP, "7z.exe not found")
+class TestTestArchive(unittest.TestCase):
+    """'7z t' on real archives: the only layer that reads the payload rather than the headers."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.source = os.path.join(self.dir.name, "a.txt")
+        with open(self.source, "w", encoding="utf-8") as f:
+            # Long enough that the packed stream spans the offset the corruption tests hit.
+            f.write("hello world, a reasonably long line to actually compress " * 40)
+
+    def archive(self, name: str, password: str | None = None) -> str:
+        path = os.path.join(self.dir.name, name)
+        args = [SEVEN_ZIP, "a", "-t7z", path, self.source]
+        if password:
+            args.append("-p" + password)
+        subprocess.run(args, capture_output=True, text=True, check=True)
+        return path
+
+    def corrupt(self, path: str, offset: int) -> str:
+        with open(path, "r+b") as f:
+            f.seek(offset)
+            byte = f.read(1)
+            f.seek(offset)
+            f.write(bytes([byte[0] ^ 0xFF]))
+        return path
+
+    def test_a_sound_archive_tests_clean(self):
+        result = sevenzip.test_archive(SEVEN_ZIP, self.archive("ok.7z"))
+        self.assertTrue(result.ok)
+        self.assertEqual(result.code, 0)
+        self.assertEqual(result.problems, [])
+
+    def test_a_flipped_byte_in_the_payload_names_the_entry_that_failed(self):
+        # Past the 32-byte signature header, so the headers still parse and the CRC check is
+        # what catches it - the corruption a listing alone cannot see.
+        result = sevenzip.test_archive(SEVEN_ZIP, self.corrupt(self.archive("crc.7z"), 60))
+        self.assertFalse(result.ok)
+        self.assertEqual(result.code, 2)
+        self.assertTrue(any("a.txt" in problem for problem in result.problems), result.problems)
+
+    def test_a_truncated_archive_reports_the_unexpected_end(self):
+        path = self.archive("trunc.7z")
+        with open(path, "rb") as f:
+            whole = f.read()
+        with open(path, "wb") as f:
+            f.write(whole[:len(whole) // 2])
+
+        result = sevenzip.test_archive(SEVEN_ZIP, path)
+        self.assertFalse(result.ok)
+        self.assertTrue(any("Unexpected end of archive" in problem for problem in result.problems),
+                        result.problems)
+
+    def test_a_password_protected_archive_passes_only_with_its_password(self):
+        path = self.archive("sealed.7z", password="S3cret")
+        self.assertFalse(sevenzip.test_archive(SEVEN_ZIP, path).ok)
+        self.assertTrue(sevenzip.test_archive(SEVEN_ZIP, path, password="S3cret").ok)
+
+    def test_a_missing_file_is_a_problem_not_an_exception(self):
+        result = sevenzip.test_archive(SEVEN_ZIP, os.path.join(self.dir.name, "absent.7z"))
+        self.assertFalse(result.ok)
 
 
 if __name__ == "__main__":
