@@ -144,6 +144,8 @@ def _build_parser() -> argparse.ArgumentParser:
     cl.add_argument("--key", nargs="*", default=None, dest="keys",
                     help="run only these ORC keyword(s)")
     cl.add_argument("--local-config", default=None, help="a local.xml to merge over")
+    cl.add_argument("--no-orc-copy", action="store_true",
+                    help="run ORC from where it is instead of copying it into --out first")
     cl.add_argument("--force", action="store_true",
                     help="collect into a non-empty --out, and pass /overwrite to ORC")
     cl.add_argument("orc_args", nargs=argparse.REMAINDER,
@@ -205,6 +207,6 @@ def main(argv=None) -> int:
             upload=args.upload, bits=args.bits, allow_invalid_uri=args.allow_invalid_uri,
             enable_keys=args.enable_keys, disable_keys=args.disable_keys, keys=args.keys,
             local_config=args.local_config, credential=args.credential,
-            pull=not args.no_pull, force=args.force,
+            pull=not args.no_pull, force=args.force, copy_orc=not args.no_orc_copy,
             orc_args=orc_passthrough(args.orc_args))
     return 0

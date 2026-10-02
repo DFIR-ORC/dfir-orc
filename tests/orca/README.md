@@ -120,9 +120,16 @@ orca diff --run E:\runs\w10-new --reference E:\runs\w10-old `
     --exclude-files "*.log" "*/Statistics.json" "Capsule#*"
 ```
 
-`--out` holds the archives, the `local.xml` ORC ran with, and `collect.json` (the target, the
-ORC binary's sha256, the argv, timings and the exit code). A VHD(X) attach needs an elevated
-shell. The VM target needs PowerShell, Hyper-V and a guest reachable by PowerShell Direct;
+`--out` holds the archives, the `local.xml` ORC ran with, `collect.json` (the target, the ORC
+binary's sha256, the argv, timings and the exit code), and **the ORC executable itself**: it is
+copied in and run from there, so the result directory holds the exact binary that produced it
+and your build output is free to be rebuilt while a collection runs. `--no-orc-copy` runs it
+where it is instead. A VHD(X) attach needs an elevated shell.
+
+**`--offline` needs a config that defines `ORC_Offline`.** Passing `/Offline=` makes
+WolfLauncher explicitly select that keyword, so a configuration without such an `<archive>`
+stops with `Key not found: ORC_Offline`. Production configurations have one; a minimal test
+config needs it added. The VM target needs PowerShell, Hyper-V and a guest reachable by PowerShell Direct;
 without `--credential` it prompts, and `--credential` reads `.clixml`/`.xml`
 (`Get-Credential | Export-Clixml`) or `.json` (`{"user": ..., "password": ...}`).
 

@@ -101,6 +101,32 @@ class TestPrepareOutDirRejections(unittest.TestCase):
             self.assertIn("file", str(caught.exception))
 
 
+class TestCopyOrcInto(unittest.TestCase):
+    def test_the_copy_keeps_its_name_and_contents(self):
+        with tempfile.TemporaryDirectory() as d:
+            orc = os.path.join(d, "DFIR-ORC_x64.exe")
+            with open(orc, "wb") as f:
+                f.write(b"MZbinary")
+            out = os.path.join(d, "results")
+            os.makedirs(out)
+            copied = collect.copy_orc_into(out, orc)
+        self.assertEqual(copied, os.path.join(out, "DFIR-ORC_x64.exe"))
+
+    def test_a_destination_that_cannot_be_written_says_why(self):
+        # On Windows a running exe cannot be overwritten, which is what a --force rerun into
+        # an --out whose copy is still collecting hits. A bare PermissionError would not say
+        # that, and the copy happens before ORC starts.
+        with tempfile.TemporaryDirectory() as d:
+            orc = os.path.join(d, "orc.exe")
+            open(orc, "wb").close()
+            with unittest.mock.patch("shutil.copy2", side_effect=PermissionError("in use")):
+                with self.assertRaises(RuntimeError) as caught:
+                    collect.copy_orc_into(d, orc)
+        message = str(caught.exception)
+        self.assertIn("orc.exe", message)
+        self.assertIn("may still be running", message)
+
+
 class TestCommandLine(unittest.TestCase):
     def test_the_printed_command_line_is_quoted(self):
         # It reads as something to copy and re-run, so an unquoted path with a space would
@@ -213,6 +239,27 @@ class TestRunCollectOffline(unittest.TestCase):
         collect.run_collect(orc=self.orc, out=self.out, offline=self.dir.name,
                             run_process=process)
         self.assertIn(f"/Offline={os.path.abspath(self.dir.name)}", process.argv)
+
+    def test_by_default_the_copy_in_out_is_what_runs(self):
+        process = FakeProcess()
+        collect.run_collect(orc=self.orc, out=self.out, offline=self.image,
+                            run_process=process)
+        copied = os.path.join(self.out, "orc.exe")
+        self.assertTrue(os.path.exists(copied), "the executable is kept with the results")
+        self.assertEqual(process.argv[0], copied, "the copy is what ran, not the original")
+        with open(os.path.join(self.out, "collect.json"), "r", encoding="utf-8") as f:
+            record = json.load(f)
+        self.assertEqual(record["orc"]["copied_to"], copied)
+        self.assertEqual(record["orc"]["path"], os.path.abspath(self.orc))
+
+    def test_no_orc_copy_runs_the_original_and_copies_nothing(self):
+        process = FakeProcess()
+        collect.run_collect(orc=self.orc, out=self.out, offline=self.image, copy_orc=False,
+                            run_process=process)
+        self.assertFalse(os.path.exists(os.path.join(self.out, "orc.exe")))
+        self.assertEqual(process.argv[0], os.path.abspath(self.orc))
+        with open(os.path.join(self.out, "collect.json"), "r", encoding="utf-8") as f:
+            self.assertIsNone(json.load(f)["orc"].get("copied_to"))
 
     def test_a_rejected_run_leaves_no_output_directory_behind(self):
         # The target is checked before --out is created, so a run that never started does not
@@ -354,6 +401,23 @@ class TestRunCollectVm(unittest.TestCase):
             collect.run_collect(orc=self.orc, out=self.out, offline=image, checkpoint="clean",
                                 run_process=FakeProcess())
         self.assertIn("--checkpoint", str(caught.exception))
+
+    def test_the_guest_is_fed_from_the_copy_in_out(self):
+        # Same guarantee as the offline target: the result directory holds the binary that
+        # was used, and the build output is read once for the copy instead of for the run.
+        collect.run_collect(orc=self.orc, out=self.out, vm="w10",
+                            credential=os.path.join(self.dir.name, "k.clixml"),
+                            vm_runner=self.runner())
+        copied = os.path.join(self.out, "orc.exe")
+        self.assertTrue(os.path.exists(copied))
+        self.assertEqual(self.calls[0]["local_exe"], copied)
+
+    def test_no_orc_copy_pushes_the_build_binary_straight_to_the_guest(self):
+        collect.run_collect(orc=self.orc, out=self.out, vm="w10", copy_orc=False,
+                            credential=os.path.join(self.dir.name, "k.clixml"),
+                            vm_runner=self.runner())
+        self.assertFalse(os.path.exists(os.path.join(self.out, "orc.exe")))
+        self.assertEqual(self.calls[0]["local_exe"], os.path.abspath(self.orc))
 
     def test_the_guest_argv_uses_guest_paths_only(self):
         collect.run_collect(orc=self.orc, out=self.out, vm="w10",

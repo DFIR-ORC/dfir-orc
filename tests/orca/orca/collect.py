@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -68,6 +69,29 @@ def prepare_out_dir(path: str, force: bool) -> str:
     return absolute
 
 
+def copy_orc_into(out_dir: str, orc: str) -> str:
+    """Put the ORC executable beside the results and return the copy's path.
+
+    Two reasons this is the default. The result directory then holds the exact binary that
+    produced it, so the run can be repeated after the build tree is gone; and the build output
+    is only read once, for the copy, instead of being held for the length of the collection,
+    which would stop a rebuild while one is running.
+
+    The name is kept as it is ('DFIR-ORC_x64.exe', not renamed to 'orc.exe' as test.psm1 does)
+    because it says which build this was.
+    """
+    destination = os.path.join(out_dir, os.path.basename(orc))
+    try:
+        shutil.copy2(orc, destination)
+    except OSError as error:
+        # On Windows a running executable cannot be overwritten, which is what a '--force'
+        # rerun into an '--out' whose copy is still collecting runs into.
+        raise RuntimeError(f"cannot copy ORC to '{destination}': {error}. A previous collect "
+                           f"may still be running from it") from error
+
+    return destination
+
+
 def printable_argv(argv: list[str]) -> str:
     """The command line as something that can be copied and re-run: an argument carrying a
     space has to come back quoted, or what is printed is not what ran."""
@@ -89,7 +113,7 @@ def _timestamp(epoch: float) -> str:
 
 def collect_record(*, target: Target, orc: str, argv: list[str], out_dir: str, temp_dir: str,
                    started: float, ended: float, exit_code: int, pulled: list[str],
-                   target_detail: dict | None = None) -> dict:
+                   target_detail: dict | None = None, copied_to: str | None = None) -> dict:
     """What produced this result set. When two ORC versions are compared, this is the only
     record of which binary wrote which side, so the binary is identified by content.
 
@@ -99,8 +123,10 @@ def collect_record(*, target: Target, orc: str, argv: list[str], out_dir: str, t
     """
     return {
         "target": {"kind": target.kind, "value": target.value, **(target_detail or {})},
+        # 'path' is the binary that was asked for, 'copied_to' the one that actually ran (or
+        # was pushed to the guest). Same bytes, so one sha256 covers both.
         "orc": {"path": os.path.abspath(orc), "size": os.path.getsize(orc),
-                "sha256": file_sha256(orc)},
+                "sha256": file_sha256(orc), "copied_to": copied_to},
         "argv": argv,
         "out": out_dir,
         "temp": temp_dir,
@@ -157,7 +183,7 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
                 public_key: str | None = None, upload: str | None = None, bits: bool = False,
                 allow_invalid_uri: bool = False, enable_keys=None, disable_keys=None,
                 keys=None, local_config: str | None = None, credential: str | None = None,
-                pull: bool = True, force: bool = False, orc_args=None,
+                pull: bool = True, force: bool = False, copy_orc: bool = True, orc_args=None,
                 run_process=subprocess.run, vm_runner=None) -> int:
     """Run a collection and leave a result directory 'orca diff' can read.
 
@@ -190,11 +216,17 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
     out_dir = prepare_out_dir(out, force)
     extra = list(orc_args or [])
 
+    # The copy is the default: see copy_orc_into. Offline runs it; the VM target pushes it to
+    # the guest. Either way the build output is touched once rather than held for the run.
+    copied_to = copy_orc_into(out_dir, orc) if copy_orc else None
+    orc_to_run = copied_to or os.path.abspath(orc)
+
     if vm:
         # The VM's own temp is a GUEST path, so '--temp' names a directory in the guest; the
         # host side only needs somewhere to drop the guest result json.
         guest = hyperv.GuestPaths(temp=temp) if temp else hyperv.GuestPaths()
-        return _collect_vm(orc=orc, vm=vm, checkpoint=checkpoint, out_dir=out_dir,
+        return _collect_vm(orc=orc, orc_to_run=orc_to_run, copied_to=copied_to, vm=vm,
+                           checkpoint=checkpoint, out_dir=out_dir,
                            temp_dir=scratch.directory("collect_"), guest=guest, target=target,
                            public_key=public_key, upload=upload, bits=bits,
                            allow_invalid_uri=allow_invalid_uri, enable_keys=enable_keys,
@@ -204,16 +236,17 @@ def run_collect(*, orc: str, out: str, offline: str | None = None, vm: str | Non
 
     temp_dir = os.path.abspath(temp) if temp else scratch.directory("collect_")
     os.makedirs(temp_dir, exist_ok=True)
-    return _collect_offline(orc=orc, target=target, out_dir=out_dir, temp_dir=temp_dir,
+    return _collect_offline(orc=orc, orc_to_run=orc_to_run, copied_to=copied_to,
+                            target=target, out_dir=out_dir, temp_dir=temp_dir,
                             public_key=public_key, upload=upload, bits=bits,
                             allow_invalid_uri=allow_invalid_uri, enable_keys=enable_keys,
                             disable_keys=disable_keys, keys=keys, local_config=local_config,
                             force=force, extra=extra, run_process=run_process)
 
 
-def _collect_offline(*, orc, target, out_dir, temp_dir, public_key, upload, bits,
-                     allow_invalid_uri, enable_keys, disable_keys, keys, local_config, force,
-                     extra, run_process) -> int:
+def _collect_offline(*, orc, orc_to_run, copied_to, target, out_dir, temp_dir, public_key,
+                     upload, bits, allow_invalid_uri, enable_keys, disable_keys, keys,
+                     local_config, force, extra, run_process) -> int:
     config_text = build_local_config(temp_dir=temp_dir,
                                      public_key=public_key, upload=upload, bits=bits,
                                      allow_invalid_uri=allow_invalid_uri,
@@ -222,14 +255,16 @@ def _collect_offline(*, orc, target, out_dir, temp_dir, public_key, upload, bits
     config_path = write_local_config(out_dir, config_text)
 
     if target.kind != "vhd":
-        return _run_orc(orc=orc, target=target, location=target.value, out_dir=out_dir,
+        return _run_orc(orc=orc, orc_to_run=orc_to_run, copied_to=copied_to, target=target,
+                        location=target.value, out_dir=out_dir,
                         temp_dir=temp_dir, config_path=config_path, force=force, extra=extra,
                         run_process=run_process)
 
     with vhd.attached(target.value) as disk:
         print(f"attached '{target.value}' as {disk.drive_letter} "
               f"({disk.physical_path}, attached by orca: {disk.attached_by_orca})")
-        return _run_orc(orc=orc, target=target, location=disk.drive_letter, out_dir=out_dir,
+        return _run_orc(orc=orc, orc_to_run=orc_to_run, copied_to=copied_to, target=target,
+                        location=disk.drive_letter, out_dir=out_dir,
                         temp_dir=temp_dir, config_path=config_path, force=force, extra=extra,
                         run_process=run_process,
                         target_detail={"drive_letter": disk.drive_letter,
@@ -237,9 +272,10 @@ def _collect_offline(*, orc, target, out_dir, temp_dir, public_key, upload, bits
                                        "attached_by_orca": disk.attached_by_orca})
 
 
-def _run_orc(*, orc, target, location, out_dir, temp_dir, config_path, force, extra,
+def _run_orc(*, orc, orc_to_run, copied_to, target, location, out_dir, temp_dir,
+             config_path, force, extra,
              run_process, target_detail=None) -> int:
-    argv = orc_argv(os.path.abspath(orc), out=out_dir, temp=temp_dir,
+    argv = orc_argv(orc_to_run, out=out_dir, temp=temp_dir,
                     local_config=config_path, extra=extra, overwrite=force, offline=location)
     print(printable_argv(argv))
     started = time.time()
@@ -249,7 +285,7 @@ def _run_orc(*, orc, target, location, out_dir, temp_dir, config_path, force, ex
     record = collect_record(target=target, orc=orc, argv=argv, out_dir=out_dir,
                             temp_dir=temp_dir, started=started, ended=ended,
                             exit_code=completed.returncode, pulled=[],
-                            target_detail=target_detail)
+                            target_detail=target_detail, copied_to=copied_to)
     write_record(out_dir, record)
 
     if completed.returncode != 0:
@@ -271,9 +307,10 @@ def _check_vm_credential(credential: str | None) -> None:
     hyperv.credential_expression(credential)
 
 
-def _collect_vm(*, orc, vm, checkpoint, out_dir, temp_dir, guest, target, public_key, upload,
-                bits, allow_invalid_uri, enable_keys, disable_keys, keys, local_config,
-                credential, pull, force, extra, vm_runner=None) -> int:
+def _collect_vm(*, orc, orc_to_run, copied_to, vm, checkpoint, out_dir, temp_dir, guest,
+                target, public_key, upload, bits, allow_invalid_uri, enable_keys,
+                disable_keys, keys, local_config, credential, pull, force, extra,
+                vm_runner=None) -> int:
     # ORC must write where orca can find it: the generated <output> names a guest directory,
     # which is what makes pulling the results possible at all. 'Invoke-OrcVM' did not need
     # this because it never brought anything back.
@@ -292,7 +329,7 @@ def _collect_vm(*, orc, vm, checkpoint, out_dir, temp_dir, guest, target, public
     argv = orc_argv(guest.exe, out=guest.out, temp=guest.temp, local_config=guest.config,
                     extra=extra, overwrite=force)
     started = time.time()
-    result = runner(vm=vm, checkpoint=checkpoint, local_exe=os.path.abspath(orc),
+    result = runner(vm=vm, checkpoint=checkpoint, local_exe=orc_to_run,
                     local_config=config_path, credential=credential, orc_args=argv[1:],
                     out_dir=out_dir, result_path=os.path.join(temp_dir, "guest-result.json"),
                     pull=pull, guest=guest)
@@ -302,7 +339,8 @@ def _collect_vm(*, orc, vm, checkpoint, out_dir, temp_dir, guest, target, public
     record = collect_record(target=target, orc=orc, argv=argv, out_dir=out_dir,
                             temp_dir=temp_dir, started=started, ended=ended,
                             exit_code=exit_code, pulled=list(result.get("pulled") or []),
-                            target_detail={"checkpoint": checkpoint, "pulled_from_guest": pull})
+                            target_detail={"checkpoint": checkpoint, "pulled_from_guest": pull},
+                            copied_to=copied_to)
     write_record(out_dir, record)
 
     if exit_code != 0:
