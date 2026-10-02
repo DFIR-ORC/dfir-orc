@@ -243,14 +243,8 @@ public:
         void ParseProxyAndSecurity(const ConfigItem& item);  // insecure, server_cert_pin, proxy_*
         void EmitProxyAdvisories();  // advisory warnings (hard rules live in Validate)
 
-        // Validate() helpers. Each returns Verdict::Ok to mean "passed, keep checking"; Validate() returns
-        // the first non-Ok verdict, and ValidateTransportSecurity() returns the final Ok/Warn/Refuse.
-        Validation ValidateRestSteps() const;  // REST functional validity + per-template placeholders
-        Validation ValidateRestStep(const RESTStep& step) const;  // per-step placeholder/capture/body/chunk checks
-        Validation ValidateRestAuth() const;  // REST server-auth fail-closed rules
-        Validation ValidateProxy() const;  // proxy credential/scheme + server_cert_pin rules
-        Validation ValidateRetryPolicy() const;  // retry / retry_delay bounds and mode compatibility
-        Validation ValidateTransportSecurity() const;  // weak-transport aspect + insecure verdict (final)
+        // Validate()'s per-aspect checks are free functions over a const Upload, in OutputSpec.cpp: they
+        // read the object and decide, so they need no access to anything this class keeps private.
     };
 
     Kind Type = Kind::None;

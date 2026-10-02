@@ -1953,153 +1953,19 @@ uint8_t Orc::OutputSpec::Upload::ResolveTlsVersions(DWORD osMajor, DWORD osMinor
     return FloorAndUp(configured, OsCeilingTls(target));
 }
 
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::Validate() const
-{
-    // TODO: These checks are intentionally scoped to REST for now: BITS/FileCopy keep their long-standing
-    // behavior (Warn-only, never Refuse). Expand to all upload methods - drop this 'isRest' gating -
-    // in a NEXT MAJOR VERSION, since refusing insecure BITS configs that work today would be a
-    // breaking change.
-    const bool isRest = (Method == UploadMethod::REST);
+// Upload::Validate's checks, one per aspect. Free functions over a const Upload: each returns
+// Verdict::Ok to mean "passed, keep checking", and Validate below returns the first non-Ok verdict.
+namespace {
 
-    // NOTE: no FileCopy/mode="async" rule here. CopyFileAgent never reads Mode (only BITSAgent and
-    // WolfLauncher do), so method="filecopy" mode="async" copies fine today; refusing it would break
-    // deployed configs - CreateUploadAgent would return nullptr and the collection would upload nothing.
+using Upload = OutputSpec::Upload;
+using Validation = Upload::Validation;
+using Verdict = Upload::Verdict;
+using BITSMode = OutputSpec::BITSMode;
+using UploadAuthScheme = OutputSpec::UploadAuthScheme;
+using UploadMethod = OutputSpec::UploadMethod;
+using UploadMode = OutputSpec::UploadMode;
 
-    if (rest.FollowRedirects && !isRest)
-    {
-        return {Verdict::Refuse, L"'follow_redirects' only applies to REST uploads (method=\"REST\")"};
-    }
-
-    // Functional validity (REST): reject a config that cannot work at runtime so the operator is
-    // warned at embed time, not after deployment.
-    if (isRest)
-    {
-        if (auto v = ValidateRestSteps(); v.verdict != Verdict::Ok)
-        {
-            return v;
-        }
-    }
-
-    if (auto v = ValidateRestAuth(); v.verdict != Verdict::Ok)
-    {
-        return v;
-    }
-
-    if (auto v = ValidateProxy(); v.verdict != Verdict::Ok)
-    {
-        return v;
-    }
-
-    // Held rather than returned: Validate reports the FIRST non-Ok verdict, so surfacing a retry WARNING
-    // here would hide the transport REFUSAL below it. A refusal still short-circuits; a warning waits.
-    const Validation retryCheck = ValidateRetryPolicy();
-    if (retryCheck.verdict == Verdict::Refuse)
-    {
-        return retryCheck;
-    }
-
-    if (const Validation transport = ValidateTransportSecurity(); transport.verdict != Verdict::Ok)
-    {
-        return transport;
-    }
-
-    return retryCheck;
-}
-
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestSteps() const
-{
-    if (ServerName.empty())
-    {
-        return {Verdict::Refuse, L"REST upload requires a 'server' (e.g. https://host)"};
-    }
-
-    if (bitsMode == BITSMode::SMB)
-    {
-        return {Verdict::Refuse, L"REST upload requires an http(s) 'server', not a file:// share"};
-    }
-
-    // Validate the 'server' port at embed time with the same parse the runtime uses, so a malformed port is
-    // refused before deployment rather than failing after collection. A host with no ':' has no port to
-    // validate (an error is returned only for a present-but-malformed port or an empty host). The default
-    // port value is irrelevant here - only success/failure matters.
-    if (SplitHostPort(ServerName, INTERNET_DEFAULT_HTTPS_PORT).has_error())
-    {
-        return {
-            Verdict::Refuse, L"REST 'server' has an invalid port (the value after ':' must be a number in 1..65535)"};
-    }
-
-    // REST uploads run inline (the agent does the transfer itself); there is no async/background
-    // mode like BITS. Refuse mode="async" instead of silently doing sync.
-    if (Mode == UploadMode::Asynchronous)
-    {
-        return {Verdict::Refuse, L"REST upload is synchronous; mode=\"async\" is not supported"};
-    }
-
-    // Option A: REST request paths come only from <rest>. Upload-level per-request attributes
-    // were recorded by Configure; their presence is a config error (critical at embed), not a
-    // silent override.
-    if (!rest.RestSupersededAttrs.empty())
-    {
-        return {
-            Verdict::Refuse,
-            L"REST <upload> attribute(s) [" + rest.RestSupersededAttrs
-                + L"] are superseded by <rest> steps; move them into a <rest> step and remove them from <upload>"};
-    }
-
-    if (rest.RestSteps.empty())
-    {
-        return {Verdict::Refuse, L"REST upload requires at least one <rest> step"};
-    }
-
-    std::wstring tmplError;
-    for (const auto& header : rest.HttpHeaders)
-    {
-        if (!CheckTemplatePlaceholders(header, tmplError))
-        {
-            return {Verdict::Refuse, L"<header>: " + tmplError};
-        }
-    }
-
-    size_t bodyCount = 0;
-    for (const auto& step : rest.RestSteps)
-    {
-        if (auto v = ValidateRestStep(step); v.verdict != Verdict::Ok)
-        {
-            return v;
-        }
-
-        if (step.hasBody)
-        {
-            ++bodyCount;
-        }
-    }
-
-    if (bodyCount == 0)
-    {
-        return {Verdict::Refuse, L"REST upload needs one <rest> step with a 'body' (the file to send)"};
-    }
-
-    if (bodyCount > 1)
-    {
-        return {Verdict::Refuse, L"REST upload must have exactly one <rest> step with a 'body'"};
-    }
-
-    // Permitted (a lab with a self-signed certificate needs it), but say what it costs: a <form>
-    // body routinely carries the share password in clear, and 'insecure' turns off the certificate
-    // validation that is the only thing keeping a MITM from reading it.
-    const bool anyForm = std::any_of(
-        rest.RestSteps.begin(), rest.RestSteps.end(), [](const RESTStep& s) { return !s.formFields.empty(); });
-    if (anyForm && rest.Insecure)
-    {
-        Log::Warn(
-            L"REST: 'insecure' is set and a <form> step sends its fields in clear; anyone able to "
-            L"intercept the connection reads them and gains the same access");
-    }
-
-    return {Verdict::Ok, {}};
-}
-
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestStep(const RESTStep& step) const
+Validation ValidateRestStep(const RESTStep& step, const std::vector<RESTStep>& allSteps)
 {
     // A typo like session="onse" must not silently fall through to "per file": it would run a
     // login for every file and replay the credential each time.
@@ -2226,7 +2092,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestStep(co
             // to prevent.
             for (const auto& token : ScanPlaceholderTokens(field.value))
             {
-                if (!IsReservedUploadName(token) && !IsDeclaredCaptureName(token, rest.RestSteps))
+                if (!IsReservedUploadName(token) && !IsDeclaredCaptureName(token, allSteps))
                 {
                     return {
                         Verdict::Refuse,
@@ -2282,7 +2148,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestStep(co
     // declared capture name (checked across all steps; a capture in body= is never legitimate).
     if (step.hasBody)
     {
-        for (const auto& otherStep : rest.RestSteps)
+        for (const auto& otherStep : allSteps)
         {
             for (const auto& cap : otherStep.captures)
             {
@@ -2328,18 +2194,112 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestStep(co
     return {Verdict::Ok, {}};
 }
 
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() const
+Validation ValidateRestSteps(const Upload& upload)
 {
-    const bool isRest = (Method == UploadMethod::REST);
+    if (upload.ServerName.empty())
+    {
+        return {Verdict::Refuse, L"REST upload requires a 'server' (e.g. https://host)"};
+    }
+
+    if (upload.bitsMode == BITSMode::SMB)
+    {
+        return {Verdict::Refuse, L"REST upload requires an http(s) 'server', not a file:// share"};
+    }
+
+    // Validate the 'server' port at embed time with the same parse the runtime uses, so a malformed port is
+    // refused before deployment rather than failing after collection. A host with no ':' has no port to
+    // validate (an error is returned only for a present-but-malformed port or an empty host). The default
+    // port value is irrelevant here - only success/failure matters.
+    if (SplitHostPort(upload.ServerName, INTERNET_DEFAULT_HTTPS_PORT).has_error())
+    {
+        return {
+            Verdict::Refuse, L"REST 'server' has an invalid port (the value after ':' must be a number in 1..65535)"};
+    }
+
+    // REST uploads run inline (the agent does the transfer itself); there is no async/background
+    // mode like BITS. Refuse mode="async" instead of silently doing sync.
+    if (upload.Mode == UploadMode::Asynchronous)
+    {
+        return {Verdict::Refuse, L"REST upload is synchronous; mode=\"async\" is not supported"};
+    }
+
+    // Option A: REST request paths come only from <rest>. Upload-level per-request attributes
+    // were recorded by Configure; their presence is a config error (critical at embed), not a
+    // silent override.
+    if (!upload.rest.RestSupersededAttrs.empty())
+    {
+        return {
+            Verdict::Refuse,
+            L"REST <upload> attribute(s) [" + upload.rest.RestSupersededAttrs
+                + L"] are superseded by <rest> steps; move them into a <rest> step and remove them from <upload>"};
+    }
+
+    if (upload.rest.RestSteps.empty())
+    {
+        return {Verdict::Refuse, L"REST upload requires at least one <rest> step"};
+    }
+
+    std::wstring tmplError;
+    for (const auto& header : upload.rest.HttpHeaders)
+    {
+        if (!CheckTemplatePlaceholders(header, tmplError))
+        {
+            return {Verdict::Refuse, L"<header>: " + tmplError};
+        }
+    }
+
+    size_t bodyCount = 0;
+    for (const auto& step : upload.rest.RestSteps)
+    {
+        if (auto v = ValidateRestStep(step, upload.rest.RestSteps); v.verdict != Verdict::Ok)
+        {
+            return v;
+        }
+
+        if (step.hasBody)
+        {
+            ++bodyCount;
+        }
+    }
+
+    if (bodyCount == 0)
+    {
+        return {Verdict::Refuse, L"REST upload needs one <rest> step with a 'body' (the file to send)"};
+    }
+
+    if (bodyCount > 1)
+    {
+        return {Verdict::Refuse, L"REST upload must have exactly one <rest> step with a 'body'"};
+    }
+
+    // Permitted (a lab with a self-signed certificate needs it), but say what it costs: a <form>
+    // body routinely carries the share password in clear, and 'insecure' turns off the certificate
+    // validation that is the only thing keeping a MITM from reading it.
+    const bool anyForm = std::any_of(upload.rest.RestSteps.begin(), upload.rest.RestSteps.end(), [](const RESTStep& s) {
+        return !s.formFields.empty();
+    });
+    if (anyForm && upload.rest.Insecure)
+    {
+        Log::Warn(
+            L"REST: 'insecure' is set and a <form> step sends its fields in clear; anyone able to "
+            L"intercept the connection reads them and gains the same access");
+    }
+
+    return {Verdict::Ok, {}};
+}
+
+Validation ValidateRestAuth(const Upload& upload)
+{
+    const bool isRest = (upload.Method == UploadMethod::REST);
 
     // AWSv4 signs every request from these three. aws_region has no default: an implicit us-east-1
     // would turn a forgotten attribute into a 403 that names nothing, which is the hardest SigV4
     // failure to diagnose.
-    if (isRest && AuthScheme == UploadAuthScheme::AWSv4)
+    if (isRest && upload.AuthScheme == UploadAuthScheme::AWSv4)
     {
         // Collected once: AllRestHeaders copies every upload-level and per-step header line, and both
         // checks below read the same list.
-        const std::vector<std::wstring> restHeaders = ::AllRestHeaders(rest);
+        const std::vector<std::wstring> restHeaders = ::AllRestHeaders(upload.rest);
 
         // A literal Authorization header would compete with the one the signer computes, with the
         // outcome depending on header ordering - a configuration whose meaning is accidental.
@@ -2369,22 +2329,22 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
             }
         }
 
-        if (rest.aws.AccessKey.empty())
+        if (upload.rest.aws.AccessKey.empty())
         {
             return {Verdict::Refuse, L"authscheme=\"AWSv4\" requires an 'access_key'"};
         }
 
-        if (rest.aws.SecretKey.empty())
+        if (upload.rest.aws.SecretKey.empty())
         {
             return {Verdict::Refuse, L"authscheme=\"AWSv4\" requires a 'secret_key'"};
         }
 
-        if (rest.aws.Region.empty())
+        if (upload.rest.aws.Region.empty())
         {
             return {Verdict::Refuse, L"authscheme=\"AWSv4\" requires an 'aws_region' (there is no default)"};
         }
 
-        if (rest.aws.Service.empty())
+        if (upload.rest.aws.Service.empty())
         {
             return {Verdict::Refuse, L"'aws_service' is empty; leave it unset for the \"s3\" default"};
         }
@@ -2392,8 +2352,9 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
 
     // Refused, not ignored: a silently dropped credential leaves an upload running anonymously while
     // the configuration says otherwise.
-    if (AuthScheme != UploadAuthScheme::AWSv4
-        && (!rest.aws.AccessKey.empty() || !rest.aws.SecretKey.empty() || !rest.aws.SessionToken.empty()))
+    if (upload.AuthScheme != UploadAuthScheme::AWSv4
+        && (!upload.rest.aws.AccessKey.empty() || !upload.rest.aws.SecretKey.empty()
+            || !upload.rest.aws.SessionToken.empty()))
     {
         return {Verdict::Refuse, L"'access_key'/'secret_key'/'session_token' require authscheme=\"AWSv4\""};
     }
@@ -2405,14 +2366,14 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
     // machine/SYSTEM account is never used and cannot be relayed; they need a 'user'/'password' just
     // like Basic. Refuse a credential-less integrated config here, at embed time, rather than letting
     // it fail closed at runtime.
-    if (isRest && UserName.empty()
-        && (AuthScheme == UploadAuthScheme::NTLM || AuthScheme == UploadAuthScheme::Kerberos
-            || AuthScheme == UploadAuthScheme::Negotiate))
+    if (isRest && upload.UserName.empty()
+        && (upload.AuthScheme == UploadAuthScheme::NTLM || upload.AuthScheme == UploadAuthScheme::Kerberos
+            || upload.AuthScheme == UploadAuthScheme::Negotiate))
     {
         return {Verdict::Refuse, L"Windows-integrated auth (NTLM/Kerberos/Negotiate) requires a 'user' and 'password'"};
     }
 
-    if (isRest && AuthScheme == UploadAuthScheme::Basic && UserName.empty())
+    if (isRest && upload.AuthScheme == UploadAuthScheme::Basic && upload.UserName.empty())
     {
         return {Verdict::Refuse, L"authscheme=\"Basic\" requires a 'user' (and usually a 'password')"};
     }
@@ -2420,11 +2381,11 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRestAuth() 
     return {Verdict::Ok, {}};
 }
 
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() const
+Validation ValidateProxy(const Upload& upload)
 {
     // Every rule here is REST-only: proxy_* settings reach no other uploader, and EmitProxyAdvisories
     // already says so once for the other methods.
-    if (Method != UploadMethod::REST)
+    if (upload.Method != UploadMethod::REST)
     {
         return {Verdict::Ok, {}};
     }
@@ -2437,9 +2398,9 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     // to NAME their destination: proxy="system" says out loud that these secrets may be sent to whatever
     // the machine points at. Nothing here is learned implicitly, as with the auth scheme never being taken
     // from a 407. So the credential check demands an explicit, non-DIRECT value, not just any live source.
-    const ProxySettings proxyCfg = ClassifyProxy(*this);
-    const bool hasProxySource = rest.Proxy.has_value() && proxyCfg.mode != ProxyMode::Direct;
-    if ((!rest.ProxyUser.empty() || !rest.ProxyPassword.empty()) && !hasProxySource)
+    const ProxySettings proxyCfg = ClassifyProxy(upload);
+    const bool hasProxySource = upload.rest.Proxy.has_value() && proxyCfg.mode != ProxyMode::Direct;
+    if ((!upload.rest.ProxyUser.empty() || !upload.rest.ProxyPassword.empty()) && !hasProxySource)
     {
         return {
             Verdict::Refuse,
@@ -2448,7 +2409,8 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     }
 
     // An authenticating proxy must name its scheme (we never learn it from a 407).
-    if ((!rest.ProxyUser.empty() || !rest.ProxyPassword.empty()) && rest.ProxyAuthScheme == UploadAuthScheme::Anonymous)
+    if ((!upload.rest.ProxyUser.empty() || !upload.rest.ProxyPassword.empty())
+        && upload.rest.ProxyAuthScheme == UploadAuthScheme::Anonymous)
     {
         return {
             Verdict::Refuse, L"an authenticating proxy requires 'proxy_authscheme' set to Basic, NTLM, or Negotiate"};
@@ -2456,7 +2418,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
 
     // A proxy password with no user can never be presented (ApplyProxyCredentials no-ops on an empty user,
     // silently dropping the password); refuse it at embed instead of uploading unauthenticated by surprise.
-    if (!rest.ProxyPassword.empty() && rest.ProxyUser.empty())
+    if (!upload.rest.ProxyPassword.empty() && upload.rest.ProxyUser.empty())
     {
         return {Verdict::Refuse, L"'proxy_password' requires a 'proxy_user'"};
     }
@@ -2464,7 +2426,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     // server_cert_pin only has meaning over TLS: the pin is matched against the server certificate, which a
     // plain-HTTP connection never presents. Refuse at embed rather than failing every request at runtime
     // (on HTTP the cert query yields no certificate, so the pin can neither pass nor protect the body).
-    if (!rest.ServerCertPins.empty() && bitsMode != BITSMode::HTTPS)
+    if (!upload.rest.ServerCertPins.empty() && upload.bitsMode != BITSMode::HTTPS)
     {
         return {
             Verdict::Refuse, L"'server_cert_pin' requires an https 'server' (pinning is meaningless over plain HTTP)"};
@@ -2473,14 +2435,14 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
     // Every pin must be a certificate the agent can read. One that is not could only ever be skipped, and a
     // mistyped rotation pin would then go unnoticed until the server key rotates onto it. 'insecure' does not
     // authorize it: an unreadable pin is a broken configuration, not a weaker transport.
-    for (size_t i = 0; i < rest.ServerCertPins.size(); ++i)
+    for (size_t i = 0; i < upload.rest.ServerCertPins.size(); ++i)
     {
-        if (CertBlobToSpkiSha256(rest.ServerCertPins[i]).has_error())
+        if (CertBlobToSpkiSha256(upload.rest.ServerCertPins[i]).has_error())
         {
             return {
                 Verdict::Refuse,
                 L"'server_cert_pin' entry " + std::to_wstring(i + 1) + L" of "
-                    + std::to_wstring(rest.ServerCertPins.size())
+                    + std::to_wstring(upload.rest.ServerCertPins.size())
                     + L" is not an X.509 certificate (PEM or base64 DER), so it could never be matched"};
         }
     }
@@ -2493,48 +2455,48 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateProxy() con
 // Validate() returns the FIRST non-Ok verdict, so a Warn here would mask an insecure-transport Refuse
 // below. None of this can break a deployed config: the attributes are new, so an existing one carries the
 // defaults and stops at the early return.
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRetryPolicy() const
+Validation ValidateRetryPolicy(const Upload& upload)
 {
     // Before the Retry == 0 return: an unreadable retry leaves Retry at 0 and would escape through it.
-    if (!RetryInvalid.empty())
+    if (!upload.RetryInvalid.empty())
     {
         return {
             Verdict::Refuse,
-            L"upload attribute(s) [" + RetryInvalid
+            L"upload attribute(s) [" + upload.RetryInvalid
                 + L"] must be a whole number, zero or more (attempts for 'retry', seconds for 'retry_delay')"};
     }
 
-    if (Retry == 0)
+    if (upload.Retry == 0)
     {
         return {Verdict::Ok, {}};
     }
 
-    if (Retry > kMaxRetry)
+    if (upload.Retry > Upload::kMaxRetry)
     {
         return {
             Verdict::Refuse,
-            L"'retry' is " + std::to_wstring(Retry) + L", above the " + std::to_wstring(kMaxRetry)
+            L"'retry' is " + std::to_wstring(upload.Retry) + L", above the " + std::to_wstring(Upload::kMaxRetry)
                 + L" extra-attempt maximum"};
     }
 
-    if (RetryDelay.count() > kMaxRetryDelay)
+    if (upload.RetryDelay.count() > Upload::kMaxRetryDelay)
     {
         return {
             Verdict::Refuse,
-            L"'retry_delay' is " + std::to_wstring(RetryDelay.count()) + L" seconds, above the "
-                + std::to_wstring(kMaxRetryDelay) + L" second maximum (the value is in SECONDS)"};
+            L"'retry_delay' is " + std::to_wstring(upload.RetryDelay.count()) + L" seconds, above the "
+                + std::to_wstring(Upload::kMaxRetryDelay) + L" second maximum (the value is in SECONDS)"};
     }
 
     // The one that matters: the two ceilings above only make the message name the obviously wrong
     // attribute when there is one, but it is their product that the run pays for.
-    const uint64_t budget = static_cast<uint64_t>(Retry) * static_cast<uint64_t>(RetryDelay.count());
-    if (budget > kMaxRetryBudgetSeconds)
+    const uint64_t budget = static_cast<uint64_t>(upload.Retry) * static_cast<uint64_t>(upload.RetryDelay.count());
+    if (budget > Upload::kMaxRetryBudgetSeconds)
     {
         return {
             Verdict::Refuse,
             L"'retry' x 'retry_delay' is " + std::to_wstring(budget)
                 + L" seconds of waiting at the end of the run for this entry alone, above the "
-                + std::to_wstring(kMaxRetryBudgetSeconds) + L" second budget"};
+                + std::to_wstring(Upload::kMaxRetryBudgetSeconds) + L" second budget"};
     }
 
     // Last, and only if nothing above refused: this is the one WARNING this function can return, and a
@@ -2543,7 +2505,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRetryPolicy
     // is ready to exit, without looking at the jobs at all. Nothing ever reports a failure, so there is
     // never anything to retry: the attribute is accepted and ignored rather than refused, because it is
     // harmless and an operator may well have meant it for a fallback entry lower down the same list.
-    if (Mode == UploadMode::Asynchronous)
+    if (upload.Mode == UploadMode::Asynchronous)
     {
         return {
             Verdict::Warn,
@@ -2554,38 +2516,38 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateRetryPolicy
     return {Verdict::Ok, {}};
 }
 
-Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateTransportSecurity() const
+Validation ValidateTransportSecurity(const Upload& upload)
 {
-    const bool isRest = (Method == UploadMethod::REST);
+    const bool isRest = (upload.Method == UploadMethod::REST);
 
     // An entry that could not be read has no reliable meaning - "tls1.2[xp" may be an XP exception or a mistyped
     // baseline, "tls1.2[win10]" names no OS ORC knows, "tls1.4" no version it can enable - so it is refused rather
     // than guessed or dropped, by ToolEmbed at embed time and by the same gate at runtime. 'insecure' does not
     // authorize it: it is a configuration error, not a transport choice.
-    if (isRest && !rest.HttpsSecurityInvalid.empty())
+    if (isRest && !upload.rest.HttpsSecurityInvalid.empty())
     {
         return {
             Verdict::Refuse,
-            L"https_security entry '" + rest.HttpsSecurityInvalid.front()
+            L"https_security entry '" + upload.rest.HttpsSecurityInvalid.front()
                 + L"' is not valid (expected \"tlsX.Y\" with X.Y from 1.0 to 1.3, optionally tagged \"[xp]\" or "
                   L"\"[seven]\", or the whole value \"os-default\" or \"os-max\")"};
     }
 
     // Inherently-insecure transport.
     std::wstring aspect;
-    if (bitsMode == BITSMode::HTTP)
+    if (upload.bitsMode == BITSMode::HTTP)
     {
         aspect = L"upload over plain HTTP sends collected data in clear text (use HTTPS)";
     }
     else if (isRest)
     {
-        uint8_t allowed = rest.TlsVersions;
-        for (const auto& [target, versions] : rest.TlsOsExceptions)
+        uint8_t allowed = upload.rest.TlsVersions;
+        for (const auto& [target, versions] : upload.rest.TlsOsExceptions)
         {
             allowed |= versions;
         }
 
-        if (allowed & (kTls1_0 | kTls1_1))
+        if (allowed & (Upload::kTls1_0 | Upload::kTls1_1))
         {
             aspect = L"https_security enables TLS 1.0/1.1 (raise the minimum to TLS 1.2)";
         }
@@ -2593,7 +2555,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateTransportSe
 
     // REST hard-refuses a weak-transport aspect unless 'insecure' authorizes it; other methods (BITS)
     // only warn so their existing behavior is unchanged.
-    if (!aspect.empty() && isRest && !rest.Insecure)
+    if (!aspect.empty() && isRest && !upload.rest.Insecure)
     {
         return {Verdict::Refuse, aspect + L"; set insecure=\"true\" to override"};
     }
@@ -2601,7 +2563,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateTransportSe
     // REST over HTTPS: 'insecure' also disables TLS certificate validation outright, in ALL builds
     // (this replaces the former DEBUG-only 'insecure_for_test_only'). Never a silent downgrade - warn
     // whenever it is set, naming the certificate effect plus any weak-transport aspect it covers.
-    if (isRest && rest.Insecure && bitsMode == BITSMode::HTTPS)
+    if (isRest && upload.rest.Insecure && upload.bitsMode == BITSMode::HTTPS)
     {
         std::wstring reason = L"insecure=\"true\" disables TLS certificate validation (prefer 'server_cert_pin')";
         if (!aspect.empty())
@@ -2619,7 +2581,7 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateTransportSe
 
     // os-default hands the protocol to the system policy of whatever host runs the collection, which embedding
     // cannot see. TLS 1.2 is then proven per connection by HttpClient; say so where the choice is made.
-    if (isRest && bitsMode == BITSMode::HTTPS && rest.TlsOsDefault && !rest.Insecure)
+    if (isRest && upload.bitsMode == BITSMode::HTTPS && upload.rest.TlsOsDefault && !upload.rest.Insecure)
     {
         return {
             Verdict::Warn,
@@ -2628,6 +2590,61 @@ Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::ValidateTransportSe
     }
 
     return {Verdict::Ok, {}};
+}
+
+}  // namespace
+
+Orc::OutputSpec::Upload::Validation Orc::OutputSpec::Upload::Validate() const
+{
+    // TODO: These checks are intentionally scoped to REST for now: BITS/FileCopy keep their long-standing
+    // behavior (Warn-only, never Refuse). Expand to all upload methods - drop this 'isRest' gating -
+    // in a NEXT MAJOR VERSION, since refusing insecure BITS configs that work today would be a
+    // breaking change.
+    const bool isRest = (Method == UploadMethod::REST);
+
+    // NOTE: no FileCopy/mode="async" rule here. CopyFileAgent never reads Mode (only BITSAgent and
+    // WolfLauncher do), so method="filecopy" mode="async" copies fine today; refusing it would break
+    // deployed configs - CreateUploadAgent would return nullptr and the collection would upload nothing.
+
+    if (rest.FollowRedirects && !isRest)
+    {
+        return {Verdict::Refuse, L"'follow_redirects' only applies to REST uploads (method=\"REST\")"};
+    }
+
+    // Functional validity (REST): reject a config that cannot work at runtime so the operator is
+    // warned at embed time, not after deployment.
+    if (isRest)
+    {
+        if (auto v = ValidateRestSteps(*this); v.verdict != Verdict::Ok)
+        {
+            return v;
+        }
+    }
+
+    if (auto v = ValidateRestAuth(*this); v.verdict != Verdict::Ok)
+    {
+        return v;
+    }
+
+    if (auto v = ValidateProxy(*this); v.verdict != Verdict::Ok)
+    {
+        return v;
+    }
+
+    // Held rather than returned: Validate reports the FIRST non-Ok verdict, so surfacing a retry WARNING
+    // here would hide the transport REFUSAL below it. A refusal still short-circuits; a warning waits.
+    const Validation retryCheck = ValidateRetryPolicy(*this);
+    if (retryCheck.verdict == Verdict::Refuse)
+    {
+        return retryCheck;
+    }
+
+    if (const Validation transport = ValidateTransportSecurity(*this); transport.verdict != Verdict::Ok)
+    {
+        return transport;
+    }
+
+    return retryCheck;
 }
 
 bool Orc::OutputSpec::Upload::IsFileUploaded(const std::wstring& file_name) const
