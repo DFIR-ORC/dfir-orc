@@ -19,6 +19,13 @@ class TestOutcomeErrorsViews(unittest.TestCase):
         self.assertEqual(len(v["failures"]), 1)
         self.assertEqual(v["memory_peak_bytes"], 2048)
 
+    def test_build_outcome_view_carries_the_command_count(self):
+        o = Outcome(host="H", start="", end="", duration_seconds=60.0,
+                    failures=[Failure("S", "c", "0x1", 5.0, "")],
+                    memory_peak_bytes=2048, memory_peak_set="S", commands=35)
+
+        self.assertEqual(report.build_outcome_view(o)["commands"], 35)
+
     def test_build_errors_view_counts_pattern_lines(self):
         with tempfile.TemporaryDirectory() as run:
             with open(os.path.join(run, "a.log"), "w", encoding="utf-8") as f:

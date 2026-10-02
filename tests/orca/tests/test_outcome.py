@@ -39,6 +39,17 @@ class TestOutcome(unittest.TestCase):
         self.assertEqual(o.failures[0].set, "SetB")
         self.assertEqual(o.failures[0].duration_seconds, 180.0)
 
+    def test_counts_every_command_it_ran(self):
+        # 'fails=1' cannot tell 1 of 2 from 1 of 300, so the summary needs the denominator.
+        o = outcome.parse_outcome(self._write(DOC))
+
+        self.assertEqual(o.commands, 2)
+
+    def test_an_outcome_with_no_command_set_counts_none(self):
+        o = outcome.parse_outcome(self._write({"dfir-orc": {"outcome": {}}}))
+
+        self.assertEqual(o.commands, 0)
+
     def test_memory_peak(self):
         o = outcome.parse_outcome(self._write(DOC))
         self.assertEqual(o.memory_peak_bytes, 5000)

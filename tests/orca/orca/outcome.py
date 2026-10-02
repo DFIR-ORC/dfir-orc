@@ -24,6 +24,9 @@ class Outcome:
     failures: list
     memory_peak_bytes: int
     memory_peak_set: str
+    # How many commands ran at all. The denominator of 'failures': one failure out of two
+    # commands and one out of three hundred are not the same collection.
+    commands: int = 0
 
 
 def _seconds(start: str, end: str) -> float:
@@ -52,6 +55,7 @@ def parse_outcome(path: str) -> Outcome:
     o = data.get("dfir-orc", {}).get("outcome", {})
 
     failures = []
+    commands = 0
     peak = 0
     peak_set = ""
     for cmd_set in o.get("command_set", []):
@@ -59,6 +63,7 @@ def parse_outcome(path: str) -> Outcome:
         if mp > peak:
             peak, peak_set = mp, cmd_set.get("name", "")
         for cmd in cmd_set.get("commands", []):
+            commands += 1
             if "exit_code" not in cmd:
                 continue
             code = _exit_int(cmd["exit_code"])
@@ -74,7 +79,7 @@ def parse_outcome(path: str) -> Outcome:
     start, end = o.get("start", ""), o.get("end", "")
     return Outcome(host=o.get("computer_name", ""), start=start, end=end,
                    duration_seconds=_seconds(start, end), failures=failures,
-                   memory_peak_bytes=peak, memory_peak_set=peak_set)
+                   memory_peak_bytes=peak, memory_peak_set=peak_set, commands=commands)
 
 
 def read_outcome(path: str) -> dict | None:

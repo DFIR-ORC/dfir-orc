@@ -206,8 +206,103 @@ orca report E:\runs\host                       # all views
 orca report E:\runs\host --view errors         # just one view (outcome | empty | stats | errors)
 orca report --root E:\runs                      # discover every run dir under a parent
 orca report --root E:\runs --one-line           # one summary line per host
-orca report E:\runs\host --json
+orca report E:\runs\host --json                 # one flat JSON object per host
+orca report --root E:\runs --list               # one line per command, every host
+orca report --root E:\runs --list --failed      # only the commands that did not exit 0
 ```
+
+`report` also holds the two row tables: `orca report outcome` and `orca report outline` (below).
+
+#### `--one-line`: one line per host
+
+```
+DESKTOP-U9N26B0: ok=False cmds=35 fails=12 empty=2 tables=26 size=64.4MB dur=6m47s mem=1.2GB empty_files=9 unread=1
+```
+
+`cmds` is the denominator of `fails`: 12 failures out of 35 commands and 12 out of 300 are not
+the same collection, and the line used to read identically either way. `empty` and `tables`
+come from the ingest, `size` is the ingested parquet total, `dur` and `mem` from the Outcome.
+
+`empty_files` and `unread` appear **only when they are not zero**, because a field that always
+reads zero stops being read, and each says something out of the ordinary: `empty_files` that
+ORC wrote an output and put nothing in it, `unread` that a table could not be ingested at all.
+Neither appears when its input could not be read either - an unread manifest must not come out
+as "no empty files". On the collection above, the nine empty outputs are the four
+`Azure_*.json` whose commands exited 1, four empty logs and the Capsule marker, and the one
+unread table is the `autoruns.csv` that is really UTF-16 usage text.
+
+#### `--list`: one line per command, across the fleet
+
+The view to scan when you have N machines and expect none of them to have failed. One line per
+command, no per-host headers, machine first and exit code last:
+
+```
+DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m22s  1.2GB  18
+DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s  1.2GB   9
+DESKTOP-U9N26B0  ORC_General  GetThis_Default           GetThis   0m45s  1.2GB   9
+DESKTOP-U9N26B0  ORC_General  Autoruns                  -          0m0s  1.2GB   1
+TESTHOST         ORC_General  NTFSInfo                  NTFSInfo   1m2s  412MB    0
+
+  35 command(s), 12 failed, 1 host(s)
+```
+
+Lines run by host, then in the order ORC ran them. `peak` is the command **set's** peak memory
+repeated across its commands, because that is the only memory an Outcome records, and `?` where
+it records none; `tool` is `-` for a command that runs a packaged binary rather than an ORC
+subtool, which the Outcome leaves null. `--failed` keeps a line only when the exit code is
+non-zero *or unparseable* - a code ORC wrote that is not a number is a failure too - and the
+summary still counts every command, since a filtered `12 failed` with no denominator says
+nothing. On a clean fleet, `--list --failed` prints the summary and nothing else.
+
+The rows are the same ones `orca report outcome` writes to parquet, so the text and the table
+cannot disagree, and `--list` needs no duckdb. A run dir with no Outcome does not abort the
+sweep: its commands are simply not there and it is named in a trailing note, because one
+machine missing an Outcome must not cost you the other eight.
+
+#### A view says so when its input is missing
+
+`report` takes an *ingested* run dir, but ORC's own files are also in a directory `extract`
+produced, so it is pointed at one of those often enough. Only two of the four views can be
+built from an extracted tree - `outcome` and `errors` read ORC's files; `stats` and `empty`
+read `.orca\ingest-timing.csv` and `.orca\manifest.parquet`, which only `ingest` writes:
+
+```
+outcome: ok=False, duration=6m47s, mem_peak=1.2GB (ORC_General)
+  FAIL ORC_General/USNInfo code=18 dur=0m22s
+  ... 12 failures
+empty: (no ingest timing: not an ingested run)
+stats: (no ingest timing: not an ingested run)
+errors: 1 log(s) with matches
+  ORC_..._144127.log: 106 error-line(s)
+```
+
+That used to read `empty: 0 table(s) -> (none)` and `stats: 0 tables, 0 rows, 0.0B`, which is
+indistinguishable from a genuine finding - a missing input reading as good news is the one
+thing a health report must not do. `--one-line` prints `?` for those fields and the JSON
+carries `null`, never 0. The two halves of `empty` are tracked separately: a run ingested
+without duckdb has real timing and no manifest, and one flag would relabel one missing input as
+the other.
+
+#### `--json`: one flat object per host
+
+Every `--one-line` scalar at the top level, each view's detail on a key below it, and an
+`*_available` flag per input so a filter can tell 0 from unknown. Flat on purpose - filtering a
+fleet has to stay a one-liner:
+
+```powershell
+orca report --root E:\runs --json | ConvertFrom-Json | ? fails -gt 0 | Select host,fails,tables
+
+host               ok fails tables stats_available
+----               -- ----- ------ ---------------
+DESKTOP-U9N26B0 False    12                  False
+
+# and the detail is there once the filter has found something
+orca report --root E:\runs --json | ConvertFrom-Json |
+    % { $_.failures } | Group-Object exit_code | Select Name,Count
+```
+
+Keys below the scalars: `failures`, `empty_tables`, `empty_files`, `biggest`, `slowest`,
+`logs`, `skipped`.
 
 ### Diff two versions
 
@@ -530,14 +625,15 @@ about that directory.
 
 ### Outline (one queryable row per ORC run)
 
+A mode of `report`, since it answers a question about a run rather than about its data.
 The Outline says what ran where: the exact ORC build, the machine, its OS, CPU and memory, the
 command line, the configured archives. `ingest` captures every Outline a collection carries
-(sealed ones too), and `orca outline` turns them into a table.
+(sealed ones too), and `orca report outline` turns them into a table.
 
 ```powershell
-orca outline --root E:\runs --out E:\runs\fleet.parquet   # across many collections
-orca outline E:\runs\host                                  # one run -> <run>\outline.parquet
-orca outline E:\runs\host --json                           # just print the rows
+orca report outline --root E:\runs --out E:\runs\fleet.parquet   # across many collections
+orca report outline E:\runs\host                                  # one run -> <run>\outline.parquet
+orca report outline E:\runs\host --json                           # just print the rows
 ```
 
 ```
@@ -567,12 +663,12 @@ restarted run leaves an Outline with no matching Outcome. Each is its own row, k
 
 ### Outcome (one queryable row per command)
 
-Where `outline` says what ran, `outcome` says how it went - one row per command executed, with
+Also a mode of `report`. Where `report outline` says what ran, `outcome` says how it went - one row per command executed, with
 its exit code, timing, IO counters and the archive it wrote into.
 
 ```powershell
-orca outcome --root E:\runs --out E:\runs\commands.parquet
-orca outcome E:\runs\host            # one run -> <run>\outcome.parquet
+orca report outcome --root E:\runs --out E:\runs\commands.parquet
+orca report outcome E:\runs\host            # one run -> <run>\outcome.parquet
 ```
 
 ```

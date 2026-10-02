@@ -29,10 +29,19 @@ def load_timing(run_dir: str) -> list[dict]:
 OUTPUT_SUFFIXES = (".log", ".csv", ".xml", ".json", ".txt", ".dmp")
 
 
-def build_empty_view(timing: list[dict], empty_files: list[str] | None = None) -> dict:
+def build_empty_view(timing: list[dict], empty_files: list[str] | None = None,
+                     available: bool = True, files_available: bool = True) -> dict:
+    """Empty tables (from the ingest timing) and empty ORC outputs (from the manifest).
+
+    Two inputs, two availability flags, because they go missing independently: a run ingested
+    without duckdb has real timing and no manifest, and one flag would relabel one missing
+    input as the other. Unlike build_outcome_view, the keys stay present when unavailable -
+    a view with two halves cannot collapse to a single {"available": False}.
+    """
     empty = sorted(t["name"] for t in timing if t["rows"] == 0)
     files = sorted(empty_files or [])
-    return {"empty_tables": empty, "empty_files": files,
+    return {"available": available, "files_available": files_available,
+            "empty_tables": empty, "empty_files": files,
             "count": len(empty), "file_count": len(files)}
 
 
@@ -57,10 +66,13 @@ def empty_output_files(engine, manifest_path: str) -> list[str]:
         return []
 
 
-def build_stats_view(timing: list[dict]) -> dict:
+def build_stats_view(timing: list[dict], available: bool = True) -> dict:
+    """Table count, rows and bytes. 'available' is False when there was no timing to read at
+    all, which is not the same as an ingest that produced no tables."""
     biggest = sorted(timing, key=lambda t: t["bytes"], reverse=True)[:5]
     slowest = sorted(timing, key=lambda t: t["seconds"], reverse=True)[:5]
     return {
+        "available": available,
         "tables": len(timing),
         "total_rows": sum(t["rows"] for t in timing),
         "total_bytes": sum(t["bytes"] for t in timing),
@@ -78,6 +90,7 @@ def build_outcome_view(outcome_obj) -> dict:
     return {
         "available": True,
         "ok": len(outcome_obj.failures) == 0,
+        "commands": outcome_obj.commands,
         "failures": [asdict(fl) for fl in outcome_obj.failures],
         "duration_seconds": outcome_obj.duration_seconds,
         "memory_peak_bytes": outcome_obj.memory_peak_bytes,
@@ -153,7 +166,16 @@ def host_of(run_dir: str) -> str:
 
 
 def build_host_report(run_dir: str, engine=None) -> dict:
+    """The four views of one run dir, each told whether its own input was there to read.
+
+    Only 'ingest' writes the '.orca' directory, and report is pointed at a directory 'extract'
+    produced often enough - ORC's Outcome and logs are both in one - so two of the four views
+    routinely have nothing to read, and have to say so rather than report a zero.
+    """
     timing = load_timing(run_dir)
+    timing_available = os.path.exists(layout.timing_path(run_dir))
+    manifest_available = bool(engine) and os.path.exists(layout.manifest_path(run_dir))
+
     op = _outcome.outcome_file(run_dir)
     oc = _outcome.parse_outcome(op) if op else None
     files = empty_output_files(engine, layout.manifest_path(run_dir)) if engine else []
@@ -161,40 +183,84 @@ def build_host_report(run_dir: str, engine=None) -> dict:
         "host": host_of(run_dir),
         "run_dir": run_dir,
         "outcome": build_outcome_view(oc),
-        "empty": build_empty_view(timing, files),
-        "stats": build_stats_view(timing),
+        "empty": build_empty_view(timing, files, timing_available, manifest_available),
+        "stats": build_stats_view(timing, timing_available),
         "errors": build_errors_view(run_dir),
     }
 
 
 def summary_of(hr: dict) -> dict:
+    """The scalars of one host. None, never 0, for a view whose input was not there: a summary
+    that reports an absent input as a zero is worse than one that admits it does not know."""
     o, e, s = hr["outcome"], hr["empty"], hr["stats"]
     avail = o.get("available")
+    tables = s.get("available", True)
+    tables_empty = e.get("available", True)
     return {
         "host": hr["host"],
         "ok": o.get("ok") if avail else None,
+        "commands": o.get("commands") if avail else None,
         "fails": len(o.get("failures", [])) if avail else None,
-        "empty": e["count"],
-        "empty_files": e.get("file_count", 0),
-        "tables": s["tables"],
+        "empty": e["count"] if tables_empty else None,
+        "empty_files": e.get("file_count", 0) if e.get("files_available", True) else None,
+        "tables": s["tables"] if tables else None,
         "unread": len(hr["errors"].get("skipped", {})),
-        "total_bytes": s["total_bytes"],
+        "total_bytes": s["total_bytes"] if tables else None,
         "duration_seconds": o.get("duration_seconds") if avail else None,
         "memory_peak_bytes": o.get("memory_peak_bytes") if avail else None,
     }
 
 
+def _opt(value) -> str:
+    """'?' for a field nobody could read, the way _hsize and _hdur already render None."""
+    return "?" if value is None else str(value)
+
+
 def render_one_line(summary: dict) -> str:
-    line = (f'{summary["host"]}: ok={summary["ok"]} fails={summary["fails"]} '
-            f'empty={summary["empty"]} tables={summary["tables"]} '
+    line = (f'{summary["host"]}: ok={_opt(summary["ok"])} cmds={_opt(summary["commands"])} '
+            f'fails={_opt(summary["fails"])} '
+            f'empty={_opt(summary["empty"])} tables={_opt(summary["tables"])} '
             f'size={_hsize(summary["total_bytes"])} dur={_hdur(summary["duration_seconds"])} '
             f'mem={_hsize(summary["memory_peak_bytes"])}')
 
-    # Only when there is one: a field that always reads zero stops being read, and this is the
-    # one saying the run is missing a table rather than the collection missing an artifact.
-    if summary.get("unread"):
-        line += f' unread={summary["unread"]}'
+    # Only when there is one: a field that always reads zero stops being read, and these two
+    # say the run is missing a table, or ORC wrote an output and put nothing in it, rather
+    # than the ordinary state of affairs. None stays quiet too - an unread manifest must not
+    # read as 'no empty files'.
+    for field in ("empty_files", "unread"):
+        if summary.get(field):
+            line += f' {field}={summary[field]}'
+
     return line
+
+
+def host_json(hr: dict) -> dict:
+    """One flat object for a host: the summary scalars at the top level, each view's detail on
+    a key below, and a flag per input saying whether it was there to read.
+
+    Flat on purpose. Filtering a fleet has to stay a one-liner - 'report --json |
+    ConvertFrom-Json | ? fails -gt 0' - and it is not one if the fields a filter wants sit
+    three levels down. The detail rides along underneath for when the filter has found
+    something.
+    """
+    outcome, empty, stats, errors = hr["outcome"], hr["empty"], hr["stats"], hr["errors"]
+    return {
+        **summary_of(hr),
+        "run_dir": hr["run_dir"],
+        "outcome_available": outcome.get("available", True),
+        "stats_available": stats.get("available", True),
+        "empty_available": empty.get("available", True),
+        "empty_files_available": empty.get("files_available", True),
+        "errors_available": errors.get("available", True),
+        "memory_peak_set": outcome.get("memory_peak_set", ""),
+        "failures": outcome.get("failures", []),
+        "empty_tables": empty.get("empty_tables", []),
+        "empty_files": empty.get("empty_files", []),
+        "biggest": stats.get("biggest", []),
+        "slowest": stats.get("slowest", []),
+        "logs": errors.get("logs", []),
+        "skipped": errors.get("skipped", {}),
+    }
 
 
 def render_json(summaries: list) -> str:
@@ -215,19 +281,27 @@ def render_human(hr: dict, views: list) -> str:
                              f'code={fl["exit_code"]} dur={_hdur(fl["duration_seconds"])}')
     if "empty" in views:
         e = hr["empty"]
-        lines.append(f'empty: {e["count"]} table(s) -> '
-                     f'{", ".join(e["empty_tables"]) or "(none)"}')
-        if e.get("file_count"):
-            lines.append(f'  {e["file_count"]} empty output file(s):')
-            lines.extend(f"    {name}" for name in e["empty_files"])
+        if not e.get("available", True):
+            lines.append("empty: (no ingest timing: not an ingested run)")
+        else:
+            lines.append(f'empty: {e["count"]} table(s) -> '
+                         f'{", ".join(e["empty_tables"]) or "(none)"}')
+            if not e.get("files_available", True):
+                lines.append("  empty output files: (not read: no manifest or no duckdb)")
+            elif e.get("file_count"):
+                lines.append(f'  {e["file_count"]} empty output file(s):')
+                lines.extend(f"    {name}" for name in e["empty_files"])
     if "stats" in views:
         s = hr["stats"]
-        lines.append(f'stats: {s["tables"]} tables, {s["total_rows"]} rows, '
-                     f'{_hsize(s["total_bytes"])}')
-        for b in s["biggest"]:
-            lines.append(f'  big  {b["name"]}: {_hsize(b["bytes"])}')
-        for sl in s["slowest"]:
-            lines.append(f'  slow {sl["name"]}: {sl["seconds"]}s')
+        if not s.get("available", True):
+            lines.append("stats: (no ingest timing: not an ingested run)")
+        else:
+            lines.append(f'stats: {s["tables"]} tables, {s["total_rows"]} rows, '
+                         f'{_hsize(s["total_bytes"])}')
+            for b in s["biggest"]:
+                lines.append(f'  big  {b["name"]}: {_hsize(b["bytes"])}')
+            for sl in s["slowest"]:
+                lines.append(f'  slow {sl["name"]}: {sl["seconds"]}s')
     if "errors" in views:
         er = hr["errors"]
         if not er.get("available"):
@@ -248,7 +322,81 @@ def render_human(hr: dict, views: list) -> str:
     return "\n".join(lines)
 
 
+def command_failed(row: dict) -> bool:
+    """A command failed when its exit code is not zero, or not a number at all.
+
+    The outcome table's own 'ok' column already reads an unparseable code as a failure, and
+    --list has to agree with it: a code ORC wrote that nothing can parse is not a success.
+    """
+    return row.get("ok") != "true"
+
+
+def command_fields(row: dict) -> list[str]:
+    """One command as the columns of a --list line: machine first, exit code last.
+
+    'peak' is the command SET's peak memory, repeated for each of its commands, because that
+    is the only memory an Outcome records; 'tool' is a dash for a command that runs a packaged
+    binary rather than an ORC subtool, which the Outcome leaves null.
+    """
+    return [
+        row.get("computer_name") or "?",
+        row.get("command_set") or "",
+        row.get("command") or "",
+        row.get("tool") or "-",
+        _hdur(row.get("duration_seconds")),
+        _hsize(row.get("set_memory_peak") or None),
+        str(row.get("exit_code", "")),
+    ]
+
+
+def sort_command_rows(rows: list[dict]) -> list[dict]:
+    """By host, then by the order ORC ran them: a machine's commands stay together and read
+    as the timeline they were."""
+    return sorted(rows, key=lambda row: (row.get("computer_name") or "",
+                                         row.get("start") or ""))
+
+
+# Left for the names, right for the numbers, so durations, peaks and exit codes line up on
+# their last digit across hosts whose names are nothing like the same length.
+_COMMAND_ALIGNMENT = ("<", "<", "<", "<", ">", ">", ">")
+
+
+def render_command_lines(rows: list[dict], failed_only: bool = False) -> str:
+    """One aligned line per command, across every host, with no per-host headers.
+
+    The output to scan when a fleet is expected to be clean: with --failed and nothing wrong,
+    all that is left is the summary. The summary counts every command either way - a filtered
+    '1 failed' with no denominator says nothing.
+    """
+    selected = [row for row in sort_command_rows(rows)
+                if not failed_only or command_failed(row)]
+    hosts = {row.get("computer_name") or "?" for row in rows}
+    failed = sum(1 for row in rows if command_failed(row))
+    summary = (f"  {len(rows)} command(s), {failed} failed, {len(hosts)} host(s)")
+
+    if not selected:
+        return summary
+
+    fields = [command_fields(row) for row in selected]
+    widths = [max(len(row[column]) for row in fields) for column in range(len(fields[0]))]
+    # No indent: a line starts with the machine name, the way a --one-line summary starts with
+    # the host, so the output stays greppable and sorts on the field you read first.
+    lines = ["  ".join(f"{value:{align}{width}}" for value, align, width
+                       in zip(row, _COMMAND_ALIGNMENT, widths)).rstrip()
+             for row in fields]
+    return "\n".join(lines + ["", summary])
+
+
 def discover_run_dirs(run_dirs: list, root) -> list:
+    """The run dirs to report on: the ones named, plus every ingested run under 'root'.
+
+    A named directory that is not there is an error rather than a report about nothing - it
+    used to come back as a host with no Outcome and no tables, which reads like a finding.
+    """
+    for path in (run_dirs or []):
+        if not os.path.isdir(path):
+            raise RuntimeError(f"no such run dir: '{path}'")
+
     found = list(run_dirs or [])
     if root:
         for path in sorted(glob.glob(os.path.join(root, "*"))):
@@ -264,10 +412,24 @@ def discover_run_dirs(run_dirs: list, root) -> list:
 
 
 def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
-               engine_name="duckdb") -> None:
+               list_commands=False, failed_only=False, engine_name="duckdb") -> None:
     dirs = discover_run_dirs(run_dirs, root)
     if not dirs:
         raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
+
+    if failed_only and not list_commands:
+        raise RuntimeError("--failed filters the --list output; add --list")
+
+    if list_commands:
+        # The same rows 'orca report outcome' writes to parquet, so the text and the table can
+        # never disagree - and no engine is needed to print them.
+        print(render_command_lines(_outcome.collect_command_rows(dirs), failed_only))
+        without = [d for d in dirs if not _outcome.outcome_file(d)]
+        if without:
+            # Named, not raised: one machine missing an Outcome must not cost you the other
+            # eight, and a silent gap in a fleet sweep is worse than a short note.
+            print(f'  no Outcome in {len(without)} run dir(s): {", ".join(without)}')
+        return
 
     # The manifest needs the engine to read; a report still prints without one, just without
     # the empty-output-file list.
@@ -278,7 +440,7 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
     reports = [build_host_report(d, engine) for d in dirs]
 
     if as_json:
-        print(render_json([summary_of(r) for r in reports]))
+        print(render_json([host_json(r) for r in reports]))
         return
     if one_line:
         for r in reports:

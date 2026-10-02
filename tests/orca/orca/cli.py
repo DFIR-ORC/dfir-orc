@@ -15,6 +15,41 @@ def orc_passthrough(remainder: list[str]) -> list[str]:
     return items
 
 
+REPORT_TABLE_MODES = ("outcome", "outline")
+
+
+def report_table_mode(argv: list[str]) -> str | None:
+    """'outcome' or 'outline' when this argv asks for 'orca report <mode>', else None.
+
+    Those two produce row tables rather than per-host views, so they are modes of 'report'
+    rather than flags on it. They cannot be argparse subparsers: 'report' already takes the run
+    dirs as an optional positional, and argparse then reads 'orca report E:\\runs\\host' as a
+    mode named E:\\runs\\host and refuses it. So the mode word is recognised here and handed to
+    a parser of its own. A directory actually named 'outcome' has to be given as '.\\outcome'.
+    """
+    if len(argv) >= 2 and argv[0] == "report" and argv[1] in REPORT_TABLE_MODES:
+        return argv[1]
+
+    return None
+
+
+def _build_mode_parser(mode: str) -> argparse.ArgumentParser:
+    """The parser for one 'orca report <mode>' row table. 'prog' is set so its --help names
+    the command the way it is actually typed."""
+    parser = argparse.ArgumentParser(
+        prog=f"orca report {mode}",
+        description=f"One queryable row per {'command run' if mode == 'outcome' else 'ORC run'}"
+                    f", across every run dir given.")
+    parser.add_argument("run_dirs", nargs="*", help="one or more run dirs")
+    parser.add_argument("--root", default=None, help="discover run dirs under this parent")
+    parser.add_argument("--out", default=None,
+                        help=f"output parquet (default: <run>/{mode}.parquet)")
+    parser.add_argument("--json", action="store_true",
+                        help="print the rows instead (no parquet)")
+    parser.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+    return parser
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="orca", description="ORC results analysis")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -82,28 +117,24 @@ def _build_parser() -> argparse.ArgumentParser:
     mg.add_argument("--ts-col", nargs="*", default=None, help="override tool timestamp: Tool=Column")
     mg.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
-    rp = sub.add_parser("report", help="run dir(s) -> per-host analyze views")
+    rp = sub.add_parser("report", help="run dir(s) -> per-host views, or a row table",
+                        description="Per-host views over ingested run dir(s). Two row tables "
+                                    "are modes of their own: 'orca report outcome' (one row "
+                                    "per command run) and 'orca report outline' (one row per "
+                                    "ORC run).",
+                        epilog="orca report outcome --root E:\\runs --out fleet.parquet")
     rp.add_argument("run_dirs", nargs="*", help="one or more run dirs")
     rp.add_argument("--root", default=None, help="discover run dirs under this parent")
     rp.add_argument("--view", action="append", default=None,
                     choices=["outcome", "empty", "stats", "errors"], help="view(s) to show")
-    rp.add_argument("--one-line", action="store_true", help="one summary line per host")
-    rp.add_argument("--json", action="store_true", help="summary JSON per host")
+    shape = rp.add_mutually_exclusive_group()
+    shape.add_argument("--one-line", action="store_true", help="one summary line per host")
+    shape.add_argument("--json", action="store_true", help="one JSON object per host")
+    shape.add_argument("--list", action="store_true",
+                       help="one line per command, every host, no headers")
+    rp.add_argument("--failed", action="store_true",
+                    help="with --list: only the commands that did not exit 0")
     rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
-
-    oc = sub.add_parser("outcome", help="run dir(s) -> one queryable row per command run")
-    oc.add_argument("run_dirs", nargs="*", help="one or more run dirs")
-    oc.add_argument("--root", default=None, help="discover run dirs under this parent")
-    oc.add_argument("--out", default=None, help="output parquet (default: <run>/outcome.parquet)")
-    oc.add_argument("--json", action="store_true", help="print the rows instead (no parquet)")
-    oc.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
-
-    ol = sub.add_parser("outline", help="run dir(s) -> one queryable row per ORC run")
-    ol.add_argument("run_dirs", nargs="*", help="one or more run dirs")
-    ol.add_argument("--root", default=None, help="discover run dirs under this parent")
-    ol.add_argument("--out", default=None, help="output parquet (default: <run>/outline.parquet)")
-    ol.add_argument("--json", action="store_true", help="print the rows instead (no parquet)")
-    ol.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
     gt.add_argument("--run", required=True, help="an ingested run dir")
@@ -177,7 +208,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
-    args = _build_parser().parse_args(argv)
+    items = list(sys.argv[1:] if argv is None else argv)
+    mode = report_table_mode(items)
+    if mode:
+        args = _build_mode_parser(mode).parse_args(items[2:])
+        runner = outcome.run_outcome if mode == "outcome" else outline.run_outline
+        runner(args.run_dirs, root=args.root, out=args.out, engine_name=args.engine,
+               as_json=args.json)
+        return 0
+
+    args = _build_parser().parse_args(items)
     if args.command == "ingest":
         ingest.run_ingest(
             args.archive, args.out,
@@ -205,18 +245,13 @@ def main(argv=None) -> int:
                 overrides[tool] = column
         merge.run_merge(args.run, out=args.out, lossless=args.lossless,
                         ts_overrides=overrides or None, engine_name=args.engine)
-    elif args.command == "outcome":
-        outcome.run_outcome(args.run_dirs, root=args.root, out=args.out,
-                            engine_name=args.engine, as_json=args.json)
-    elif args.command == "outline":
-        outline.run_outline(args.run_dirs, root=args.root, out=args.out,
-                            engine_name=args.engine, as_json=args.json)
     elif args.command == "getthis":
         getthis.run_getthis(args.run, out=args.out, engine_name=args.engine,
                             as_json=args.json)
     elif args.command == "report":
         report.run_report(args.run_dirs, root=args.root, views=args.view,
                           one_line=args.one_line, as_json=args.json,
+                          list_commands=args.list, failed_only=args.failed,
                           engine_name=args.engine)
     elif args.command == "diff":
         pa, pb = (args.paths + [None, None])[:2]

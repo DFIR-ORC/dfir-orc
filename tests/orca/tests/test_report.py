@@ -71,5 +71,88 @@ class TestReportViews(unittest.TestCase):
         self.assertEqual(rows[0]["bytes"], 5000)
 
 
+class TestViewAvailability(unittest.TestCase):
+    """A missing input must not read as a zero.
+
+    'report' takes an ingested run dir, but it is pointed at an extracted tree often enough -
+    the Outcome and the logs are both there - and then the two views that read '.orca' have
+    nothing to read. 'stats: 0 tables' and 'empty: 0 table(s)' are then indistinguishable from
+    a genuine finding, which is the one thing a health report must not get wrong.
+    """
+
+    def test_stats_of_a_real_ingest_is_available(self):
+        self.assertTrue(report.build_stats_view(TIMING)["available"])
+
+    def test_stats_says_when_there_was_no_timing_to_read(self):
+        self.assertFalse(report.build_stats_view([], available=False)["available"])
+
+    def test_the_empty_view_tracks_its_two_inputs_separately(self):
+        # A run ingested without duckdb has real timing and no manifest. Calling that "no
+        # empty files" would relabel one missing input as the other.
+        view = report.build_empty_view(TIMING, None, files_available=False)
+
+        self.assertTrue(view["available"])
+        self.assertFalse(view["files_available"])
+
+    def test_a_directory_that_was_never_ingested_reports_neither_half(self):
+        view = report.build_empty_view([], None, available=False, files_available=False)
+
+        self.assertFalse(view["available"])
+        self.assertFalse(view["files_available"])
+
+    def test_an_extracted_tree_has_an_outcome_but_no_timing(self):
+        # Exactly what 'orca report <extracted tree>' hits: ORC's own files are there, the
+        # ones ingest writes are not.
+        with tempfile.TemporaryDirectory() as directory:
+            with open(os.path.join(directory, "ORC_Outcome.json"), "w", encoding="utf-8") as f:
+                f.write('{"dfir-orc": {"outcome": {"computer_name": "HOST", '
+                        '"command_set": []}}}')
+
+            hr = report.build_host_report(directory)
+
+        self.assertTrue(hr["outcome"]["available"])
+        self.assertFalse(hr["stats"]["available"])
+        self.assertFalse(hr["empty"]["available"])
+        self.assertFalse(hr["empty"]["files_available"])
+
+    def test_an_ingested_run_reports_its_timing_as_available(self):
+        with tempfile.TemporaryDirectory() as directory:
+            os.makedirs(os.path.join(directory, layout.ORCA_DIR))
+            with open(layout.timing_path(directory), "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["kind", "name", "rows", "bytes", "seconds"])
+                writer.writerow(["parquet", "NTFSInfo", "100", "5000", "2.0"])
+
+            hr = report.build_host_report(directory)
+
+        self.assertTrue(hr["stats"]["available"])
+        self.assertTrue(hr["empty"]["available"])
+        self.assertEqual(hr["stats"]["tables"], 1)
+
+
+class TestRunDirDiscovery(unittest.TestCase):
+    def test_a_run_dir_that_does_not_exist_is_an_error(self):
+        # It used to report cheerfully on nothing: no Outcome, no tables, all zeros. A typo
+        # has to be a typo, which is also what makes a mistyped mode name legible.
+        with self.assertRaises(RuntimeError) as caught:
+            report.discover_run_dirs(["E:/definitely/not/here"], None)
+
+        self.assertIn("no such run dir", str(caught.exception))
+
+    def test_an_existing_run_dir_is_kept(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(report.discover_run_dirs([directory], None), [directory])
+
+    def test_root_discovery_only_takes_ingested_runs(self):
+        with tempfile.TemporaryDirectory() as parent:
+            ingested = os.path.join(parent, "run")
+            os.makedirs(os.path.join(ingested, layout.ORCA_DIR))
+            with open(layout.timing_path(ingested), "w", encoding="utf-8") as f:
+                f.write("kind,name,rows,bytes,seconds\n")
+            os.makedirs(os.path.join(parent, "an-extracted-tree"))
+
+            self.assertEqual(report.discover_run_dirs([], parent), [ingested])
+
+
 if __name__ == "__main__":
     unittest.main()

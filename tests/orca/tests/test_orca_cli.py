@@ -33,6 +33,52 @@ class TestCli(unittest.TestCase):
         self.assertTrue(args.json)
         self.assertTrue(args.one_line)
 
+    def test_outcome_and_outline_are_no_longer_top_level_commands(self):
+        # They are modes of 'report' now: everything you ask about a run's metadata is there.
+        for argv in (["outcome", "E:/runs/host"], ["outline", "E:/runs/host"]):
+            with self.assertRaises(SystemExit):
+                cli._build_parser().parse_args(argv)
+
+    def test_report_recognises_its_two_table_modes(self):
+        self.assertEqual(cli.report_table_mode(["report", "outcome", "--root", "E:/r"]),
+                         "outcome")
+        self.assertEqual(cli.report_table_mode(["report", "outline"]), "outline")
+
+    def test_a_run_dir_is_not_mistaken_for_a_mode(self):
+        # Why these cannot be argparse subparsers: 'report' already takes the run dirs as an
+        # optional positional, and argparse would read the path as a mode name.
+        self.assertIsNone(cli.report_table_mode(["report", "E:/runs/host"]))
+        self.assertIsNone(cli.report_table_mode(["report"]))
+        self.assertIsNone(cli.report_table_mode(["check", "outcome"]))
+        self.assertIsNone(cli.report_table_mode([]))
+
+    def test_the_mode_parser_takes_the_table_options(self):
+        args = cli._build_mode_parser("outcome").parse_args(
+            ["E:/runs/host", "--root", "E:/runs", "--out", "x.parquet", "--json"])
+
+        self.assertEqual(args.run_dirs, ["E:/runs/host"])
+        self.assertEqual(args.root, "E:/runs")
+        self.assertEqual(args.out, "x.parquet")
+        self.assertTrue(args.json)
+
+    def test_the_mode_parser_names_itself_as_the_real_command(self):
+        # So that 'orca report outline --help' does not claim to be something else.
+        self.assertEqual(cli._build_mode_parser("outline").prog, "orca report outline")
+
+    def test_report_takes_list_and_failed(self):
+        args = cli._build_parser().parse_args(["report", "--root", "E:/runs", "--list",
+                                               "--failed"])
+
+        self.assertTrue(args.list)
+        self.assertTrue(args.failed)
+
+    def test_the_report_output_shapes_are_mutually_exclusive(self):
+        for argv in (["report", "x", "--list", "--json"],
+                     ["report", "x", "--one-line", "--list"],
+                     ["report", "x", "--json", "--one-line"]):
+            with self.assertRaises(SystemExit):
+                cli._build_parser().parse_args(argv)
+
     def test_ingest_without_out_defaults_beside_the_archive(self):
         args = cli._build_parser().parse_args(["ingest", "arch.7z"])
         self.assertIsNone(args.out)
