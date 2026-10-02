@@ -27,7 +27,7 @@ def full_host_report() -> dict:
         "outcome": {
             "available": True, "ok": False, "commands": 35,
             "duration_seconds": 407.0, "memory_peak_bytes": 1325150208,
-            "memory_peak_set": "ORC_General",
+            "memory_peak_set": "ORC_General", "failures_ignored": 0,
             "failures": [
                 {"set": "ORC_General", "command": f"Command{i}", "tool": "GetThis",
                  "exit_code": "9", "duration_seconds": 51.0, "start": ""}
@@ -36,7 +36,8 @@ def full_host_report() -> dict:
                   "exit_code": "1", "duration_seconds": 0.0, "start": ""}],
         },
         "empty": {
-            "available": True, "files_available": True,
+            "available": True, "files_available": True, "tables_ignored": 0,
+            "files_ignored": 0,
             "empty_tables": ["USNInfo_00000000_DiskInterface_0x9e1e94d71e94aa33_", "VSS_list"],
             "count": 2,
             "empty_files": [f"Empty{i}.json" for i in range(9)], "file_count": 9,
@@ -51,7 +52,7 @@ def full_host_report() -> dict:
                     {"name": "SlowButSmall", "bytes": 2048, "rows": 20, "seconds": 9.0}],
         },
         "errors": {
-            "available": True,
+            "available": True, "logs_ignored": 0, "skipped_ignored": 0,
             "logs": ([{"log": f"Command{i}.dev.log", "bytes": 100, "error_lines": 2398 - i}
                       for i in range(8)]
                      + [{"log": "Quiet.dev.log", "bytes": 100, "error_lines": 0}]),
@@ -449,6 +450,95 @@ class TestRenderSections(unittest.TestCase):
     def test_no_line_runs_past_a_hundred_columns(self):
         for line in self.lines():
             self.assertLessEqual(len(line), 100, line)
+
+
+def host_report_with_ignores() -> dict:
+    """The same run, with some findings passed over."""
+    hr = full_host_report()
+    hr["outcome"]["failures"] = hr["outcome"]["failures"][:3]
+    hr["outcome"]["failures_ignored"] = 5
+    hr["empty"]["empty_files"] = hr["empty"]["empty_files"][:5]
+    hr["empty"]["file_count"] = 5
+    hr["empty"]["files_ignored"] = 4
+    hr["errors"]["logs_ignored"] = 2
+    return hr
+
+
+class TestRenderIgnored(unittest.TestCase):
+    """A heading says what it kept and what it passed over, so the report never silently
+    disagrees with the Outcome."""
+
+    def render(self, hr=None) -> str:
+        return report.render_human(hr or host_report_with_ignores(),
+                                   ["outcome", "empty", "stats", "errors"])
+
+    def test_a_section_says_how_many_it_kept_of_how_many(self):
+        self.assertIn("failed commands (3 of 8, 5 ignored)", self.render())
+
+    def test_an_untouched_section_keeps_its_plain_count(self):
+        self.assertIn("empty tables (2)", self.render())
+
+    def test_the_empty_outputs_say_it_too(self):
+        self.assertIn("empty outputs (5 of 9, 4 ignored)", self.render())
+
+    def test_the_logs_heading_keeps_its_own_of_and_adds_the_ignored(self):
+        # Eleven logs read: two passed over, one of the nine left was quiet, eight carried
+        # something. The 'of' counts what was read, as it did before the ignore list existed.
+        self.assertIn("logs with errors (8 of 11, 2 ignored)", self.render())
+
+    def test_a_report_with_no_ignores_reads_exactly_as_before(self):
+        self.assertIn("failed commands (8)", self.render(full_host_report()))
+
+    def test_the_one_line_carries_the_total_it_passed_over(self):
+        line = report.render_one_line(report.summary_of(host_report_with_ignores()))
+
+        self.assertIn("fails=3", line)
+        self.assertIn("ignored=11", line)  # 5 failures + 4 outputs + 2 logs
+
+    def test_the_one_line_stays_quiet_with_nothing_ignored(self):
+        self.assertNotIn("ignored=",
+                         report.render_one_line(report.summary_of(full_host_report())))
+
+    def test_a_section_wholly_ignored_still_says_so(self):
+        # Vanishing because you ignored all of it hides the choice you made; the heading is
+        # the only record of it in the human report.
+        hr = full_host_report()
+        hr["empty"].update({"empty_files": [], "file_count": 0, "files_ignored": 9})
+
+        text = report.render_human(hr, ["empty"])
+
+        self.assertIn("empty outputs (0 of 9, 9 ignored)", text)
+
+    def test_a_section_with_nothing_at_all_is_still_left_out(self):
+        hr = full_host_report()
+        hr["empty"].update({"empty_files": [], "file_count": 0, "files_ignored": 0})
+
+        self.assertNotIn("empty outputs", report.render_human(hr, ["empty"]))
+
+    def test_the_json_carries_it_as_a_number(self):
+        self.assertEqual(report.host_json(host_report_with_ignores())["ignored"], 11)
+
+
+class TestListIgnored(unittest.TestCase):
+    def rows(self) -> list:
+        return [command_row("H", "Autoruns", "1", False, "2026-09-25T14:00:00Z"),
+                command_row("H", "USNInfo", "18", False, "2026-09-25T14:01:00Z", "USNInfo"),
+                command_row("H", "NTFSInfo", "0", True, "2026-09-25T14:02:00Z", "NTFSInfo")]
+
+    def test_an_ignored_command_is_not_listed(self):
+        text = report.render_command_lines(self.rows(), False, ["Autoruns"])
+
+        self.assertNotIn("Autoruns", text)
+        self.assertIn("USNInfo", text)
+
+    def test_the_summary_says_how_many_were_passed_over(self):
+        text = report.render_command_lines(self.rows(), False, ["Autoruns"])
+
+        self.assertIn("2 command(s), 1 failed, 1 ignored", text)
+
+    def test_with_nothing_ignored_the_summary_is_unchanged(self):
+        self.assertIn("3 command(s), 2 failed, 1 host(s)",
+                      report.render_command_lines(self.rows(), False, []))
 
 
 if __name__ == "__main__":

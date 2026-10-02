@@ -210,6 +210,7 @@ orca report E:\runs\host --json                 # one flat JSON object per host
 orca report E:\runs --list               # one line per command, every host
 orca report E:\runs --list --failed      # only the commands that did not exit 0
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed collection
+orca report E:\runs --ignore ignore.json         # pass over what you already know about
 ```
 
 `report` also holds the two row tables: `orca report outcome` and `orca report outline` (below).
@@ -376,6 +377,75 @@ it can still build.
 **A directory means every collection in it.** There is no `--root`: a directory is read for
 what it holds, and both shapes a fleet arrives in are the same command (see *What a directory
 means* below).
+
+#### `--ignore`: the findings you have already decided about
+
+```powershell
+orca report \\host\archive\merged --private-key contoso.com.key --ignore ignore.json
+```
+
+A fleet has findings you already know about - a command that always fails on these machines, an
+output ORC always writes empty - and a report that repeats them every time trains you to skim
+past the ones that matter. `--ignore` takes one JSON list of names; `*` and `?` work, and case
+does not matter, since ORC's own names mix cases (the `Autoruns` command writes an `autoruns`
+table):
+
+```json
+[
+  "Azure_*",
+  "Autoruns",
+  "EventConsumer.log",
+  "processes?.log",
+  "Capsule#*",
+  "*.dev.log"
+]
+```
+
+A name is matched against **every named finding**: a failed command, an empty output, an empty
+table, an unread table, a log with errors, and the lines of `--list`. A failed command can also
+be given as `set/command` (`ORC_Little/Autoruns`), so a name that means one thing in one command
+set can be passed over without silencing it everywhere.
+
+**Nothing is hidden.** Each section heading says what it kept of how many and how many it passed
+over, `--one-line` and the JSON carry an `ignored` total, and a section whose every row was
+ignored still prints its heading rather than vanishing - the heading is the only record of the
+choice in a human report:
+
+```
+DESKTOP-U9N26B0: ok=False cmds=35 fails=7 empty=2 tables=26 ... ignored=33
+
+  failed commands (7 of 12, 5 ignored)
+    ORC_General  USNInfo                   USNInfo   0m22s  18
+    ...
+  empty outputs (0 of 9, 9 ignored)
+
+  logs with errors (15 of 35, 18 ignored)
+    USNInfo.log  124
+    ...
+```
+
+A run whose every failure is ignored reads as `ok=True`: that is what the list is for. On the
+real two-machine share, five patterns took 24 failures down to the four nobody expected:
+
+```
+without:  DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ...
+          w11test:         ok=False cmds=35 fails=12 ...
+with:     DESKTOP-U9N26B0: ok=False cmds=35 fails=2 ... ignored=10
+          w11test:         ok=False cmds=35 fails=2 ... ignored=10
+
+orca report ... --ignore ignore.json --list --failed
+  DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m36s  18
+  DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  6m14s   9
+  w11test          ORC_General  USNInfo                   USNInfo   0m23s  18
+  w11test          ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m39s   9
+
+  50 command(s), 4 failed, 20 ignored, 2 host(s)
+```
+
+The file is read before anything is decrypted, and a file that is there but unreadable is an
+error naming it: an ignore file with a typo that silently ignored nothing would make a report
+look clean for the wrong reason. `report outcome` and `report outline` do not take `--ignore` -
+they write a queryable table, and a row you want gone belongs in the query, not in the table.
 
 #### `--one-line`: one line per host
 

@@ -9,7 +9,7 @@ import re
 from dataclasses import asdict
 from typing import NamedTuple
 
-from . import ingest, layout, outcome as _outcome, scratch, sevenzip
+from . import ignores, ingest, layout, outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
@@ -32,7 +32,8 @@ OUTPUT_SUFFIXES = (".log", ".csv", ".xml", ".json", ".txt", ".dmp")
 
 
 def build_empty_view(timing: list[dict], empty_files: list[str] | None = None,
-                     available: bool = True, files_available: bool = True) -> dict:
+                     available: bool = True, files_available: bool = True,
+                     ignore: list | None = None) -> dict:
     """Empty tables (from the ingest timing) and empty ORC outputs (from the manifest).
 
     Two inputs, two availability flags, because they go missing independently: a run ingested
@@ -40,11 +41,16 @@ def build_empty_view(timing: list[dict], empty_files: list[str] | None = None,
     input as the other. Unlike build_outcome_view, the keys stay present when unavailable -
     a view with two halves cannot collapse to a single {"available": False}.
     """
+    patterns = ignore or []
     empty = sorted(t["name"] for t in timing if t["rows"] == 0)
     files = sorted(empty_files or [])
+    kept_tables = [name for name in empty if not ignores.matches(name, patterns)]
+    kept_files = [name for name in files if not ignores.matches(name, patterns)]
     return {"available": available, "files_available": files_available,
-            "empty_tables": empty, "empty_files": files,
-            "count": len(empty), "file_count": len(files)}
+            "empty_tables": kept_tables, "empty_files": kept_files,
+            "count": len(kept_tables), "file_count": len(kept_files),
+            "tables_ignored": len(empty) - len(kept_tables),
+            "files_ignored": len(files) - len(kept_files)}
 
 
 def empty_output_files(engine, manifest_path: str) -> list[str]:
@@ -103,14 +109,23 @@ def build_stats_view(timing: list[dict], available: bool = True, limit: int = 5)
 _ERROR_RE = re.compile(r"error|failed|exception", re.IGNORECASE)
 
 
-def build_outcome_view(outcome_obj) -> dict:
+def build_outcome_view(outcome_obj, ignore: list | None = None) -> dict:
+    """What the Outcome says. 'ignore' passes over the failures you have already decided about.
+
+    A run whose every failure is expected reads as ok: that is what the ignore list is for, and
+    the count of what was passed over goes out with it so nothing is hidden.
+    """
     if outcome_obj is None:
         return {"available": False}
+
+    kept = [fl for fl in outcome_obj.failures
+            if not ignores.matches_any([fl.command, f"{fl.set}/{fl.command}"], ignore or [])]
     return {
         "available": True,
-        "ok": len(outcome_obj.failures) == 0,
+        "ok": len(kept) == 0,
         "commands": outcome_obj.commands,
-        "failures": [asdict(fl) for fl in outcome_obj.failures],
+        "failures": [asdict(fl) for fl in kept],
+        "failures_ignored": len(outcome_obj.failures) - len(kept),
         "duration_seconds": outcome_obj.duration_seconds,
         "memory_peak_bytes": outcome_obj.memory_peak_bytes,
         "memory_peak_set": outcome_obj.memory_peak_set,
@@ -180,7 +195,7 @@ def log_stem(outcome_path: str) -> str | None:
 
 
 def build_errors_view(run_dir: str, extra_dirs: list | None = None,
-                      stem: str | None = None) -> dict:
+                      stem: str | None = None, ignore: list | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
     could not read at all, which are a hole in the run rather than a message inside it.
 
@@ -190,7 +205,9 @@ def build_errors_view(run_dir: str, extra_dirs: list | None = None,
     container, and ORC's console output are all one run's.
     """
     if not os.path.isdir(run_dir):
-        return {"available": False, "skipped": {}}
+        return {"available": False, "skipped": {}, "logs_ignored": 0, "skipped_ignored": 0}
+
+    patterns = ignore or []
     logs = []
     for path in run_logs_of(run_dir, extra_dirs, stem):
         size = os.path.getsize(path)
@@ -207,12 +224,18 @@ def build_errors_view(run_dir: str, extra_dirs: list | None = None,
             count = -1
         logs.append({"log": log_label(path, run_dir), "bytes": size, "error_lines": count})
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
+    kept_logs = [log for log in logs if not ignores.matches(log["log"], patterns)]
+    skipped = layout.skipped(run_dir)
+    kept_skipped = {name: why for name, why in skipped.items()
+                    if not ignores.matches(name, patterns)}
 
     # 'available' is whether there was a log to read, not whether the directory exists: a
     # sealed collection holds only '<name>.log.7z.p7b', and '0 log(s) with matches' would then
     # read as reassurance when nothing had been read at all.
-    return {"available": bool(run_logs_of(run_dir, extra_dirs, stem)), "logs": logs,
-            "skipped": layout.skipped(run_dir)}
+    return {"available": bool(run_logs_of(run_dir, extra_dirs, stem)), "logs": kept_logs,
+            "skipped": kept_skipped,
+            "logs_ignored": len(logs) - len(kept_logs),
+            "skipped_ignored": len(skipped) - len(kept_skipped)}
 
 
 def _hsize(n) -> str:
@@ -252,7 +275,8 @@ def host_of(run_dir: str, extra_dirs: list | None = None,
 
 
 def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None,
-                      outcome_path: str | None = None, stem: str | None = None) -> dict:
+                      outcome_path: str | None = None, stem: str | None = None,
+                      ignore: list | None = None) -> dict:
     """The four views of one run dir, each told whether its own input was there to read.
 
     Only 'ingest' writes the '.orca' directory, and report is pointed at a directory 'extract'
@@ -269,11 +293,20 @@ def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None,
     return {
         "host": host_of(run_dir, extra_dirs, op),
         "run_dir": run_dir,
-        "outcome": build_outcome_view(oc),
-        "empty": build_empty_view(timing, files, timing_available, manifest_available),
+        "outcome": build_outcome_view(oc, ignore),
+        "empty": build_empty_view(timing, files, timing_available, manifest_available, ignore),
         "stats": build_stats_view(timing, timing_available),
-        "errors": build_errors_view(run_dir, extra_dirs, stem),
+        "errors": build_errors_view(run_dir, extra_dirs, stem, ignore),
     }
+
+
+def ignored_count(hr: dict) -> int:
+    """How many findings the ignore list passed over, across every view of this run."""
+    return (hr["outcome"].get("failures_ignored", 0)
+            + hr["empty"].get("tables_ignored", 0)
+            + hr["empty"].get("files_ignored", 0)
+            + hr["errors"].get("logs_ignored", 0)
+            + hr["errors"].get("skipped_ignored", 0))
 
 
 def summary_of(hr: dict) -> dict:
@@ -292,6 +325,7 @@ def summary_of(hr: dict) -> dict:
         "empty_files": e.get("file_count", 0) if e.get("files_available", True) else None,
         "tables": s["tables"] if tables else None,
         "unread": len(hr["errors"].get("skipped", {})),
+        "ignored": ignored_count(hr),
         "total_bytes": s["total_bytes"] if tables else None,
         "duration_seconds": o.get("duration_seconds") if avail else None,
         "memory_peak_bytes": o.get("memory_peak_bytes") if avail else None,
@@ -314,7 +348,7 @@ def render_one_line(summary: dict) -> str:
     # say the run is missing a table, or ORC wrote an output and put nothing in it, rather
     # than the ordinary state of affairs. None stays quiet too - an unread manifest must not
     # read as 'no empty files'.
-    for field in ("empty_files", "unread"):
+    for field in ("empty_files", "unread", "ignored"):
         if summary.get(field):
             line += f' {field}={summary[field]}'
 
@@ -339,6 +373,7 @@ def host_json(hr: dict) -> dict:
         "empty_available": empty.get("available", True),
         "empty_files_available": empty.get("files_available", True),
         "errors_available": errors.get("available", True),
+        "ignored": ignored_count(hr),
         "memory_peak_set": outcome.get("memory_peak_set", ""),
         "failures": outcome.get("failures", []),
         "empty_tables": empty.get("empty_tables", []),
@@ -384,6 +419,15 @@ def section(heading: str, rows: list, align: str) -> list:
     say how long the list is, not to excuse not printing it.
     """
     return [f"  {heading}"] + [f"    {line}" for line in columns(rows, align)]
+
+
+def counted(label: str, kept: int, ignored: int = 0) -> str:
+    """A section heading. With an ignore list it says what it kept of how many, and how many it
+    passed over, so a report never quietly disagrees with the Outcome it read."""
+    if not ignored:
+        return f"{label} ({kept})"
+
+    return f"{label} ({kept} of {kept + ignored}, {ignored} ignored)"
 
 
 def failure_rows(outcome: dict) -> list:
@@ -435,9 +479,12 @@ def outcome_lines(hr: dict, explicit: bool) -> list:
              f'mem={_hsize(outcome["memory_peak_bytes"])} ({outcome["memory_peak_set"]})']
 
     rows = failure_rows(outcome)
-    if rows or explicit:
+    # A heading with no rows under it where something was ignored: vanishing because you
+    # ignored all of it would hide the choice, and the heading is its only record here.
+    if rows or explicit or outcome.get("failures_ignored", 0):
         lines.append("")
-        lines += section(f"failed commands ({len(rows)})", rows, "<<<>>")
+        lines += section(counted("failed commands", len(rows),
+                                 outcome.get("failures_ignored", 0)), rows, "<<<>>")
 
     return lines
 
@@ -463,15 +510,17 @@ def empty_lines(hr: dict, explicit: bool) -> list:
 
     lines = []
     tables = [[name] for name in empty.get("empty_tables", [])]
-    if tables or explicit:
-        lines += section(f"empty tables ({len(tables)})", tables, "<")
+    if tables or explicit or empty.get("tables_ignored", 0):
+        lines += section(counted("empty tables", len(tables),
+                                 empty.get("tables_ignored", 0)), tables, "<")
 
     if not empty.get("files_available", True):
         return lines + ["  empty outputs: (not read: no manifest or no duckdb)"]
 
     files = [[name] for name in empty.get("empty_files", [])]
-    if files or explicit:
-        lines += section(f"empty outputs ({len(files)})", files, "<")
+    if files or explicit or empty.get("files_ignored", 0):
+        lines += section(counted("empty outputs", len(files),
+                                 empty.get("files_ignored", 0)), files, "<")
 
     return lines
 
@@ -483,15 +532,20 @@ def errors_lines(hr: dict, explicit: bool) -> list:
         lines.append("  logs: (no logs captured)")
     else:
         rows = log_rows(errors)
-        if rows or explicit:
-            read = len(errors.get("logs", []))
-            lines += section(f"logs with errors ({len(rows)} of {read})", rows, "<>")
+        if rows or explicit or errors.get("logs_ignored", 0):
+            # Its own 'of': how many logs were read, which is not how many were kept.
+            read = len(errors.get("logs", [])) + errors.get("logs_ignored", 0)
+            heading = f"logs with errors ({len(rows)} of {read}"
+            passed = errors.get("logs_ignored", 0)
+            heading += f", {passed} ignored)" if passed else ")"
+            lines += section(heading, rows, "<>")
 
     # A hole in the run rather than a message inside it, so it is said separately and whether
     # or not there were logs to read.
     skipped = skipped_rows(errors.get("skipped") or {})
-    if skipped or explicit:
-        lines += section(f"unread tables ({len(skipped)})", skipped, "<<")
+    if skipped or explicit or errors.get("skipped_ignored", 0):
+        lines += section(counted("unread tables", len(skipped),
+                                 errors.get("skipped_ignored", 0)), skipped, "<<")
 
     return lines
 
@@ -559,18 +613,27 @@ def sort_command_rows(rows: list[dict]) -> list[dict]:
 _COMMAND_ALIGNMENT = ("<", "<", "<", "<", ">", ">", ">")
 
 
-def render_command_lines(rows: list[dict], failed_only: bool = False) -> str:
+def render_command_lines(rows: list[dict], failed_only: bool = False,
+                         ignore: list | None = None) -> str:
     """One aligned line per command, across every host, with no per-host headers.
 
     The output to scan when a fleet is expected to be clean: with --failed and nothing wrong,
     all that is left is the summary. The summary counts every command either way - a filtered
     '1 failed' with no denominator says nothing.
     """
-    selected = [row for row in sort_command_rows(rows)
+    patterns = ignore or []
+    kept = [row for row in rows
+            if not ignores.matches_any([row.get("command") or "",
+                                        f'{row.get("command_set")}/{row.get("command")}'],
+                                       patterns)]
+    selected = [row for row in sort_command_rows(kept)
                 if not failed_only or command_failed(row)]
-    hosts = {row.get("computer_name") or "?" for row in rows}
-    failed = sum(1 for row in rows if command_failed(row))
-    summary = (f"  {len(rows)} command(s), {failed} failed, {len(hosts)} host(s)")
+    hosts = {row.get("computer_name") or "?" for row in kept}
+    failed = sum(1 for row in kept if command_failed(row))
+    passed = len(rows) - len(kept)
+    summary = f"  {len(kept)} command(s), {failed} failed"
+    summary += f", {passed} ignored" if passed else ""
+    summary += f", {len(hosts)} host(s)"
 
     if not selected:
         return summary
@@ -785,7 +848,7 @@ def orphan_lines(dirs: list, sealed: dict) -> list:
 
 def run_report(run_dirs, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
-               refresh=False, engine_name="duckdb") -> None:
+               refresh=False, ignore_file=None, engine_name="duckdb") -> None:
     """Report on every collection in every directory given.
 
     A directory is read for what it holds rather than taken for one run: a fleet arrives either
@@ -795,6 +858,9 @@ def run_report(run_dirs, views=None, one_line=False, as_json=False, list_command
     if failed_only and not list_commands:
         raise RuntimeError("--failed filters the --list output; add --list")
 
+    # Read before anything expensive: a mistyped ignore file must not surface after a fleet's
+    # worth of decryption, and must never be read as "nothing to ignore".
+    ignore = ignores.load(ignore_file)
     dirs = candidate_dirs(list(run_dirs or []))
 
     scratch.use(work_dir)
@@ -811,7 +877,7 @@ def run_report(run_dirs, views=None, one_line=False, as_json=False, list_command
         # The same rows 'orca report outcome' writes to parquet, so the text and the table can
         # never disagree - and no engine is needed to print them.
         paths = [run.outcome_path for run in runs if run.outcome_path]
-        print(render_command_lines(_outcome.command_rows_from(paths), failed_only))
+        print(render_command_lines(_outcome.command_rows_from(paths), failed_only, ignore))
         without = [run.run_dir for run in runs if not run.outcome_path]
         if without:
             # Named, not raised: one machine missing an Outcome must not cost you the other
@@ -831,7 +897,8 @@ def run_report(run_dirs, views=None, one_line=False, as_json=False, list_command
     shared = shared_dirs(runs)
     reports = [build_host_report(
         run.run_dir, engine, run.extra_dirs, run.outcome_path,
-        log_stem(run.outcome_path) if os.path.abspath(run.run_dir) in shared else None)
+        log_stem(run.outcome_path) if os.path.abspath(run.run_dir) in shared else None,
+        ignore)
         for run in runs]
 
     if as_json:

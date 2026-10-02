@@ -54,7 +54,8 @@ class TestOutcomeErrorsViews(unittest.TestCase):
 
     def test_build_errors_view_missing_dir(self):
         self.assertEqual(report.build_errors_view("nope"),
-                         {"available": False, "skipped": {}})
+                         {"available": False, "skipped": {}, "logs_ignored": 0,
+                          "skipped_ignored": 0})
 
     def test_build_errors_view_carries_the_tables_the_ingest_could_not_read(self):
         # A hole in the run rather than a message inside it, but the same question answered:

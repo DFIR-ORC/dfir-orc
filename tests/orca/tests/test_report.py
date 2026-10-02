@@ -671,5 +671,81 @@ class TestRunReport(unittest.TestCase):
         self.assertIn("no collection", str(caught.exception))
 
 
+class TestIgnoringFindings(unittest.TestCase):
+    """What an ignore list does to each view.
+
+    Nothing is hidden: the view keeps a count of what it passed over, so a report can say
+    '7 of 12, 5 ignored' rather than quietly disagreeing with the Outcome.
+    """
+
+    def test_an_ignored_command_leaves_the_failures_and_is_counted(self):
+        from orca.outcome import Failure, Outcome
+
+        run = Outcome(host="H", start="", end="", duration_seconds=1.0, commands=5,
+                      failures=[Failure("ORC_General", "Autoruns", "1", 0.0, ""),
+                                Failure("ORC_General", "USNInfo", "18", 22.0, "")],
+                      memory_peak_bytes=1024, memory_peak_set="ORC_General")
+
+        view = report.build_outcome_view(run, ["Autoruns"])
+
+        self.assertEqual([f["command"] for f in view["failures"]], ["USNInfo"])
+        self.assertEqual(view["failures_ignored"], 1)
+
+    def test_a_command_can_be_ignored_in_one_command_set_only(self):
+        from orca.outcome import Failure, Outcome
+
+        run = Outcome(host="H", start="", end="", duration_seconds=1.0, commands=5,
+                      failures=[Failure("ORC_General", "Autoruns", "1", 0.0, ""),
+                                Failure("ORC_Little", "Autoruns", "1", 0.0, "")],
+                      memory_peak_bytes=0, memory_peak_set="")
+
+        view = report.build_outcome_view(run, ["ORC_Little/Autoruns"])
+
+        self.assertEqual([f["set"] for f in view["failures"]], ["ORC_General"])
+
+    def test_a_run_whose_every_failure_is_expected_reads_as_ok(self):
+        # The point of the list: a command that always fails on this fleet is not news.
+        from orca.outcome import Failure, Outcome
+
+        run = Outcome(host="H", start="", end="", duration_seconds=1.0, commands=5,
+                      failures=[Failure("ORC_General", "Autoruns", "1", 0.0, "")],
+                      memory_peak_bytes=0, memory_peak_set="")
+
+        self.assertTrue(report.build_outcome_view(run, ["Autoruns"])["ok"])
+        self.assertFalse(report.build_outcome_view(run, [])["ok"])
+
+    def test_an_ignored_empty_output_leaves_the_list_and_is_counted(self):
+        timing = [{"name": "VSS_list", "rows": 0, "bytes": 10, "seconds": 0.1},
+                  {"name": "NTFSInfo", "rows": 100, "bytes": 5000, "seconds": 1.0}]
+
+        view = report.build_empty_view(timing, ["Azure_Attested.json", "EventConsumer.log"],
+                                       ignore=["Azure_*", "VSS_list"])
+
+        self.assertEqual(view["empty_files"], ["EventConsumer.log"])
+        self.assertEqual(view["file_count"], 1)
+        self.assertEqual(view["files_ignored"], 1)
+        self.assertEqual(view["empty_tables"], [])
+        self.assertEqual(view["count"], 0)
+        self.assertEqual(view["tables_ignored"], 1)
+
+    def test_an_ignored_log_and_an_ignored_unread_table_are_counted(self):
+        with tempfile.TemporaryDirectory() as run:
+            for name, payload in (("USNInfo.dev.log", "an Error here\n"),
+                                  ("Autoruns.dev.log", "an Error here\n")):
+                with open(os.path.join(run, name), "w", encoding="utf-8") as f:
+                    f.write(payload)
+            os.makedirs(os.path.join(run, layout.ORCA_DIR))
+            with open(os.path.join(run, layout.ORCA_DIR, "skipped.txt"), "w",
+                      encoding="utf-8") as f:
+                f.write("autoruns\tduckdb said no\n")
+
+            view = report.build_errors_view(run, None, None, ["Autoruns*", "autoruns"])
+
+        self.assertEqual([log["log"] for log in view["logs"]], ["USNInfo.dev.log"])
+        self.assertEqual(view["logs_ignored"], 1)
+        self.assertEqual(view["skipped"], {})
+        self.assertEqual(view["skipped_ignored"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

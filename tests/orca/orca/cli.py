@@ -142,6 +142,8 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="one line per command, every host, no headers")
     rp.add_argument("--failed", action="store_true",
                     help="with --list: only the commands that did not exit 0")
+    rp.add_argument("--ignore", default=None,
+                    help="JSON list of names (fnmatch) this report should pass over")
     rp.add_argument("--private-key", default=None,
                     help="PEM key to unseal a sealed Outcome, Outline or log")
     rp.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
@@ -271,7 +273,7 @@ def main(argv=None) -> int:
                           list_commands=args.list, failed_only=args.failed,
                           private_key=args.private_key, cms_backend=args.cms_backend,
                           work_dir=args.work_dir, refresh=args.refresh,
-                          engine_name=args.engine)
+                          ignore_file=args.ignore, engine_name=args.engine)
     elif args.command == "diff":
         pa, pb = (args.paths + [None, None])[:2]
         diff.run_diff(path_a=pa, path_b=pb, run_a=args.run, run_b=args.reference,

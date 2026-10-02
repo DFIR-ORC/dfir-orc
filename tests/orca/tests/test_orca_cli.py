@@ -87,6 +87,12 @@ class TestCli(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 cli._build_mode_parser(mode).parse_args(["--root", "E:/runs"])
 
+    def test_report_takes_an_ignore_file(self):
+        args = cli._build_parser().parse_args(["report", "E:/runs", "--ignore",
+                                               "ignore.json"])
+
+        self.assertEqual(args.ignore, "ignore.json")
+
     def test_report_needs_something_to_report_on(self):
         with self.assertRaises(SystemExit):
             cli._build_parser().parse_args(["report"])
