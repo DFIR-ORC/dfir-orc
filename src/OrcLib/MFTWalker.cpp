@@ -1636,44 +1636,44 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                     // This record has child records (or is a child record), parsing them.
                     for (size_t i = 0; i < pAttributeList->m_AttList.size(); ++i)
                     {
-                        AttributeListEntry& attr = pAttributeList->m_AttList[i];
-
-                        if (attr.m_Attribute == NULL
-                            && NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber)
-                                != NtfsFullSegmentNumber(&attr.m_pListEntry->SegmentReference))
+                        // BEWARE: 'ParseRecord' below appends the host record's attributes to this very list
+                        // (a host record registers them with its base record), which reallocates the vector
+                        // and leaves any reference into it dangling. So the host's FRN is copied out before
+                        // the call and 'attr' is never read after it.
+                        const AttributeListEntry& attr = pAttributeList->m_AttList[i];
+                        if (attr.m_Attribute != nullptr || attr.m_pListEntry == nullptr)
                         {
-                            auto pParentPair =
-                                m_MFTMap.find(NtfsFullSegmentNumber(&(attr.m_pListEntry->SegmentReference)));
+                            continue;
+                        }
 
-                            if (pParentPair != m_MFTMap.end())
-                            {
-                                MFTRecord* pHostRecord = pParentPair->second;
+                        const MFTUtils::SafeMFTSegmentNumber hostFrn =
+                            NtfsFullSegmentNumber(&attr.m_pListEntry->SegmentReference);
+                        if (hostFrn == NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber))
+                        {
+                            continue;
+                        }
 
-                                if (pHostRecord != nullptr)
-                                {
-                                    if (!pHostRecord->IsParsed())
-                                    {
-                                        hr = pHostRecord->ParseRecord(
-                                            m_pVolReader,
-                                            pHostRecord->m_pRecord,
-                                            m_pVolReader->GetBytesPerFRS(),
-                                            pRecord);
-                                        if (hr == S_FALSE)
-                                        {
-                                            Log::Trace(
-                                                L"Skipping MFT record (frn: {:#x})",
-                                                NtfsFullSegmentNumber(&(attr.m_pListEntry->SegmentReference)));
-                                        }
-                                        else if (FAILED(hr))
-                                        {
-                                            Log::Debug(
-                                                L"Failed to parse child record (frn: {:#x}) [{}]",
-                                                NtfsFullSegmentNumber(&(attr.m_pListEntry->SegmentReference)),
-                                                SystemError(hr));
-                                        }
-                                    }
-                                }
-                            }
+                        const auto pParentPair = m_MFTMap.find(hostFrn);
+                        if (pParentPair == m_MFTMap.end())
+                        {
+                            continue;
+                        }
+
+                        MFTRecord* pHostRecord = pParentPair->second;
+                        if (pHostRecord == nullptr || pHostRecord->IsParsed())
+                        {
+                            continue;
+                        }
+
+                        hr = pHostRecord->ParseRecord(
+                            m_pVolReader, pHostRecord->m_pRecord, m_pVolReader->GetBytesPerFRS(), pRecord);
+                        if (hr == S_FALSE)
+                        {
+                            Log::Trace(L"Skipping MFT record (frn: {:#x})", hostFrn);
+                        }
+                        else if (FAILED(hr))
+                        {
+                            Log::Debug(L"Failed to parse child record (frn: {:#x}) [{}]", hostFrn, SystemError(hr));
                         }
                     }
                 }
