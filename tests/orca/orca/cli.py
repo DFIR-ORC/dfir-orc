@@ -2,8 +2,8 @@
 import argparse
 import sys
 
-from . import (check, cms, collect, extract, ingest, localconfig, merge, outcome, outline,
-               report, diff, getthis)
+from . import (check, cms, collect, extract, getthis, ingest, localconfig, logs, merge,
+               outcome, outline, report, diff)
 
 
 def orc_passthrough(remainder: list[str]) -> list[str]:
@@ -13,6 +13,37 @@ def orc_passthrough(remainder: list[str]) -> list[str]:
         return items[1:]
 
     return items
+
+
+def view_names(value: str) -> list[str]:
+    """One '--view' value: a name, or a comma list of them.
+
+    Validated here rather than by argparse 'choices', which cannot see inside a comma list.
+    An unknown name is refused rather than ignored: a view that silently matched nothing would
+    print a host header and read as a clean run.
+    """
+    names = [name.strip() for name in value.split(",") if name.strip()]
+    unknown = [name for name in names if name not in report.VIEW_NAMES]
+    if unknown:
+        raise argparse.ArgumentTypeError(
+            f'unknown view {", ".join(unknown)} (pick from {", ".join(report.VIEW_NAMES)})')
+
+    return names
+
+
+def context_count(value: str) -> int:
+    """The optional count of '--backtrace N': how many log lines either side to print."""
+    try:
+        count = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not a number of lines")
+
+    if count < 1:
+        raise argparse.ArgumentTypeError(
+            f"{count} lines either side is no context; leave the count out for "
+            f"{logs.DEFAULT_CONTEXT}")
+
+    return count
 
 
 REPORT_TABLE_MODES = ("outcome", "outline")
@@ -238,9 +269,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "report", help="collection(s) or dataset(s) -> per-host views, or a row table",
         description="Is this collection healthy. Per host: whether every command succeeded "
                     "and which did not, the tables an ingest produced and which came out "
-                    "empty, and the logs carrying errors. It reads ORC's own Outcome, "
-                    "Outlines and log - unsealing them when they are encrypted - so most of "
-                    "it works on a collection as it arrives, before anything is ingested; "
+                    "empty, the logs carrying errors and what the critical ones said. It "
+                    "reads ORC's own Outcome, Outlines and log - unsealing them when they "
+                    "are encrypted, and pulling each command's log out of the archive it is "
+                    "in - so most of it works on a collection as it arrives, before anything "
+                    "is ingested; "
                     "only the two views built from '.orca' need a dataset, and they name the "
                     "command that would fill them rather than running it. Every Outcome in a "
                     "directory is a run of its own, so a merged dump of a fleet reports every "
@@ -249,8 +282,15 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog="orca report outcome E:\\datasets --recurse --out fleet.parquet")
     rp.add_argument("paths", nargs="+",
                     help="collection(s), ingested dataset(s), or a directory holding either")
-    rp.add_argument("--view", action="append", default=None,
-                    choices=["outcome", "empty", "stats", "errors"], help="view(s) to show")
+    rp.add_argument("--view", action="extend", type=view_names, default=None,
+                    metavar="NAME[,NAME...]",
+                    help=f'view(s) to show: {" | ".join(report.VIEW_NAMES)}')
+    rp.add_argument("--backtrace", nargs="?", type=context_count,
+                    const=logs.DEFAULT_CONTEXT, default=None, metavar="LINES",
+                    help="with a message view: print the LINES log lines either side of each "
+                         f"message (default: {logs.DEFAULT_CONTEXT})")
+    rp.add_argument("--no-archive-logs", dest="archive_logs", action="store_false",
+                    help="do not pull the per-command logs out of the archives")
     shape = rp.add_mutually_exclusive_group()
     shape.add_argument("--one-line", action="store_true", help="one summary line per host")
     shape.add_argument("--json", action="store_true", help="one JSON object per host")
@@ -399,6 +439,7 @@ def main(argv=None) -> int:
                           private_key=args.private_key, cms_backend=args.cms_backend,
                           work_dir=args.work_dir, refresh=args.refresh,
                           ignore_file=args.ignore, recurse=args.recurse,
+                          context=args.backtrace, archive_logs=args.archive_logs,
                           engine_name=args.engine)
     elif args.command == "diff":
         pa, pb = (args.paths + [None, None])[:2]

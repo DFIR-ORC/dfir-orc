@@ -3,11 +3,12 @@ import json
 import os
 import types
 import struct
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
-from orca import ingest, journal
+from orca import ingest, journal, sevenzip
 from orca.sevenzip import ArchiveEntry
 
 
@@ -462,6 +463,82 @@ class TestCaptureSidecarLogs(unittest.TestCase):
             run = os.path.join(d, "run")
             self.assertEqual(ingest.capture_sidecar_logs([d], run), [])
             self.assertFalse(os.path.exists(run))
+
+
+SEVEN_ZIP = sevenzip.find_7z()
+
+
+@unittest.skipUnless(SEVEN_ZIP, "7z.exe not found")
+class TestCaptureLogs(unittest.TestCase):
+    """The per-command logs, which live inside the archive rather than beside it."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        src = os.path.join(self.dir.name, "src")
+        os.makedirs(os.path.join(src, "Errors"))
+        for name in ("NTFSInfo.dev.log", "USNInfo.dev.log", "NTFSInfo.csv"):
+            with open(os.path.join(src, name), "w", encoding="utf-8") as f:
+                f.write("x")
+        with open(os.path.join(src, "Errors", "Autoruns.dev.log"), "w", encoding="utf-8") as f:
+            f.write("x")
+
+        self.archive = os.path.join(self.dir.name, "ORC_H_General.7z")
+        subprocess.run([SEVEN_ZIP, "a", "-t7z", self.archive, os.path.join(src, "*")],
+                       capture_output=True, text=True, check=True)
+        self.run = os.path.join(self.dir.name, "run")
+
+    def test_every_log_in_the_archive_reaches_the_run(self):
+        products = ingest.capture_logs(SEVEN_ZIP, [self.archive], self.run, None)
+
+        # The names are relative to the run dir and separated the way this OS writes paths:
+        # 'products' is what cache.clear_dataset joins onto it to know what it may remove.
+        self.assertEqual(sorted(products),
+                         [os.path.join("Errors", "Autoruns.dev.log"),
+                          "NTFSInfo.dev.log", "USNInfo.dev.log"])
+        self.assertTrue(os.path.isfile(os.path.join(self.run, "Errors", "Autoruns.dev.log")))
+
+    def test_the_collected_data_is_left_in_the_archive(self):
+        ingest.capture_logs(SEVEN_ZIP, [self.archive], self.run, None)
+
+        self.assertFalse(os.path.exists(os.path.join(self.run, "NTFSInfo.csv")))
+
+    def test_the_password_recorded_beside_the_archive_is_used_without_being_asked_for(self):
+        locked = os.path.join(self.dir.name, "GetThis.7z")
+        subprocess.run([SEVEN_ZIP, "a", "-t7z", "-pS3cret", locked,
+                        os.path.join(self.dir.name, "src", "*")],
+                       capture_output=True, text=True, check=True)
+        with open(os.path.join(self.dir.name, "GetThis_cli_config.xml"), "w",
+                  encoding="utf-8") as f:
+            f.write('<getthis><output password="S3cret"/></getthis>')
+
+        products = ingest.capture_logs(SEVEN_ZIP, [locked], self.run, None)
+
+        self.assertIn("NTFSInfo.dev.log", products)
+
+    def test_an_archive_that_will_not_open_is_named_rather_than_coming_back_empty(self):
+        # 'report' has no --password, so this is reachable there; silently returning no logs
+        # would look exactly like an archive that holds none.
+        sealed = os.path.join(self.dir.name, "ORC_H_Locked.7z")
+        subprocess.run([SEVEN_ZIP, "a", "-t7z", "-pS3cret", sealed,
+                        os.path.join(self.dir.name, "src", "*")],
+                       capture_output=True, text=True, check=True)
+
+        printed = io.StringIO()
+        with redirect_stdout(printed):
+            products = ingest.capture_logs(SEVEN_ZIP, [sealed], self.run, None)
+
+        self.assertEqual(products, [])
+        self.assertIn("ORC_H_Locked.7z", printed.getvalue())
+
+    def test_an_archive_is_decoded_once_however_many_logs_it_holds(self):
+        # Not a detail: ORC writes a single solid block, so a call per log re-decodes
+        # everything in front of it. Counted rather than timed, which would be flaky.
+        with mock.patch("orca.sevenzip.extract_matching",
+                        wraps=sevenzip.extract_matching) as extract:
+            ingest.capture_logs(SEVEN_ZIP, [self.archive], self.run, None)
+
+        self.assertEqual(extract.call_count, 1)
 
 
 class TestSidecarDirs(unittest.TestCase):

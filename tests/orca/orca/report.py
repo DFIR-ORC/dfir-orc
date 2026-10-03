@@ -5,11 +5,11 @@ import glob
 import hashlib
 import json
 import os
-import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import NamedTuple
 
-from . import ignores, ingest, layout, outcome as _outcome, scratch, sevenzip
+from . import ignores, ingest, layout, logs as _logs, outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
@@ -106,7 +106,25 @@ def build_stats_view(timing: list[dict], available: bool = True, limit: int = 5)
     }
 
 
-_ERROR_RE = re.compile(r"error|failed|exception", re.IGNORECASE)
+def scan_log(path: str, context: int | None = None) -> dict:
+    """One log read once, for every view: the level counts, and the messages themselves.
+
+    Read once because a fleet dump holds a log per host and they are not small; the message
+    views reshape what this returns rather than opening the files again.
+    """
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            scan = _logs.scan(f, context)
+    except OSError:
+        # Unreadable is not clean, and -1 is the count the view has always shown for it.
+        return {"error_lines": -1, "warnings": 0, "errors": 0, "criticals": 0,
+                "exact": False, "messages": []}
+
+    counts = scan["counts"]
+    return {"error_lines": counts["error"] + counts["critical"],
+            "warnings": counts["warning"], "errors": counts["error"],
+            "criticals": counts["critical"], "exact": scan["exact"],
+            "messages": scan["messages"]}
 
 
 def build_outcome_view(outcome_obj, ignore: list | None = None) -> dict:
@@ -138,13 +156,30 @@ def run_log_files(directory: str, extra_dirs: list | None = None) -> list[str]:
     Deliberately not a walk of the whole run directory - it may hold a tree 'orca extract'
     expanded, whose every command log would drown the ones this run is about.
 
-    'extra_dirs' is where a sealed collection's log was unsealed to.
+    'extra_dirs' is where a sealed collection's log was unsealed to, and where the logs taken
+    out of its archives were put.
+
+    A log seen in two places is one log: 'ingest' leaves the per-command logs beside the
+    tables and a report on that dataset also pulls them out of the archives still sitting
+    there, which would otherwise count every one of them twice. The place is part of the
+    name, so 'Errors/NTFSInfo.dev.log' and 'NTFSInfo.dev.log' stay two logs; the run
+    directory comes first, so its copy is the one kept.
     """
-    found = []
-    for directory in [directory] + list(extra_dirs or []):
-        found += sorted(glob.glob(os.path.join(directory, "*.log")))
-        for root, _dirs, files in os.walk(os.path.join(directory, "Errors")):
-            found += sorted(os.path.join(root, name) for name in files)
+    found, seen = [], set()
+    for place in [directory] + list(extra_dirs or []):
+        here = sorted(glob.glob(os.path.join(place, "*.log")))
+        for root, _dirs, files in os.walk(os.path.join(place, "Errors")):
+            here += sorted(os.path.join(root, name) for name in files)
+
+        for path in here:
+            # Sliced rather than relpath'd: every path here was built from 'place', and
+            # relpath raises across Windows mounts, which is exactly where these dirs sit.
+            name = os.path.normcase(path[len(place):].lstrip("\\/"))
+            if name in seen:
+                continue
+
+            seen.add(name)
+            found.append(path)
 
     return found
 
@@ -194,8 +229,9 @@ def log_stem(outcome_path: str) -> str | None:
     return name[:-len(OUTCOME_SUFFIX)]
 
 
-def build_errors_view(directory: str, extra_dirs: list | None = None,
-                      stem: str | None = None, ignore: list | None = None) -> dict:
+def build_log_view(directory: str, extra_dirs: list | None = None,
+                   stem: str | None = None, ignore: list | None = None,
+                   context: int | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
     could not read at all, which are a hole in the run rather than a message inside it.
 
@@ -214,15 +250,7 @@ def build_errors_view(directory: str, extra_dirs: list | None = None,
         if size == 0:
             continue
 
-        count = 0
-        try:
-            with open(path, encoding="utf-8", errors="ignore") as f:
-                for line in f:
-                    if _ERROR_RE.search(line):
-                        count += 1
-        except OSError:
-            count = -1
-        logs.append({"log": log_label(path, directory), "bytes": size, "error_lines": count})
+        logs.append(dict(scan_log(path, context), log=log_label(path, directory), bytes=size))
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
     kept_logs = [log for log in logs if not ignores.matches(log["log"], patterns)]
     skipped = layout.skipped(directory)
@@ -236,6 +264,21 @@ def build_errors_view(directory: str, extra_dirs: list | None = None,
             "skipped": kept_skipped,
             "logs_ignored": len(logs) - len(kept_logs),
             "skipped_ignored": len(skipped) - len(kept_skipped)}
+
+
+def build_message_view(log_view: dict, level: str) -> dict:
+    """What was said at one level, built from the scan the log view already did.
+
+    Told in time order rather than a log at a time: a host's collection log and its per-command
+    logs each hold part of one story, and read one file at a time it does not join up. ORC
+    timestamps are fixed-width UTC, so sorting them as text is sorting them as time.
+    """
+    messages = [dict(message, log=log["log"])
+                for log in log_view.get("logs", [])
+                for message in log.get("messages", [])
+                if message["level"] == level]
+    messages.sort(key=lambda m: (m["time"], m["log"]))
+    return {"available": log_view.get("available", True), "messages": messages}
 
 
 def _hsize(n) -> str:
@@ -276,12 +319,15 @@ def host_of(directory: str, extra_dirs: list | None = None,
 
 def build_host_report(directory: str, engine=None, extra_dirs: list | None = None,
                       outcome_path: str | None = None, stem: str | None = None,
-                      ignore: list | None = None) -> dict:
-    """The four views of one run dir, each told whether its own input was there to read.
+                      ignore: list | None = None, context: int | None = None) -> dict:
+    """Every view of one run dir, each told whether its own input was there to read.
 
     Only 'ingest' writes the '.orca' directory, and report is pointed at a directory 'extract'
-    produced often enough - ORC's Outcome and logs are both in one - so two of the four views
+    produced often enough - ORC's Outcome and logs are both in one - so two of the views
     routinely have nothing to read, and have to say so rather than report a zero.
+
+    The three message views are built from the log view rather than from the directory: they
+    are about the same logs, and a fleet's worth of them is not worth reading twice.
     """
     timing = load_timing(directory)
     timing_available = os.path.exists(layout.timing_path(directory))
@@ -290,13 +336,17 @@ def build_host_report(directory: str, engine=None, extra_dirs: list | None = Non
     op = outcome_path or _outcome.outcome_file(directory, extra_dirs)
     oc = _outcome.parse_outcome(op) if op else None
     files = empty_output_files(engine, layout.manifest_path(directory)) if engine else []
+    log_view = build_log_view(directory, extra_dirs, stem, ignore, context)
     return {
         "host": host_of(directory, extra_dirs, op),
         "directory": directory,
         "outcome": build_outcome_view(oc, ignore),
         "empty": build_empty_view(timing, files, timing_available, manifest_available, ignore),
         "stats": build_stats_view(timing, timing_available),
-        "errors": build_errors_view(directory, extra_dirs, stem, ignore),
+        "log": log_view,
+        "warn": build_message_view(log_view, "warning"),
+        "error": build_message_view(log_view, "error"),
+        "critical": build_message_view(log_view, "critical"),
     }
 
 
@@ -305,8 +355,8 @@ def ignored_count(hr: dict) -> int:
     return (hr["outcome"].get("failures_ignored", 0)
             + hr["empty"].get("tables_ignored", 0)
             + hr["empty"].get("files_ignored", 0)
-            + hr["errors"].get("logs_ignored", 0)
-            + hr["errors"].get("skipped_ignored", 0))
+            + hr["log"].get("logs_ignored", 0)
+            + hr["log"].get("skipped_ignored", 0))
 
 
 def summary_of(hr: dict) -> dict:
@@ -324,7 +374,8 @@ def summary_of(hr: dict) -> dict:
         "empty": e["count"] if tables_empty else None,
         "empty_files": e.get("file_count", 0) if e.get("files_available", True) else None,
         "tables": s["tables"] if tables else None,
-        "unread": len(hr["errors"].get("skipped", {})),
+        "unread": len(hr["log"].get("skipped", {})),
+        "criticals": len(hr.get("critical", {}).get("messages", [])),
         "ignored": ignored_count(hr),
         "total_bytes": s["total_bytes"] if tables else None,
         "duration_seconds": o.get("duration_seconds") if avail else None,
@@ -344,11 +395,11 @@ def render_one_line(summary: dict) -> str:
             f'size={_hsize(summary["total_bytes"])} dur={_hdur(summary["duration_seconds"])} '
             f'mem={_hsize(summary["memory_peak_bytes"])}')
 
-    # Only when there is one: a field that always reads zero stops being read, and these two
-    # say the run is missing a table, or ORC wrote an output and put nothing in it, rather
-    # than the ordinary state of affairs. None stays quiet too - an unread manifest must not
-    # read as 'no empty files'.
-    for field in ("empty_files", "unread", "ignored"):
+    # Only when there is one: a field that always reads zero stops being read, and each of
+    # these says something went wrong - the run is missing a table, ORC wrote an output and
+    # put nothing in it, a command died - rather than the ordinary state of affairs. None
+    # stays quiet too - an unread manifest must not read as 'no empty files'.
+    for field in ("criticals", "empty_files", "unread", "ignored"):
         if summary.get(field):
             line += f' {field}={summary[field]}'
 
@@ -364,7 +415,7 @@ def host_json(hr: dict) -> dict:
     three levels down. The detail rides along underneath for when the filter has found
     something.
     """
-    outcome, empty, stats, errors = hr["outcome"], hr["empty"], hr["stats"], hr["errors"]
+    outcome, empty, stats, log_view = hr["outcome"], hr["empty"], hr["stats"], hr["log"]
     return {
         **summary_of(hr),
         "directory": hr["directory"],
@@ -372,7 +423,7 @@ def host_json(hr: dict) -> dict:
         "stats_available": stats.get("available", True),
         "empty_available": empty.get("available", True),
         "empty_files_available": empty.get("files_available", True),
-        "errors_available": errors.get("available", True),
+        "log_available": log_view.get("available", True),
         "ignored": ignored_count(hr),
         "memory_peak_set": outcome.get("memory_peak_set", ""),
         "failures": outcome.get("failures", []),
@@ -380,8 +431,16 @@ def host_json(hr: dict) -> dict:
         "empty_files": empty.get("empty_files", []),
         "biggest": stats.get("biggest", []),
         "slowest": stats.get("slowest", []),
-        "logs": errors.get("logs", []),
-        "skipped": errors.get("skipped", {}),
+        # The messages are kept off the logs: they are the bulky part, and a filter that found
+        # a host has one place to read them rather than two that must agree.
+        "logs": [{key: value for key, value in log.items() if key != "messages"}
+                 for log in log_view.get("logs", [])],
+        # Not 'critical': the summary's count is 'criticals', and a detail list under the same
+        # name would overwrite the scalar a filter reads.
+        "warn_messages": hr.get("warn", {}).get("messages", []),
+        "error_messages": hr.get("error", {}).get("messages", []),
+        "critical_messages": hr.get("critical", {}).get("messages", []),
+        "skipped": log_view.get("skipped", {}),
     }
 
 
@@ -445,10 +504,76 @@ def table_rows(stats: dict) -> list:
             for table in stats.get("top", [])]
 
 
-def log_rows(errors: dict) -> list:
+def log_level_cells(log: dict) -> list:
+    """The counts of one log, or the one thing that can be said when there are none.
+
+    A log nothing could parse gets the substring count alone, marked approximate: zeros under
+    warnings and criticals would assert something that heuristic cannot know. Always three
+    cells wide, and the one thing it can say goes in the error column, so the numbers line up
+    down the table whatever each log turned out to be.
+    """
+    if log["error_lines"] < 0:
+        return ["", "unreadable", ""]
+
+    if not log.get("exact", True):
+        return ["", f'~{log["error_lines"]}E', ""]
+
+    return [f'{log["warnings"]}W', f'{log["errors"]}E', f'{log["criticals"]}C']
+
+
+def log_rows(log_view: dict) -> list:
     """Only the logs that carried something: a log read and found clean needs no line."""
-    return [[log["log"], str(log["error_lines"])]
-            for log in errors.get("logs", []) if log["error_lines"]]
+    return [[log["log"]] + log_level_cells(log)
+            for log in log_view.get("logs", []) if log["error_lines"]]
+
+
+def time_of_day(timestamp: str) -> str:
+    """'2026-10-03T08:15:03.000Z' -> '08:15:03'. A host report is one run, so the date is the
+    same on every line of it and only costs width."""
+    return timestamp[11:19] if len(timestamp) >= 19 else timestamp
+
+
+def message_rows(messages: list, width: int = MAX_WIDTH) -> list:
+    """A message as its log, when it happened, and what it said, cut to fit one line."""
+    rows = []
+    for message in messages:
+        room = width - len(message["log"]) - 18
+        text = message["message"]
+        rows.append([message["log"], time_of_day(message["time"]),
+                     text if len(text) <= room else text[:room - 3] + "..."])
+
+    return rows
+
+
+# The rule around a message's context: several of them otherwise run into one wall of
+# indented lines with nothing saying where each one ends.
+CONTEXT_RULE = "      " + "-" * 30
+
+
+def log_line(entry, marker: str = " ") -> str:
+    """One context line in the shape the log itself used, under the report's indent."""
+    time, level, text = entry
+    return f"      {marker} {time_of_day(time)} [{_logs.TAGS[level]}] {text}"
+
+
+def context_lines(message: dict) -> list:
+    """The log lines around the message, ruled off, the message itself marked with '>'.
+
+    Read from the log rather than taken from ORC's backtrace block: the block is a replay the
+    sink clears on every dump, so with a trigger of Error it holds the two or three lines since
+    the previous error while sitting exactly where this error's own context would be. The
+    marked line carries the message in full, which the row above it has had to cut to a width.
+    """
+    before, after = message.get("before", []), message.get("after", [])
+    if not before and not after:
+        return []
+
+    own = (message["time"], message["level"], message["message"])
+    return ([CONTEXT_RULE]
+            + [log_line(entry) for entry in before]
+            + [log_line(own, ">")]
+            + [log_line(entry) for entry in after]
+            + [CONTEXT_RULE])
 
 
 def skipped_rows(skipped: dict, width: int = MAX_WIDTH) -> list:
@@ -534,32 +659,88 @@ def empty_lines(hr: dict, explicit: bool) -> list:
     return lines
 
 
-def errors_lines(hr: dict, explicit: bool) -> list:
-    errors = hr["errors"]
+def log_lines(hr: dict, explicit: bool) -> list:
+    log_view = hr["log"]
     lines = []
-    if not errors.get("available", True):
+    if not log_view.get("available", True):
         lines.append("  logs: (no logs captured)")
     else:
-        rows = log_rows(errors)
-        if rows or explicit or errors.get("logs_ignored", 0):
+        rows = log_rows(log_view)
+        if rows or explicit or log_view.get("logs_ignored", 0):
             # Its own 'of': how many logs were read, which is not how many were kept.
-            read = len(errors.get("logs", [])) + errors.get("logs_ignored", 0)
+            read = len(log_view.get("logs", [])) + log_view.get("logs_ignored", 0)
             heading = f"logs with errors ({len(rows)} of {read}"
-            passed = errors.get("logs_ignored", 0)
+            passed = log_view.get("logs_ignored", 0)
             heading += f", {passed} ignored)" if passed else ")"
-            lines += section(heading, rows, "<>")
+            lines += section(heading, rows, "<>>>")
 
     # A hole in the run rather than a message inside it, so it is said separately and whether
     # or not there were logs to read.
-    skipped = skipped_rows(errors.get("skipped") or {})
-    if skipped or explicit or errors.get("skipped_ignored", 0):
+    skipped = skipped_rows(log_view.get("skipped") or {})
+    if skipped or explicit or log_view.get("skipped_ignored", 0):
         lines += section(counted("unread tables", len(skipped),
-                                 errors.get("skipped_ignored", 0)), skipped, "<<")
+                                 log_view.get("skipped_ignored", 0)), skipped, "<<")
 
     return lines
 
 
-def render_human(hr: dict, views: list, explicit: bool = False) -> str:
+def message_lines(hr: dict, view: str, explicit: bool,
+                  context: int | None = None) -> list:
+    """What was said at one level. The log view says which log to open; this says why.
+
+    The heading is the view's own name - 'warn', not 'warning' - so a section maps back to the
+    flag that asks for it. When no log was read at all the log view already says so, so this
+    one repeats it only when it was asked for by name; otherwise the report says it twice.
+    """
+    messages = hr.get(view, {})
+    if not messages.get("available", True):
+        return [f"  {view}: (no logs captured)"] if explicit else []
+
+    rows = messages.get("messages", [])
+    if not rows and not explicit:
+        return []
+
+    lines = [f"  {view} ({len(rows)})"]
+    for row, message in zip(columns(message_rows(rows), "<<<"), rows):
+        lines.append(f"    {row}")
+        if context is not None:
+            lines += context_lines(message)
+
+    return lines
+
+
+# Every view, in the order a report prints them: what ran, what it produced, then what it said
+# about it, by rising severity.
+VIEWS = ("outcome", "stats", "empty", "log", "warn", "error", "critical")
+
+# What a report prints when no view was named. The message views below critical are left out:
+# a run with thousands of warnings would bury the rest of its own report.
+DEFAULT_VIEWS = ("outcome", "stats", "empty", "log", "critical")
+
+MESSAGE_VIEWS = ("warn", "error", "critical")
+
+# What '--view' accepts. 'all' is every view rather than one of them.
+VIEW_NAMES = VIEWS + ("all",)
+
+
+def expand_views(views: list | None) -> list:
+    """The views to print: the default set when none was named, every one for 'all'.
+
+    Returned in VIEWS order whatever order they were asked for, so '--view critical,log' and
+    '--view log,critical' print the same report. None is 'none was named'; an empty list is
+    none of them, which is the header alone.
+    """
+    if views is None:
+        return list(DEFAULT_VIEWS)
+
+    if "all" in views:
+        return list(VIEWS)
+
+    return [view for view in VIEWS if view in views]
+
+
+def render_human(hr: dict, views: list, explicit: bool = False,
+                 context: int | None = None) -> str:
     """The default report: the host, its scalars, then one counted section per finding.
 
     Every row of every section is printed. Sections with nothing in them are left out - the
@@ -568,15 +749,24 @@ def render_human(hr: dict, views: list, explicit: bool = False) -> str:
     is empty, because asking for a view and getting nothing back cannot be told from a broken
     report.
     """
+    views = expand_views(views)
     lines = header_lines(hr)
     if "outcome" in views:
         lines += outcome_lines(hr, explicit)
-    for name, builder in (("stats", stats_lines), ("empty", empty_lines),
-                          ("errors", errors_lines)):
+    for name, builder in (("stats", stats_lines), ("empty", empty_lines), ("log", log_lines)):
         if name not in views:
             continue
 
         built = builder(hr, explicit)
+        if built:
+            lines += [""] + built
+
+    # Last, and apart, because these are the sections that take a flag of their own.
+    for name in MESSAGE_VIEWS:
+        if name not in views:
+            continue
+
+        built = message_lines(hr, name, explicit, context)
         if built:
             lines += [""] + built
 
@@ -835,6 +1025,111 @@ def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=N
     return mapped
 
 
+def archived_logs_dir(run: Run, work: str) -> str:
+    """Where this run's in-archive logs are kept: a directory of its own under the work dir.
+
+    Per run, not per directory: a merged dump of a fleet is one directory holding one Outcome
+    per machine, and the logs come out under the command's name ('NTFSInfo.dev.log'), which
+    says nothing about which machine they belong to. A directory each is what keeps them
+    apart, since 'extra_dirs' attributes by directory rather than by file name.
+    """
+    return os.path.join(sidecar_dir(run.directory, work), "archived-logs",
+                        log_stem(run.outcome_path) or "run")
+
+
+def archives_of(run: Run) -> tuple[list, list]:
+    """This run's archives as (readable paths, names that are sealed).
+
+    Sealed ones are named rather than opened: the envelope is CMS over the whole archive, so
+    reading one log out of it costs decrypting all of it, which is an extract wearing a
+    report's clothes.
+    """
+    readable, sealed = [], []
+    for name in archives_named_by([run.outcome_path] if run.outcome_path else []):
+        path = os.path.join(run.directory, name)
+        if ingest.sealed_name(name):
+            plain = os.path.join(run.directory, ingest.sealed_name(name) + ".7z")
+            if os.path.isfile(plain):
+                readable.append(plain)
+            elif os.path.isfile(path):
+                sealed.append(name)
+
+            continue
+
+        if os.path.isfile(path):
+            readable.append(path)
+
+    return readable, sealed
+
+
+def capture_archived_logs(run: Run, work: str, seven_zip: str,
+                          refresh: bool) -> tuple[str | None, list]:
+    """Pull this run's in-archive logs into the work dir. (where they went, what stayed sealed)
+
+    Never into the collection: a report only reads, and what it reads has to stay as it was
+    found. Kept between runs because the decode is the expensive part - an archive already
+    expanded is reused, and '--refresh' is how you ask for it again.
+
+    The sealed ones are returned rather than announced here, so a fleet of them is one line
+    instead of one per host.
+    """
+    target = archived_logs_dir(run, work)
+    if os.path.isdir(target) and not refresh:
+        return (target if os.listdir(target) else None), []
+
+    readable, sealed = archives_of(run)
+    if not readable:
+        return None, sealed
+
+    os.makedirs(target, exist_ok=True)
+    try:
+        # capture_logs names an archive it could not open itself, so only what it does not
+        # handle is caught here.
+        ingest.capture_logs(seven_zip, readable, target, None)
+    except OSError as error:
+        print(f"could not keep the logs of '{run.directory}': {error}")
+
+    return (target if os.listdir(target) else None), sealed
+
+
+def sealed_archive_line(sealed: list, directories: list) -> str:
+    """One line for the archives no report can open: there is more in them, and what opens it.
+
+    A signpost, not an explanation. Said at all because an invisible gap is what this whole
+    path exists to close - a report that quietly skipped them would read as a clean run - and
+    said once rather than per host, the way orphan_lines is, since a fleet's worth of the same
+    sentence buries it.
+    """
+    names = sorted(set(sealed))
+    shown = ", ".join(names[:3]) + (", ..." if len(names) > 3 else "")
+    plural = "archive" if len(names) == 1 else "archives"
+    where = directories[0] if len(set(directories)) == 1 else os.path.dirname(directories[0])
+    return f"more in {len(names)} sealed {plural}: {shown} (orca ingest {where})"
+
+
+def with_archived_logs(runs: list, work: str, seven_zip: str, refresh: bool = False,
+                       workers: int = 8) -> list:
+    """Every run, with the logs out of its archives added to its extra_dirs.
+
+    In parallel across runs because each one is a decode: a fleet of hosts is the case where
+    this is worth anything, and they do not wait on each other.
+    """
+    if not seven_zip:
+        print("cannot read the logs inside the archives: 7z.exe not found")
+        return runs
+
+    with ThreadPoolExecutor(max_workers=min(workers, len(runs)) or 1) as pool:
+        found = list(pool.map(lambda run: capture_archived_logs(run, work, seven_zip, refresh),
+                              runs))
+
+    sealed = [name for _directory, names in found for name in names]
+    if sealed:
+        print(sealed_archive_line(sealed, [run.directory for run in runs]))
+
+    return [run if directory is None else run._replace(extra_dirs=run.extra_dirs + [directory])
+            for run, (directory, _sealed) in zip(runs, found)]
+
+
 def shared_dirs(runs: list) -> set:
     """The directories holding more than one run, where a log has to be attributed."""
     counts: dict = {}
@@ -864,7 +1159,8 @@ def orphan_lines(dirs: list, sealed: dict) -> list:
 
 def run_report(paths, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
-               refresh=False, ignore_file=None, recurse=False, engine_name="duckdb") -> None:
+               refresh=False, ignore_file=None, recurse=False, context=None,
+               archive_logs=True, engine_name="duckdb") -> None:
     """Report on every collection in every directory given.
 
     A directory is read for what it holds rather than taken for one run: a fleet arrives either
@@ -880,8 +1176,8 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     dirs = candidate_dirs(list(paths or []), recurse)
 
     scratch.use(work_dir)
-    sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
-                                   private_key, cms_backend, refresh)
+    work = work_dir or scratch.directory("report_")
+    sealed = unsealed_sidecar_dirs(dirs, work, private_key, cms_backend, refresh)
     runs = find_runs(dirs, sealed)
     if not runs:
         # Name the flag: a parent of per-host folders is the likeliest reason, and the fix is
@@ -889,6 +1185,12 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
         inside = "" if recurse else " (--recurse to look inside)"
         raise RuntimeError(f"no collection in {', '.join(paths)}{inside}: need a collection, "
                            f"an ingested dataset, or a directory holding either")
+
+    # Before the views, and not for '--list', which reads the Outcome alone: the per-command
+    # logs are inside the archives, and without this the errors and criticals views read
+    # WolfLauncher's own log and nothing else.
+    if archive_logs and not list_commands:
+        runs = with_archived_logs(runs, work, sevenzip.find_7z() or "", refresh)
 
     orphans = orphan_lines(dirs, sealed)
 
@@ -917,7 +1219,7 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     reports = [build_host_report(
         run.directory, engine, run.extra_dirs, run.outcome_path,
         log_stem(run.outcome_path) if os.path.abspath(run.directory) in shared else None,
-        ignore)
+        ignore, context)
         for run in runs]
 
     if as_json:
@@ -928,6 +1230,7 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
             print(render_one_line(summary_of(r)))
         return
 
+    # 'explicit' is whether a view was named: a named view prints its heading even when it is
+    # empty, and the default report leaves the empty ones out.
     explicit = bool(views)
-    views = views or ["outcome", "empty", "stats", "errors"]
-    print("\n\n".join([render_human(r, views, explicit) for r in reports] + orphans))
+    print("\n\n".join([render_human(r, views, explicit, context) for r in reports] + orphans))

@@ -1,6 +1,7 @@
 import json
+import re
 import unittest
-from orca import report
+from orca import logs, report
 
 
 def host_report() -> dict:
@@ -15,7 +16,10 @@ def host_report() -> dict:
         "empty": {"empty_tables": ["E1"], "count": 1},
         "stats": {"tables": 25, "total_rows": 100, "total_bytes": 13207024435,
                   "biggest": [], "slowest": []},
-        "errors": {"available": True, "logs": []},
+        "log": {"available": True, "logs": []},
+        "warn": {"available": True, "messages": []},
+        "error": {"available": True, "messages": []},
+        "critical": {"available": True, "messages": []},
     }
 
 
@@ -51,13 +55,52 @@ def full_host_report() -> dict:
                      "rows": 798432, "seconds": 1.23},
                     {"name": "SlowButSmall", "bytes": 2048, "rows": 20, "seconds": 9.0}],
         },
-        "errors": {
+        "log": {
             "available": True, "logs_ignored": 0, "skipped_ignored": 0,
-            "logs": ([{"log": f"Command{i}.dev.log", "bytes": 100, "error_lines": 2398 - i}
+            "logs": ([{"log": f"Command{i}.dev.log", "bytes": 100, "error_lines": 2398 - i,
+                       "warnings": 10 + i, "errors": 2397 - i, "criticals": 1, "exact": True,
+                       "messages": [{"time": "2026-10-03T08:15:03.000Z", "level": "critical",
+                                     "message": "m", "before": [], "after": []}]}
                       for i in range(8)]
-                     + [{"log": "Quiet.dev.log", "bytes": 100, "error_lines": 0}]),
+                     + [{"log": "Quiet.dev.log", "bytes": 100, "error_lines": 0,
+                         "warnings": 0, "errors": 0, "criticals": 0, "exact": True}]),
             "skipped": {"autoruns": "duckdb failed: Invalid Input Error: it was not possible "
                                     "to detect the CSV dialect"},
+        },
+        "warn": {
+            "available": True,
+            "messages": [
+                {"log": "Command0.dev.log", "time": "2026-10-03T08:15:01.000Z",
+                 "level": "warning", "message": "volume C: is dirty",
+                 "before": [], "after": []},
+            ],
+        },
+        "error": {
+            "available": True,
+            "messages": [
+                {"log": "Command0.dev.log", "time": "2026-10-03T08:15:02.500Z",
+                 "level": "error", "message": "CreateFile failed [access denied]",
+                 "before": [("2026-10-03T08:15:02.000Z", "debug", "opening volume")],
+                 "after": [("2026-10-03T08:15:03.000Z", "info", "giving up on C:")]},
+                {"log": "Command1.dev.log", "time": "2026-10-03T08:15:59.000Z",
+                 "level": "error", "message": "could not write the archive",
+                 "before": [], "after": []},
+            ],
+        },
+        "critical": {
+            "available": True,
+            "messages": [
+                {"log": "Command0.dev.log", "time": "2026-10-03T08:15:03.000Z",
+                 "level": "critical",
+                 "message": "Failed to open volume \\\\.\\C: [access denied]",
+                 "before": [("2026-10-03T08:15:02.000Z", "debug", "opening volume"),
+                            ("2026-10-03T08:15:02.500Z", "error", "CreateFile failed")],
+                 "after": [("2026-10-03T08:15:03.500Z", "info", "collection aborted")]},
+                {"log": "Command1.dev.log", "time": "2026-10-03T08:16:00.000Z",
+                 "level": "critical",
+                 "message": "Job was authoritatively terminated",
+                 "before": [], "after": []},
+            ],
         },
     }
 
@@ -81,7 +124,7 @@ class TestRender(unittest.TestCase):
 
     def _hr_with_skips(self):
         hr = self._hr()
-        hr["errors"]["skipped"] = {"autoruns": "duckdb said no"}
+        hr["log"]["skipped"] = {"autoruns": "duckdb said no"}
         return hr
 
     def test_the_stats_view_names_the_command_that_would_fill_it(self):
@@ -147,14 +190,14 @@ class TestRender(unittest.TestCase):
         line = report.render_one_line(report.summary_of(self._hr_with_skips()))
         self.assertIn("unread=1", line)
 
-    def test_the_errors_view_names_the_unread_table_and_why(self):
-        text = report.render_human(self._hr_with_skips(), ["errors"])
+    def test_the_log_view_names_the_unread_table_and_why(self):
+        text = report.render_human(self._hr_with_skips(), ["log"])
         self.assertIn("unread tables (1)", text)
         self.assertIn("autoruns", text)
         self.assertIn("duckdb said no", text)
 
-    def test_the_errors_view_says_nothing_when_the_run_is_complete(self):
-        self.assertNotIn("unread", report.render_human(self._hr(), ["errors"]))
+    def test_the_log_view_says_nothing_when_the_run_is_complete(self):
+        self.assertNotIn("unread", report.render_human(self._hr(), ["log"]))
 
     def test_render_one_line_has_host_and_fields(self):
         line = report.render_one_line(report.summary_of(self._hr()))
@@ -343,7 +386,7 @@ class TestRenderSections(unittest.TestCase):
 
     def render(self, hr=None, views=None, explicit=False) -> str:
         return report.render_human(hr or full_host_report(),
-                                   views or ["outcome", "empty", "stats", "errors"],
+                                   views or ["outcome", "empty", "stats", "log"],
                                    explicit=explicit)
 
     def lines(self, **kwargs) -> list:
@@ -398,6 +441,32 @@ class TestRenderSections(unittest.TestCase):
 
     def test_a_quiet_log_is_not_listed(self):
         self.assertNotIn("Quiet.dev.log", self.render())
+
+    def test_a_log_is_broken_down_by_level(self):
+        line = next(l for l in self.lines() if "Command0.dev.log" in l)
+
+        self.assertEqual(line.split(), ["Command0.dev.log", "10W", "2397E", "1C"])
+
+    def test_a_log_nothing_could_parse_claims_no_level_breakdown(self):
+        # Zeros under W and C would assert something the substring fallback cannot know.
+        hr = full_host_report()
+        hr["log"]["logs"] = [{"log": "crash.txt", "bytes": 10, "error_lines": 3,
+                                 "warnings": 0, "errors": 0, "criticals": 0, "exact": False}]
+
+        line = next(l for l in report.render_human(hr, ["log"]).splitlines()
+                    if "crash.txt" in l)
+
+        self.assertEqual(line.split(), ["crash.txt", "~3E"])
+
+    def test_a_log_that_could_not_be_read_says_so_rather_than_counting_minus_one(self):
+        hr = full_host_report()
+        hr["log"]["logs"] = [{"log": "locked.log", "bytes": 10, "error_lines": -1,
+                                 "warnings": 0, "errors": 0, "criticals": 0, "exact": False}]
+
+        line = next(l for l in report.render_human(hr, ["log"]).splitlines()
+                    if "locked.log" in l)
+
+        self.assertEqual(line.split(), ["locked.log", "unreadable"])
 
     def test_every_failure_is_listed(self):
         # Eight of them, Autoruns last: a report that hides rows makes you run it again.
@@ -466,7 +535,7 @@ def host_report_with_ignores() -> dict:
     hr["empty"]["empty_files"] = hr["empty"]["empty_files"][:5]
     hr["empty"]["file_count"] = 5
     hr["empty"]["files_ignored"] = 4
-    hr["errors"]["logs_ignored"] = 2
+    hr["log"]["logs_ignored"] = 2
     return hr
 
 
@@ -476,7 +545,7 @@ class TestRenderIgnored(unittest.TestCase):
 
     def render(self, hr=None) -> str:
         return report.render_human(hr or host_report_with_ignores(),
-                                   ["outcome", "empty", "stats", "errors"])
+                                   ["outcome", "empty", "stats", "log"])
 
     def test_a_section_says_how_many_it_kept_of_how_many(self):
         self.assertIn("failed commands (3 of 8, 5 ignored)", self.render())
@@ -545,6 +614,157 @@ class TestListIgnored(unittest.TestCase):
     def test_with_nothing_ignored_the_summary_is_unchanged(self):
         self.assertIn("3 command(s), 2 failed, 1 host(s)",
                       report.render_command_lines(self.rows(), False, []))
+
+
+class TestRenderCriticals(unittest.TestCase):
+    """The message views: what was said, as against where it was said.
+
+    The log view counts the levels per log, which answers 'which log do I open'. These answer
+    'what went wrong', which is the question that is usually being asked.
+    """
+
+    def render(self, hr=None, views=None, **kwargs) -> str:
+        return report.render_human(hr or full_host_report(), views or ["critical"], **kwargs)
+
+    def test_the_section_counts_them(self):
+        self.assertIn("critical (2)", self.render())
+
+    def test_a_critical_is_its_log_its_time_and_what_it_said(self):
+        line = next(l for l in self.render().splitlines() if "access denied" in l)
+
+        self.assertEqual(line.split()[:2], ["Command0.dev.log", "08:15:03"])
+        self.assertIn("Failed to open volume", line)
+
+    def test_the_context_is_not_printed_unless_it_is_asked_for(self):
+        # Five lines either side of 61 errors is the whole report on a bad run.
+        self.assertNotIn("opening volume", self.render())
+
+    def test_the_context_is_the_lines_either_side_of_the_message(self):
+        lines = self.render(context=logs.DEFAULT_CONTEXT).splitlines()
+        critical = next(i for i, l in enumerate(lines) if l.strip().startswith("Command0"))
+
+        self.assertIn("[D] opening volume", lines[critical + 2])
+        self.assertIn("[E] CreateFile failed", lines[critical + 3])
+        self.assertIn("[I] collection aborted", lines[critical + 5])
+
+    def test_the_message_itself_is_marked_in_its_context(self):
+        # So the eye finds the line the section is about in the middle of the block, and so the
+        # message is there in full rather than cut to the width of the row above it.
+        lines = self.render(context=logs.DEFAULT_CONTEXT).splitlines()
+        own = next(l for l in lines if l.strip().startswith(">"))
+
+        self.assertIn("[C] Failed to open volume", own)
+
+    def test_a_rule_line_opens_and_closes_each_context(self):
+        # Without it the contexts of several messages run into one wall of indented lines.
+        lines = self.render(context=logs.DEFAULT_CONTEXT).splitlines()
+        critical = next(i for i, l in enumerate(lines) if l.strip().startswith("Command0"))
+
+        self.assertRegex(lines[critical + 1], r"^ +-{4,}$")
+        self.assertRegex(lines[critical + 6], r"^ +-{4,}$")
+        self.assertIn("Job was authoritatively terminated", lines[critical + 7])
+
+    def test_a_message_with_nothing_around_it_gets_no_rule(self):
+        lines = self.render(context=logs.DEFAULT_CONTEXT).splitlines()
+        last = next(i for i, l in enumerate(lines) if "authoritatively" in l)
+
+        self.assertEqual(lines[last:], [lines[last]])
+
+    def test_a_run_whose_logs_were_never_read_does_not_read_as_clean(self):
+        # Asked for by name, as '--view critical' does: in the default report the log
+        # view already says it and twice reads as a bug.
+        hr = full_host_report()
+        hr["critical"] = {"available": False, "messages": []}
+
+        self.assertIn("(no logs captured)", self.render(hr, explicit=True))
+
+    def test_the_default_report_does_not_say_it_twice(self):
+        hr = full_host_report()
+        hr["log"]["available"] = False
+        hr["critical"] = {"available": False, "messages": []}
+
+        text = report.render_human(hr, ["log", "critical"])
+
+        self.assertEqual(text.count("(no logs captured)"), 1)
+
+    def test_a_clean_run_prints_no_section_at_all(self):
+        hr = full_host_report()
+        hr["critical"] = {"available": True, "messages": []}
+
+        self.assertEqual(self.render(hr), report.render_human(hr, []))
+
+    def test_naming_the_view_prints_its_heading_even_when_empty(self):
+        hr = full_host_report()
+        hr["critical"] = {"available": True, "messages": []}
+
+        self.assertIn("critical (0)", self.render(hr, explicit=True))
+
+    def test_the_error_view_prints_what_the_errors_said(self):
+        text = self.render(views=["error"])
+
+        self.assertIn("error (2)", text)
+        self.assertIn("could not write the archive", text)
+
+    def test_the_warn_view_prints_what_the_warnings_said(self):
+        text = self.render(views=["warn"])
+
+        self.assertIn("warn (1)", text)
+        self.assertIn("volume C: is dirty", text)
+
+    def test_each_section_is_headed_by_the_name_that_asks_for_it(self):
+        # 'warn (1)' rather than 'warning (1)': the heading has to map back to '--view warn'.
+        text = self.render(views=["warn", "error", "critical"])
+        headings = [re.match(r"^ {2}(\w+) \(\d+\)$", line) for line in text.splitlines()]
+
+        self.assertEqual([m.group(1) for m in headings if m], ["warn", "error", "critical"])
+
+    def test_the_context_is_printed_under_an_error_too(self):
+        # The case the flag missed: a log whose trigger was Error has no critical at all, and
+        # its errors are the only thing there is to read.
+        lines = self.render(views=["error"], context=logs.DEFAULT_CONTEXT).splitlines()
+        error = next(i for i, l in enumerate(lines) if l.strip().startswith("Command0"))
+
+        self.assertIn("[D] opening volume", lines[error + 2])
+        self.assertIn("[I] giving up on C:", lines[error + 4])
+
+    def test_all_prints_every_view(self):
+        text = self.render(views=["all"], explicit=True)
+
+        for heading in ("failed commands", "tables", "empty tables", "logs with errors",
+                        "warn (1)", "error (2)", "critical (2)"):
+            self.assertIn(heading, text)
+
+
+class TestCriticalsInTheOtherShapes(unittest.TestCase):
+    def test_the_one_line_carries_the_count_when_there_is_one(self):
+        self.assertIn("criticals=2", report.render_one_line(report.summary_of(full_host_report())))
+
+    def test_the_one_line_stays_quiet_when_there_are_none(self):
+        self.assertNotIn("criticals=", report.render_one_line(report.summary_of(host_report())))
+
+    def test_the_json_carries_the_criticals_at_the_top_level(self):
+        doc = report.host_json(full_host_report())
+
+        self.assertEqual([c["message"] for c in doc["critical_messages"]],
+                         ["Failed to open volume \\\\.\\C: [access denied]",
+                          "Job was authoritatively terminated"])
+
+    def test_the_count_a_filter_reads_is_not_overwritten_by_the_messages(self):
+        # Both wanted the name 'criticals' and the detail won, so '? criticals -gt 0' was
+        # comparing a number against a list.
+        self.assertEqual(report.host_json(full_host_report())["criticals"], 2)
+
+    def test_the_json_does_not_also_repeat_them_under_every_log(self):
+        doc = report.host_json(full_host_report())
+
+        self.assertNotIn("messages", doc["logs"][0])
+
+    def test_the_json_carries_the_warnings_and_errors_too(self):
+        doc = report.host_json(full_host_report())
+
+        self.assertEqual([m["message"] for m in doc["warn_messages"]], ["volume C: is dirty"])
+        self.assertEqual([m["message"] for m in doc["error_messages"]],
+                         ["CreateFile failed [access denied]", "could not write the archive"])
 
 
 if __name__ == "__main__":

@@ -703,41 +703,82 @@ def capture_sidecar_logs(directories: list[str], out_dir: str) -> list[str]:
     return copy_into_run(found, out_dir)
 
 
+def error_containers(entries: list) -> list[str]:
+    """The 'Errors' sub-archives among an archive's entries: the failing commands' output."""
+    return [entry.path for entry in entries
+            if entry.path.lower().endswith(".7z") and "error" in entry.path.lower()]
+
+
+def expand_error_container(seven_zip: str, top: str, container_path: str, stage: str,
+                           out_dir: str, password) -> bool:
+    """Expand one 'Errors' sub-archive into 'out_dir/Errors'. True when it came out.
+
+    Its password is its own: ORC writes it into the '_cli_config.xml' beside it in the
+    archive, which is why that file is fetched in the same breath.
+    """
+    cfg = os.path.splitext(container_path)[0] + "_cli_config.xml"
+    try:
+        sevenzip.extract_matching(seven_zip, top, [container_path, cfg], stage, password)
+    except RuntimeError:
+        return False
+
+    container = os.path.join(stage, container_path)
+    if not os.path.isfile(container):
+        return False
+
+    pw = password or sevenzip.password_from_cli_config(os.path.join(stage, cfg))
+    dest = os.path.join(out_dir, ERRORS_DIR)
+    os.makedirs(dest, exist_ok=True)
+    try:
+        sevenzip.extract_all(seven_zip, container, dest, pw)
+    except RuntimeError:
+        return False
+
+    return True
+
+
 def capture_logs(seven_zip: str, archives: list, out_dir: str, password) -> list[str]:
-    """Extract the top-level *.log entries and any 'Errors' sub-archive of each archive.
+    """Extract every *.log entry and any 'Errors' sub-archive of each archive.
 
     They land in the run beside the tables, under the names they carry in the archive - the
     same place and names 'orca extract' would give them.
+
+    One extraction call per archive, not one per log: ORC writes a single solid block
+    (Archive7z.cpp), so reaching an entry costs decoding everything in front of it, and asking
+    for each log separately pays that again for each. Listing first is free by comparison - it
+    only reads the header - and is what names the 'Errors' container to ask for in the same
+    call.
     """
     written = []
     for top in archives:
-        for entry in sevenzip.list_entries(seven_zip, top, password):
-            low = entry.path.lower()
-            if low.endswith(".log"):
-                os.makedirs(out_dir, exist_ok=True)
-                try:
-                    sevenzip.extract_entry(seven_zip, top, entry.path, out_dir, password)
-                    written.append(entry.path)
-                except Exception:
-                    pass
-            elif low.endswith(".7z") and "error" in low:
-                stage = scratch.directory("errors_")
-                try:
-                    container = sevenzip.extract_entry(seven_zip, top, entry.path, stage, password)
-                    pw = password
-                    if not pw:
-                        cfg = os.path.splitext(entry.path)[0] + "_cli_config.xml"
-                        try:
-                            sevenzip.extract_entry(seven_zip, top, cfg, stage, password)
-                            pw = sevenzip.password_from_cli_config(os.path.join(stage, cfg))
-                        except Exception:
-                            pw = None
-                    dest = os.path.join(out_dir, ERRORS_DIR)
-                    os.makedirs(dest, exist_ok=True)
-                    sevenzip.extract_all(seven_zip, container, dest, pw)
+        # Resolved per archive, not once: a collection holds several, each with its own
+        # '_cli_config.xml' beside it, and only an explicit --password overrides them all.
+        pw = sevenzip.password_for(top, password)
+        entries = sevenzip.list_entries(seven_zip, top, pw)
+        logs = [entry.path for entry in entries if entry.path.lower().endswith(".log")]
+        if logs:
+            os.makedirs(out_dir, exist_ok=True)
+            try:
+                sevenzip.extract_matching(seven_zip, top, "*.log", out_dir, pw)
+            except RuntimeError as error:
+                # Named, not swallowed: an archive that will not open (a password nobody
+                # passed, most often) returning no logs is indistinguishable from one that
+                # holds none, and the logs are what explains the failure being reported.
+                print(f"could not read the logs of '{os.path.basename(top)}': {error}")
+
+            # What came out, not what was asked for: an entry 7-Zip warned about is missing
+            # from the run, and naming it a product would have the cache delete a file that
+            # is not there and claim the log was captured.
+            written += [path for path in logs
+                        if os.path.isfile(os.path.join(out_dir, path))]
+
+        for container_path in error_containers(entries):
+            stage = scratch.directory("errors_")
+            try:
+                if expand_error_container(seven_zip, top, container_path, stage, out_dir,
+                                          pw):
                     written.append(ERRORS_DIR)
-                except Exception:
-                    pass
-                finally:
-                    shutil.rmtree(stage, ignore_errors=True)
+            finally:
+                shutil.rmtree(stage, ignore_errors=True)
+
     return written

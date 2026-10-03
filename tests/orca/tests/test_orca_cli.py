@@ -1,5 +1,5 @@
 import unittest
-from orca import cli
+from orca import cli, logs, report
 
 
 class TestCli(unittest.TestCase):
@@ -70,6 +70,58 @@ class TestCli(unittest.TestCase):
 
         self.assertTrue(args.list)
         self.assertTrue(args.failed)
+
+    def test_report_takes_the_critical_view_and_its_backtrace_flag(self):
+        args = cli._build_parser().parse_args(["report", "E:/runs", "--view", "critical",
+                                               "--backtrace"])
+
+        self.assertEqual(args.view, ["critical"])
+        self.assertEqual(args.backtrace, logs.DEFAULT_CONTEXT)
+
+    def test_the_backtrace_flag_takes_an_optional_line_count(self):
+        args = cli._build_parser().parse_args(["report", "E:/runs", "--backtrace", "3"])
+
+        self.assertEqual(args.backtrace, 3)
+
+    def test_a_backtrace_count_that_is_not_a_positive_number_is_refused(self):
+        for count in ("0", "-5", "x"):
+            with self.assertRaises(SystemExit):
+                cli._build_parser().parse_args(["report", "E:/runs", "--backtrace", count])
+
+    def test_a_comma_list_of_views_is_the_same_as_repeating_the_flag(self):
+        parser = cli._build_parser()
+        listed = parser.parse_args(["report", "E:/runs", "--view", "critical,error,warn"])
+        repeated = parser.parse_args(["report", "E:/runs", "--view", "critical",
+                                      "--view", "error", "--view", "warn"])
+
+        self.assertEqual(listed.view, ["critical", "error", "warn"])
+        self.assertEqual(listed.view, repeated.view)
+
+    def test_no_view_named_is_not_an_empty_list_of_views(self):
+        # None is 'print the default report'; [] would be 'print none of them'.
+        self.assertIsNone(cli._build_parser().parse_args(["report", "E:/runs"]).view)
+
+    def test_every_view_the_report_knows_is_accepted_by_name(self):
+        parser = cli._build_parser()
+        for view in report.VIEW_NAMES:
+            self.assertEqual(parser.parse_args(["report", "E:/runs", "--view", view]).view,
+                             [view])
+
+    def test_a_plural_or_unknown_view_is_refused(self):
+        # The names were plural once; a silent 'nothing matched that' would read as a clean run.
+        for name in ("criticals", "errors", "logs", "nope"):
+            with self.assertRaises(SystemExit):
+                cli._build_parser().parse_args(["report", "E:/runs", "--view", name])
+
+    def test_the_backtrace_is_off_unless_asked_for(self):
+        self.assertIsNone(cli._build_parser().parse_args(["report", "E:/runs"]).backtrace)
+
+    def test_the_logs_inside_the_archives_are_read_unless_declined(self):
+        parser = cli._build_parser()
+
+        self.assertTrue(parser.parse_args(["report", "E:/runs"]).archive_logs)
+        self.assertFalse(parser.parse_args(["report", "E:/runs",
+                                            "--no-archive-logs"]).archive_logs)
 
     def test_the_report_output_shapes_are_mutually_exclusive(self):
         for argv in (["report", "x", "--list", "--json"],

@@ -218,7 +218,11 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
         self.encrypt(self.build_archive("SEALED", "200", "aaaa"))
         self.seal("ORC_SEALED_Outcome.json", json.dumps(self.OUTCOME))
         self.seal("ORC_SEALED_Outline.json", json.dumps(self.OUTLINE))
-        self.seal("ORC_SEALED.log", "a clean start\nFAILED to read the journal\nan Error here\n")
+        self.seal("ORC_SEALED.log",
+                  "2026-09-25T14:41:27.000Z [I] a clean start\n"
+                  "2026-09-25T14:41:28.000Z [W] the journal is short\n"
+                  "2026-09-25T14:41:29.000Z [E] FAILED to read the journal\n"
+                  "2026-09-25T14:41:30.000Z [E] an error here\n")
         return self.dumps
 
     def report(self, *extra) -> str:
@@ -243,7 +247,7 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
         self.assertIn("logs with errors (1 of 1)", output)
         # The section row, not the 'decrypted ...' progress line that names the same file.
         rows = [l.split() for l in output.splitlines() if l.startswith("    ")]
-        self.assertIn(["ORC_SEALED.log", "2"], rows)
+        self.assertIn(["ORC_SEALED.log", "1W", "2E", "0C"], rows)
 
     def test_the_host_is_the_machine_not_the_folder_name(self):
         # Without the Outcome, a sealed collection is reported under its directory name.

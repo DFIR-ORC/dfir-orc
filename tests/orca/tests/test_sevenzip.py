@@ -246,5 +246,93 @@ class TestTestArchive(unittest.TestCase):
         self.assertFalse(result.ok)
 
 
+class TestPasswordFor(unittest.TestCase):
+    """ORC records a protected archive's password in the '<name>_cli_config.xml' beside it.
+
+    It is the '/config' the sub-command was run with, archived next to that command's output,
+    so an archive that needs a password usually arrives with it - no '--password' needed.
+    """
+
+    def config(self, directory: str, name: str, password: str) -> None:
+        with open(os.path.join(directory, name), "w", encoding="utf-8") as f:
+            f.write(f'<getthis><output password="{password}"/></getthis>')
+
+    def test_the_password_recorded_beside_the_archive_is_found(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.config(d, "GetThis_cli_config.xml", "S3cret")
+
+            self.assertEqual(sevenzip.password_for(os.path.join(d, "GetThis.7z")), "S3cret")
+
+    def test_an_explicit_password_wins(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.config(d, "GetThis_cli_config.xml", "S3cret")
+
+            self.assertEqual(sevenzip.password_for(os.path.join(d, "GetThis.7z"), "mine"),
+                             "mine")
+
+    def test_no_config_beside_it_is_no_password(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIsNone(sevenzip.password_for(os.path.join(d, "GetThis.7z")))
+
+
+@unittest.skipUnless(SEVEN_ZIP, "7z.exe not found")
+class TestExtractMatching(unittest.TestCase):
+    """Pulling every match out in one 7z call.
+
+    ORC writes a single solid block, so the cost of reaching an entry is decoding everything
+    before it. One call stops at the last match; a call per entry re-decodes that prefix for
+    each one.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.src = os.path.join(self.dir.name, "src")
+        os.makedirs(os.path.join(self.src, "Errors"))
+        for name in ("NTFSInfo.dev.log", "USNInfo.dev.log", "NTFSInfo.csv"):
+            with open(os.path.join(self.src, name), "w", encoding="utf-8") as f:
+                f.write("payload " * 20)
+        with open(os.path.join(self.src, "Errors", "Autoruns.dev.log"), "w",
+                  encoding="utf-8") as f:
+            f.write("nested")
+
+        self.archive = os.path.join(self.dir.name, "a.7z")
+        subprocess.run([SEVEN_ZIP, "a", "-t7z", self.archive, os.path.join(self.src, "*")],
+                       capture_output=True, text=True, check=True)
+        self.out = os.path.join(self.dir.name, "out")
+
+    def test_every_match_comes_out_and_nothing_else(self):
+        written = sevenzip.extract_matching(SEVEN_ZIP, self.archive, "*.log", self.out)
+
+        self.assertEqual(sorted(os.path.basename(p) for p in written),
+                         ["Autoruns.dev.log", "NTFSInfo.dev.log", "USNInfo.dev.log"])
+        self.assertFalse(os.path.exists(os.path.join(self.out, "NTFSInfo.csv")))
+
+    def test_a_nested_match_keeps_the_path_it_had_in_the_archive(self):
+        # 'Errors/Autoruns.dev.log' has to stay under 'Errors': run_log_files walks that
+        # directory by name, and flattened the per-command logs would collide.
+        sevenzip.extract_matching(SEVEN_ZIP, self.archive, "*.log", self.out)
+
+        self.assertTrue(os.path.isfile(os.path.join(self.out, "Errors", "Autoruns.dev.log")))
+
+    def test_an_archive_with_no_match_is_not_an_error(self):
+        self.assertEqual(sevenzip.extract_matching(SEVEN_ZIP, self.archive, "*.nope", self.out),
+                         [])
+
+    def test_several_patterns_are_one_call(self):
+        # ORC's failing-command logs are inside a nested 'Errors' container, which is not a
+        # '*.log'. Fetching it in a second call would decode the solid prefix twice.
+        written = sevenzip.extract_matching(SEVEN_ZIP, self.archive,
+                                            ["*.log", "NTFSInfo.csv"], self.out)
+
+        self.assertIn("NTFSInfo.csv", [os.path.basename(p) for p in written])
+        self.assertIn("USNInfo.dev.log", [os.path.basename(p) for p in written])
+
+    def test_a_missing_archive_raises_rather_than_reporting_nothing_found(self):
+        with self.assertRaises(RuntimeError):
+            sevenzip.extract_matching(SEVEN_ZIP, os.path.join(self.dir.name, "absent.7z"),
+                                      "*.log", self.out)
+
+
 if __name__ == "__main__":
     unittest.main()

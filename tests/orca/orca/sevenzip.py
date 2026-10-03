@@ -178,6 +178,42 @@ def extract_entry(seven_zip: str, archive: str, entry_path: str, dest_dir: str,
     return out_path
 
 
+def extract_matching(seven_zip: str, archive: str, patterns, dest_dir: str,
+                     password: str | None = None) -> list[str]:
+    """Extract every entry matching 'patterns' in ONE 7z call; returns what 'dest_dir' holds.
+
+    One call rather than a loop over the matching entries, because ORC writes a single solid
+    block (Archive7z.cpp): reaching an entry means decoding everything before it, and 7-Zip
+    stops at the last entry it was asked for. One call therefore decodes that prefix once; a
+    call per entry, or a second call for a second pattern, decodes it again each time.
+
+    '-r' so a match nested in the archive is found, 'x' so it keeps the path it had there -
+    ORC's failing-command logs live under 'Errors', and flattened they would collide.
+
+    The return is everything in 'dest_dir' afterwards, not this call's contribution alone:
+    callers extract several archives of one run into one directory and want the whole of it.
+    """
+    wanted = [patterns] if isinstance(patterns, str) else list(patterns)
+    args = [seven_zip, "x", archive, *wanted, "-o" + dest_dir, "-y", "-bsp0", "-r"]
+    if password:
+        args.append("-p" + password)
+    result = subprocess.run(args, capture_output=True, text=True)
+
+    # An archive with no match is ordinary (7-Zip still returns 0), so emptiness is not a
+    # failure; only a fatal code is, and then with 7z's own message. Warnings (1) mean some
+    # entry did not come out, and what did is still worth reading.
+    if result.returncode >= 2:
+        message = (result.stderr or result.stdout or "").strip()
+        raise RuntimeError(f"7z extract of {wanted} from '{archive}' failed "
+                           f"(code {result.returncode}): {message}")
+
+    written = []
+    for root, _dirs, files in os.walk(dest_dir):
+        written += [os.path.join(root, name) for name in files]
+
+    return sorted(written)
+
+
 def extract_all(seven_zip: str, archive: str, dest_dir: str, password: str | None = None) -> int:
     """Extract everything in 'archive'. Returns 7-Zip's exit code: 0 clean, 1 warnings.
 
@@ -198,6 +234,23 @@ def extract_all(seven_zip: str, archive: str, dest_dir: str, password: str | Non
                            f"(code {result.returncode}): {message}")
 
     return result.returncode
+
+
+def password_for(archive: str, password: str | None = None) -> str | None:
+    """The password for 'archive': the explicit one, else the one ORC recorded beside it.
+
+    ORC archives each sub-command's '/config' next to that command's output as
+    '<name>_cli_config.xml' (CommandAgent.cpp), and a protected archive's password is in it.
+    So an archive that needs one usually arrives carrying it, and nothing has to be told.
+    """
+    if password:
+        return password
+
+    config = os.path.splitext(archive)[0] + "_cli_config.xml"
+    if not os.path.exists(config):
+        return None
+
+    return password_from_cli_config(config)
 
 
 def password_from_cli_config(path: str) -> str | None:

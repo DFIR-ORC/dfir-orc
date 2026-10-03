@@ -26,7 +26,7 @@ class TestOutcomeErrorsViews(unittest.TestCase):
 
         self.assertEqual(report.build_outcome_view(o)["commands"], 35)
 
-    def test_build_errors_view_counts_pattern_lines(self):
+    def test_build_log_view_counts_pattern_lines(self):
         with tempfile.TemporaryDirectory() as run:
             with open(os.path.join(run, "a.log"), "w", encoding="utf-8") as f:
                 f.write("all good\nFAILED to open\nan Error here\nfine\n")
@@ -43,7 +43,7 @@ class TestOutcomeErrorsViews(unittest.TestCase):
                       encoding="utf-8") as f:
                 f.write("an Error here\n")
 
-            v = report.build_errors_view(run)
+            v = report.build_log_view(run)
 
         self.assertTrue(v["available"])
         names = {x["log"]: x for x in v["logs"]}
@@ -52,12 +52,12 @@ class TestOutcomeErrorsViews(unittest.TestCase):
         self.assertNotIn("empty.log", names)
         self.assertNotIn("GetThis_Default/buried.log", names)
 
-    def test_build_errors_view_missing_dir(self):
-        self.assertEqual(report.build_errors_view("nope"),
+    def test_build_log_view_missing_dir(self):
+        self.assertEqual(report.build_log_view("nope"),
                          {"available": False, "skipped": {}, "logs_ignored": 0,
                           "skipped_ignored": 0})
 
-    def test_build_errors_view_carries_the_tables_the_ingest_could_not_read(self):
+    def test_build_log_view_carries_the_tables_the_ingest_could_not_read(self):
         # A hole in the run rather than a message inside it, but the same question answered:
         # what went wrong here.
         with tempfile.TemporaryDirectory() as run:
@@ -65,13 +65,13 @@ class TestOutcomeErrorsViews(unittest.TestCase):
             with open(layout.skipped_path(run), "w", encoding="utf-8") as f:
                 f.write("autoruns\tduckdb said no\n")
 
-            v = report.build_errors_view(run)
+            v = report.build_log_view(run)
 
         self.assertEqual(v["skipped"], {"autoruns": "duckdb said no"})
 
-    def test_build_errors_view_of_a_complete_run_has_no_skips(self):
+    def test_build_log_view_of_a_complete_run_has_no_skips(self):
         with tempfile.TemporaryDirectory() as run:
-            self.assertEqual(report.build_errors_view(run)["skipped"], {})
+            self.assertEqual(report.build_log_view(run)["skipped"], {})
 
 
 if __name__ == "__main__":

@@ -236,8 +236,12 @@ orca getthis E:\datasets\host --json
 ### Report (run health)
 
 ```powershell
-orca report E:\datasets\host                       # all views
-orca report E:\datasets\host --view errors         # just one view (outcome | empty | stats | errors)
+orca report E:\datasets\host                       # the default views
+orca report E:\datasets\host --view log            # one view (outcome | stats | empty | log | warn | error | critical | all)
+orca report E:\datasets\host --view critical,error         # several, in one list or by repeating the flag
+orca report E:\datasets\host --view error --backtrace      # and 5 log lines either side of each
+orca report E:\datasets\host --view error --backtrace 10   # 10 lines either side instead
+orca report E:\datasets\host --no-archive-logs      # do not open the archives for their logs
 orca report E:\datasets                      # every run or collection under a parent
 orca report E:\datasets --one-line           # one summary line per host
 orca report E:\datasets\host --json                 # one flat JSON object per host
@@ -352,11 +356,14 @@ DESKTOP-U9N26B0  E:/datasets/DESKTOP-U9N26B0
     Azure_Identity.json
 
   logs with errors (33 of 35)
-    USNInfo.dev.log              2398
-    Residents.dev.log            1288
+    USNInfo.dev.log              12W  2397E  1C
+    Residents.dev.log             4W  1288E  0C
 
   unread tables (1)
     autoruns  duckdb failed: Invalid Input Error: Error when sniffing file "C:/Users/...
+
+  critical (1)
+    USNInfo.dev.log  09:14:22  Failed to open volume \\.\C: [access denied]
 ```
 
 The real run continues from there: all 26 tables, all 9 empty outputs and all 33 logs are
@@ -374,6 +381,156 @@ four tables twice.
 run should read as a short report rather than a page of zeros. Naming a view does print its
 heading even when it is empty (`--view empty` on a clean run says `empty tables (0)`), since
 asking for a view and getting nothing back cannot be told from a broken report.
+
+#### The views, and what `--view` takes
+
+`outcome`, `stats`, `empty` and `log` are what ran, what it produced, and which logs carried
+something; `warn`, `error` and `critical` are what was actually said at that level. The names
+are singular, a comma list and a repeated flag are the same thing, and `all` is every view:
+`--view critical,error` is `--view critical --view error`. An unknown name is refused rather
+than passed over, because a view that silently matched nothing prints a host header and reads
+as a clean run.
+
+The default report - no `--view` at all - is `outcome`, `stats`, `empty`, `log` and
+`critical`. `warn` and `error` are left out of it on purpose: a run with thousands of
+warnings would bury the rest of its own report. Ask for them by name, which is also how you
+get at them on the usual run where nothing was critical but plenty went wrong.
+
+#### Levels come from the log, not from the words in it
+
+ORC writes every line through one pattern, `2026-10-03T08:15:03.000Z [E] ...`, so a log is
+counted by its level tag: `12W  2397E  1C`. Counting lines that contain "error" or "failed"
+instead is wrong in both directions - ORC logs `Failed to ...` at Debug all over the place
+while reporting the failure once at Error. A log with no ORC line in it, a crashing tool's
+stderr say, still gets the old substring count, marked `~3E` so it is not read as exact; a
+log that could not be opened reads `unreadable` rather than counting `-1`.
+
+A message can be preceded by a replay of the last 64 lines, between `--- BACKTRACE START ---`
+and `--- BACKTRACE END ---`. **Before**, not after: ORC dumps the ring and then writes the line
+that triggered the dump, so the block belongs to the message that follows it. Those lines are a
+*replay* of lines already logged, with their original levels and timestamps, so they are
+counted nowhere, and nothing inside a block is read as a message of its own: counting the block
+would report every error inside the ring a second time.
+
+They are part of a message's **context** though, and they have to be. The file facility sits at
+Info on a real collection, while `dump_to` drops every sink to trace for the replay, so the
+ring is the only place the debug lines that say *why* a failure happened are written at all -
+on one real collection log, 216 of its 217 debug lines. What the context does drop is a replay
+of the message itself, since ORC dumps the ring just before the *next* error and this one is in
+it by then, and a line repeated back to back.
+
+#### `--view warn|error|critical`: what was actually said
+
+The log view says which log to open. These say why, in time order across every log of the run,
+because a host's collection log and its per-command logs each hold part of one story:
+
+```
+  critical (2)
+    ORC_HOST.log     09:14:22  Failed to open volume \\.\C: [access denied]
+    USNInfo.dev.log  09:16:03  Job was authoritatively terminated
+```
+
+`--backtrace` prints the log lines either side of each message of whichever levels are being
+shown - five of them by default, `--backtrace N` for N - ruled off above and below so the
+contexts of several messages do not run into one wall of indented lines. The message itself is
+marked with `>`, and carries its text in full where the row above it has had to cut it to the
+width of the report:
+
+```
+  error (131)
+    ORC_HOST.log  16:53:45  Failed CreateFile for 'C:\Windows\Temp\orc-temp\WorkingTe...
+      ------------------------------
+        16:53:45 [I] Upload  Add file: ORC_..._Outline.json.7z.p7b (5 KB)
+        16:53:45 [D] capsule: Created
+        16:53:45 [D] CommandAgent: Execute command 'VSS_list'
+      > 16:53:45 [E] Failed CreateFile for 'C:\Windows\Temp\orc-temp\WorkingTemp\3308.tmp\orc_x64-xp.exe' [0x80070020: The process cannot access the file because it is being used by another process.]
+        16:53:45 [D] Failed to open: 'C:\Windows\Temp\orc-temp\WorkingTemp\3308.tmp\orc_x64-xp.exe' [0x80070020: ...]
+        16:53:45 [E] Failed to compute sha1 for command 'VSS_list' [0x80070020: ...]
+        16:53:45 [D] VSS_list: Created
+      ------------------------------
+```
+
+The context comes from the log, not from ORC's backtrace block, because the block on its own
+is not the context: `dump_to` **clears** the ring at every dump, so with a trigger of `Error`
+it holds the two or three lines logged since the previous error - on one real collection, 16
+of its 32 blocks are two lines long and the first of the two is the previous error repeated -
+while the three 64-line blocks are whatever happened to be logged during a quiet stretch
+rather than anything to do with the error below them. The lines that actually surround a
+failure are above it in the file. Block lines are part of that context (the file sits at Info,
+so they are the only copy of the debug lines that say why), minus the replay of the message
+itself and any line repeated back to back.
+
+`--view error --backtrace` is what to reach for when the log's trigger was `Error` and nothing
+was critical. It is off by default, and the lines are not even kept without it: five lines
+either side of every message, over a fleet of logs, is most of the memory a scan takes. The
+count bounds the scan as well as the printing.
+
+#### The per-command logs are inside the archives
+
+WolfLauncher's own log sits beside the archives; each command's `<Command>.dev.log` is *in*
+one, and ORC's failing commands put theirs in an `Errors` container in there too. So a report
+on a collection as it arrives used to read the collection log, find it clean, and print no
+logs section at all - while the critical explaining the failure it had just listed sat in the
+archive next to it. `report` now pulls those logs out before building the views:
+
+```
+  failed commands (1)
+    ORC_General  NTFSInfo  -  0m0s  1
+
+  logs with errors (1 of 2)
+    NTFSInfo.dev.log  0W  1E  1C
+
+  critical (1)
+    NTFSInfo.dev.log  09:14:22  Failed to open volume \.\C: [access denied]
+```
+
+**It costs one decode per archive, and only the first time.** ORC writes a single solid block
+(`Archive7z.cpp`), so reaching an entry means decoding everything in front of it - measured
+here at ~250 MB/s of uncompressed content, 1.4 s for a 244 MB archive whose logs sit at the
+very end. That is why it is one `7z` call per archive asking for every log at once rather than
+a call per log, which would pay that again for each; listing first, to name the `Errors`
+container for the same call, is free by comparison because it only reads the header. The logs
+land in the work dir beside the unsealed sidecars, under a directory per run, and the next
+report reuses them (`--refresh` to redo). `--no-archive-logs` skips the whole thing.
+
+**A sealed archive is named, not opened.** The envelope is CMS over the whole archive, so one
+log out of it costs decrypting all of it, which is an extract wearing a report's clothes. The
+report says which archives it did not read and what would read them, rather than leaving the
+gap invisible:
+
+```
+more in 1 sealed archive: ORC_HOST_General.7z.p7b (orca ingest <dir>)
+```
+
+A signpost, not an explanation: one line however many hosts are sealed.
+
+`ingest` rather than `extract`, and the distinction is not cosmetic: `extract` expands into a
+subdirectory per archive, which `run_log_files` deliberately does not walk, so a report on an
+extracted tree still shows none of them. `ingest` leaves the decrypted `.7z` *beside* the
+collection, which is all this path needs - the next report reads the logs out of it with no
+key and no second decrypt - and it does not need duckdb to get that far.
+
+Unsealing in `report` itself was measured and rejected. The decrypt is cheap: 0.27 s for a
+98 MB sealed archive, against 1.09 s to pull the logs out of the 65 MB plain one it becomes,
+so it is a fifth of a cost already being paid. It cannot be narrowed to the log entries
+either - a 7z keeps its header at the end, so nothing can say where an entry is, or that one
+exists, before the whole plain archive is on disk. That last point is the objection: `report`
+would write a full-size copy of every archive, and without `--work-dir` rewrite it every run.
+`ingest` writes that same copy once, beside the collection, where everything afterwards
+reuses it.
+
+**A protected archive usually arrives with its own password.** ORC archives each
+sub-command's `/config` next to that command's output as `<name>_cli_config.xml`
+(`CommandAgent.cpp`), and a password-protected archive's password is in it, so nothing has to
+be told: `report` reads it from beside the archive. `ingest`, `extract` and `check` take an
+explicit `--password`, which overrides it; `report` has no such flag and does not need one.
+An archive that still will not open is named rather than quietly yielding no logs, which would
+look exactly like an archive holding none.
+
+**A log seen twice is one log.** `ingest` leaves the per-command logs beside the tables, and a
+report on that dataset also finds the archives still sitting there - so a log is keyed by its
+path within the place it was found (`Errors/NTFSInfo.dev.log` and `NTFSInfo.dev.log` stay two
+logs) and the run directory's copy is the one kept.
 
 #### A collection as it arrives, with everything sealed
 
@@ -439,8 +596,9 @@ a dataset it was not given, it names the command rather than running it:
   empty tables: (not ingested; orca ingest \\host\archive\merged)
 ```
 
-The outcome, the failures, `--list` and the errors view all read ORC's own sidecars, so they
-work on a collection as it arrives; only the two views built from `.orca` need the ingest. This
+The outcome, the failures, `--list`, the log view and the message views all read ORC's own
+sidecars, so they work on a collection as it arrives; only the two views built from `.orca`
+need the ingest. This
 is the opposite choice from `merge` and `diff` on purpose: for them the ingest *is* the work,
 and for `report` it would be a surprise.
 
@@ -562,9 +720,10 @@ machine missing an Outcome must not cost you the other eight.
 #### A view says so when its input is missing
 
 `report` takes an *ingested* dataset, but ORC's own files are also in a directory `extract`
-produced, so it is pointed at one of those often enough. Only two of the four views can be
-built from an extracted tree - `outcome` and `errors` read ORC's files; `stats` and `empty`
-read `.orca\ingest-timing.csv` and `.orca\manifest.parquet`, which only `ingest` writes:
+produced, so it is pointed at one of those often enough. Most views can be built from an
+extracted tree - `outcome`, `log` and the three message views read ORC's files; `stats` and
+`empty` read `.orca\ingest-timing.csv` and `.orca\manifest.parquet`, which only `ingest`
+writes:
 
 ```
 DESKTOP-U9N26B0  //host/dumps/ORC_HOST
@@ -609,7 +768,10 @@ orca report E:\datasets --json | ConvertFrom-Json |
 ```
 
 Keys below the scalars: `failures`, `empty_tables`, `empty_files`, `biggest`, `slowest`,
-`logs`, `skipped`.
+`logs`, `warn_messages`, `error_messages`, `critical_messages`, `skipped`. The scalar
+`criticals` is the count a filter reads; the messages, each with its log and - with
+`--backtrace` - the lines either side of it under `before` and `after`, are under the three
+`*_messages` keys.
 
 ### Diff two versions
 

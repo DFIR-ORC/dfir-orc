@@ -68,13 +68,7 @@ def handle_container_warning(name: str, strict: bool = False) -> None:
 
 def container_password(container: str, password: str | None) -> str | None:
     """An explicit password wins; otherwise read the one ORC recorded next to the container."""
-    if password:
-        return password
-
-    config = os.path.splitext(container)[0] + "_cli_config.xml"
-    if not os.path.exists(config):
-        return None
-    return sevenzip.password_from_cli_config(config)
+    return sevenzip.password_for(container, password)
 
 
 def retire_container(container: str, root: str, containers_dir: str) -> None:
