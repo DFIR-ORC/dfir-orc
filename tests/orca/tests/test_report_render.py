@@ -6,7 +6,7 @@ from orca import report
 def host_report() -> dict:
     """A report of a run that was ingested: every view has its input."""
     return {
-        "host": "TESTHOST", "run_dir": "d",
+        "host": "TESTHOST", "directory": "d",
         "outcome": {"available": True, "ok": False,
                     "failures": [{"set": "S", "command": "c", "exit_code": "0x1",
                                   "duration_seconds": 5.0, "start": ""}],
@@ -23,7 +23,7 @@ def full_host_report() -> dict:
     """A run with something in every section, shaped as the view builders produce it."""
     return {
         "host": "DESKTOP-U9N26B0",
-        "run_dir": "E:/runs/DESKTOP-U9N26B0",
+        "directory": "E:/runs/DESKTOP-U9N26B0",
         "outcome": {
             "available": True, "ok": False, "commands": 35,
             "duration_seconds": 407.0, "memory_peak_bytes": 1325150208,
@@ -210,7 +210,7 @@ class TestHostJson(unittest.TestCase):
         self.assertEqual(obj["host"], "TESTHOST")
         self.assertEqual(obj["fails"], 1)
         self.assertEqual(obj["tables"], 25)
-        self.assertEqual(obj["run_dir"], "d")
+        self.assertEqual(obj["directory"], "d")
 
     def test_every_view_detail_hangs_off_a_key_below(self):
         obj = report.host_json(host_report())

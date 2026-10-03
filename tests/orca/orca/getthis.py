@@ -8,17 +8,17 @@ from . import layout
 from .engine import get_engine, sql_path as _fwd
 
 
-def discover_getthis(run_dir: str) -> list[str]:
+def discover_getthis(dataset: str) -> list[str]:
     """The GetThis tables of a run, taken by name rather than by glob: the run directory also
     holds this command's own 'getthis.parquet', which a case-insensitive glob would match."""
-    return [path for name, path in sorted(layout.table_paths(run_dir).items())
+    return [path for name, path in sorted(layout.table_paths(dataset).items())
             if name.startswith("GetThis")]
 
 
-def glob_reader(run_dir: str) -> str:
+def glob_reader(dataset: str) -> str:
     """A single read_parquet over every GetThis table. Schemas are uniform, but union_by_name
     tolerates any column-order drift between command sets."""
-    paths = ", ".join(f"'{_fwd(path)}'" for path in discover_getthis(run_dir))
+    paths = ", ".join(f"'{_fwd(path)}'" for path in discover_getthis(dataset))
     return f"read_parquet([{paths}], union_by_name=true)"
 
 
@@ -35,12 +35,12 @@ def read_source_archives(name_map_path: str) -> dict[str, str]:
     return mapping
 
 
-def counts_by_archive(engine, run_dir: str) -> list[tuple[str, int]]:
+def counts_by_archive(engine, dataset: str) -> list[tuple[str, int]]:
     """(container archive name, collected-file count) per GetThis container, files summed per
     archive and ordered by count descending."""
-    archives = read_source_archives(layout.name_map_path(run_dir))
+    archives = read_source_archives(layout.name_map_path(dataset))
     totals: dict[str, int] = {}
-    for path in discover_getthis(run_dir):
+    for path in discover_getthis(dataset):
         name = os.path.splitext(os.path.basename(path))[0]
         archive = archives.get(name) or name  # fall back to the table name if unmapped
         totals[archive] = totals.get(archive, 0) + engine.count(path)
@@ -55,19 +55,19 @@ def render_summary(total: int, by_archive: list[tuple[str, int]]) -> str:
     return "\n".join(lines)
 
 
-def run_getthis(run_dir: str, out: str | None = None, engine_name: str = "duckdb",
+def run_getthis(dataset: str, out: str | None = None, engine_name: str = "duckdb",
                 as_json: bool = False) -> str | None:
     engine = get_engine(engine_name)
-    paths = discover_getthis(run_dir)
+    paths = discover_getthis(dataset)
     if not paths:
         print("GetThis: no GetThis tables in run")
         return None
 
-    by_archive = counts_by_archive(engine, run_dir)
+    by_archive = counts_by_archive(engine, dataset)
     total = sum(count for _, count in by_archive)
 
-    out = out or os.path.join(run_dir, "getthis.parquet")
-    engine.query_to_parquet(f"SELECT FullName, * EXCLUDE (FullName) FROM {glob_reader(run_dir)}", out)
+    out = out or os.path.join(dataset, "getthis.parquet")
+    engine.query_to_parquet(f"SELECT FullName, * EXCLUDE (FullName) FROM {glob_reader(dataset)}", out)
 
     if as_json:
         print(json.dumps({"files": total, "parquet": out,

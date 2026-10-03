@@ -115,10 +115,10 @@ def read_name_map_mtimes(name_map_path: str) -> dict[str, str]:
     return mtimes
 
 
-def _discover_tables(engine, run_dir: str, ts_overrides: dict | None) -> list[dict]:
-    mtimes = read_name_map_mtimes(layout.name_map_path(run_dir))
+def _discover_tables(engine, dataset: str, ts_overrides: dict | None) -> list[dict]:
+    mtimes = read_name_map_mtimes(layout.name_map_path(dataset))
     tables = []
-    for name, path in sorted(layout.table_paths(run_dir).items()):
+    for name, path in sorted(layout.table_paths(dataset).items()):
         columns = engine.columns(path)
         if "VolumeID" not in columns or "FRN" not in columns:
             continue
@@ -132,16 +132,16 @@ def _discover_tables(engine, run_dir: str, ts_overrides: dict | None) -> list[di
     return tables
 
 
-def run_merge(run_dir: str, out: str | None = None, lossless: bool = False,
+def run_merge(dataset: str, out: str | None = None, lossless: bool = False,
               ts_overrides: dict | None = None, engine_name: str = "duckdb") -> str:
     # The merge has duckdb to itself and is the heaviest query orca runs.
     engine = get_engine(engine_name, single_process_memory_limit())
-    tables = _discover_tables(engine, run_dir, ts_overrides)
+    tables = _discover_tables(engine, dataset, ts_overrides)
     if not tables:
-        raise RuntimeError(f"no file-keyed (VolumeID+FRN) parquet found in '{run_dir}'")
+        raise RuntimeError(f"no file-keyed (VolumeID+FRN) parquet found in '{dataset}'")
 
     cols = master_columns(tables)
-    out = out or os.path.join(run_dir, "dfir-orc.parquet")
+    out = out or os.path.join(dataset, "dfir-orc.parquet")
 
     t0 = time.perf_counter()
     if lossless:

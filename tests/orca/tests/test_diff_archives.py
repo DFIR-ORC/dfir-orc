@@ -26,12 +26,12 @@ class DispatchCase(unittest.TestCase):
     def setUp(self):
         self.resolved = []
 
-        def ensure_run(source, work_dir=None, **kwargs):
+        def ensure_dataset(source, work_dir=None, **kwargs):
             self.resolved.append((source, work_dir, kwargs))
             return f"/cache/{os.path.basename(source)}-hash"
 
         for target, attribute, value in (
-                (cache, "ensure_run", ensure_run),
+                (cache, "ensure_dataset", ensure_dataset),
                 (engine, "get_engine", lambda name, memory_limit=None: mock.Mock()),
                 (diff, "diff_runs", lambda *a, **k: EMPTY_RUN_DIFF),
                 (diff, "diff_tables", lambda *a, **k: {
@@ -95,7 +95,7 @@ class TestRunDirsSkipTheCache(unittest.TestCase):
             run = os.path.join(d, "run")
             os.makedirs(layout.orca_dir(run))
             with mock.patch.object(cache.ingest, "run_ingest") as ingest:
-                self.assertEqual(cache.ensure_run(run), run)
+                self.assertEqual(cache.ensure_dataset(run), run)
             ingest.assert_not_called()
 
 

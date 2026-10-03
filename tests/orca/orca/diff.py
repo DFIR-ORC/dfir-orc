@@ -442,11 +442,11 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
                        private_key=private_key, cms_backend=cms_backend,
                        exclude_cols=exclude_cols, engine_name=engine_name,
                        skip_errors=skip_errors)
-        run_a = cache.ensure_run(run_a, **resolve)
-        run_b = cache.ensure_run(run_b, **resolve)
+        run_a = cache.ensure_dataset(run_a, **resolve)
+        run_b = cache.ensure_dataset(run_b, **resolve)
 
         # One duckdb at a time, so it gets the machine budget (see engine.single_process_*).
-        # Taken here rather than on entry: ensure_run may have just spent minutes ingesting two
+        # Taken here rather than on entry: ensure_dataset may have just spent minutes ingesting two
         # archives with a duckdb per job, and the budget has to describe the machine as it is when
         # the queries below run, not as it was when the command started.
         engine = get_engine(engine_name, single_process_memory_limit())

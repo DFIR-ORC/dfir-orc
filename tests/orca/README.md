@@ -27,11 +27,11 @@ python -m orca <command> ...
 **Ingest an archive and look at the results** - the two commands you will use most:
 
 ```powershell
-# 1. archive -> a run directory of parquet/CSV (does NOT expand the full tree)
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\runs\host
+# 1. archive -> a dataset of parquet/CSV (does NOT expand the full tree)
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host
 
-# 2. quick health view of that run
-orca report E:\runs\host
+# 2. quick health view of that dataset
+orca report E:\datasets\host
 ```
 
 `ingest` accepts either a single `.7z` archive or a directory containing an ORC Outcome JSON and
@@ -46,9 +46,23 @@ orca check E:\dumps\DFIR-ORC_HOST.7z            # see "Check" below
 
 ---
 
-## What a run directory contains
+## Three kinds of directory
 
-A run is flat: everything it holds sits in one directory, under the name ORC gave it.
+orca's commands hand each other three different things, and it helps to keep them apart:
+
+| | what it holds | who writes it |
+|:---|:---|:---|
+| a **collection** | the archives ORC wrote, plus its Outcome, Outlines and log | ORC, or `orca collect` |
+| a **dataset** | per-table parquet, the CSV renderings, the sidecar copies, `.orca` bookkeeping | `orca ingest` |
+| an **expanded tree** | the collected files themselves | `orca extract` |
+
+A **run** is one execution of ORC on one machine: what the Outline describes, what `run_id`
+identifies, and what a collection is the product of. `check` and `extract` read a collection;
+`merge` and `getthis` read a dataset; `report` and `diff` take either.
+
+## What a dataset contains
+
+A dataset is flat: everything it holds sits in one directory, under the name ORC gave it.
 
 ```
 E:\dumps\ORC_WS_H2ODEV_Offline\
@@ -88,7 +102,7 @@ and "orca could not read it" are not the same finding - and never compares it:
 
 `--one-line` carries `unread_tables` as a count, and only when there is one, so a summary that
 mentions it is a summary you should not take at face value. A run ingested with the flag also
-gets a cache key of its own: it is not the run a strict ingest would have produced, since that
+gets a cache key of its own: it is not the dataset a strict ingest would have produced, since that
 one would have failed.
 
 The CSV renderings keep a directory of their own: a top-level CSV of the collection
@@ -109,21 +123,21 @@ nothing else: ingesting them is `orca ingest`, comparing them is `orca diff`.
 
 ```powershell
 # a disk image: handed to ORC as is, nothing is mounted
-orca collect --offline E:\dumps\w10.dd --orc build\orc.exe --out E:\runs\w10
+orca collect --offline E:\dumps\w10.dd --orc build\orc.exe --out E:\datasets\w10
 
 # a VHDX: attached read-only for the duration of the run, then detached
-orca collect --offline E:\vm\w10.vhdx --orc build\orc.exe --out E:\runs\w10 --force
+orca collect --offline E:\vm\w10.vhdx --orc build\orc.exe --out E:\datasets\w10 --force
 
 # encrypted output, and arguments passed to ORC verbatim after '--'
-orca collect --offline E:\dumps\w10.dd --orc build\orc.exe --out E:\runs\w10 `
+orca collect --offline E:\dumps\w10.dd --orc build\orc.exe --out E:\datasets\w10 `
     --public-key tools\ci\contoso.com.pem -- /key=GetEvt
 
 # a Hyper-V VM: restore a checkpoint, run, pull the results back to --out
-orca collect --vm w10 --checkpoint clean --orc build\orc.exe --out E:\runs\w10 `
+orca collect --vm w10 --checkpoint clean --orc build\orc.exe --out E:\datasets\w10 `
     --credential vm.clixml
 
 # then compare two ORC versions on the same input
-orca diff --run E:\runs\w10-new --reference E:\runs\w10-old `
+orca diff --run E:\datasets\w10-new --reference E:\datasets\w10-old `
     --exclude-files "*.log" "*/Statistics.json" "Capsule#*"
 ```
 
@@ -173,44 +187,44 @@ tucked away in a subdirectory.
 ### Ingest
 
 ```powershell
-# basic: the run lands beside the archive, in E:\dumps\DFIR-ORC_HOST\
+# basic: the dataset lands beside the archive, in E:\dumps\DFIR-ORC_HOST\
 orca ingest E:\dumps\DFIR-ORC_HOST.7z
 
 # somewhere else
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\runs\host
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host
 
 # encrypted / password-protected sub-archives (otherwise read from the sibling *_cli_config.xml)
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\runs\host --password S3cret
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --password S3cret
 
 # parquet only (skip CSV / truncated CSV), more workers
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\runs\host --no-csv --jobs 12
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --no-csv --jobs 12
 
 # change which columns count as "volatile" (dropped from csv-trunc)
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\runs\host --exclude-cols SampleCollectionDate CreationDate
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --exclude-cols SampleCollectionDate CreationDate
 ```
 
 ### GetThis summary
 
 ```powershell
 # how many files each container archive collected, plus the grand total
-orca getthis --run E:\runs\host
+orca getthis --dataset E:\datasets\host
 
 # machine-readable
-orca getthis --run E:\runs\host --json
+orca getthis --dataset E:\datasets\host --json
 ```
 
 ### Report (run health)
 
 ```powershell
-orca report E:\runs\host                       # all views
-orca report E:\runs\host --view errors         # just one view (outcome | empty | stats | errors)
-orca report E:\runs                      # every run or collection under a parent
-orca report E:\runs --one-line           # one summary line per host
-orca report E:\runs\host --json                 # one flat JSON object per host
-orca report E:\runs --list               # one line per command, every host
-orca report E:\runs --list --failed      # only the commands that did not exit 0
+orca report E:\datasets\host                       # all views
+orca report E:\datasets\host --view errors         # just one view (outcome | empty | stats | errors)
+orca report E:\datasets                      # every run or collection under a parent
+orca report E:\datasets --one-line           # one summary line per host
+orca report E:\datasets\host --json                 # one flat JSON object per host
+orca report E:\datasets --list               # one line per command, every host
+orca report E:\datasets --list --failed      # only the commands that did not exit 0
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed collection
-orca report E:\runs --ignore ignore.json         # pass over what you already know about
+orca report E:\datasets --ignore ignore.json         # pass over what you already know about
 ```
 
 `report` also holds the two row tables: `orca report outcome` and `orca report outline` (below).
@@ -224,7 +238,7 @@ DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ...
 w11test:         ok=False cmds=35 fails=12 ...
 
 # a directory of per-host folders: the same command
-orca report E:\runs --one-line
+orca report E:\datasets --one-line
 ```
 
 **The Outcome identifies a run, not the directory.** A fleet arrives either as a directory of
@@ -235,10 +249,10 @@ child directory that holds one. There was a `--root` for the first shape; it has
 is gone.
 
 What is looked at is the directory given plus its immediate children - not a deeper walk,
-because an ingested run and an expanded tree each hold a copy of the collection's Outcome and
+because a dataset and an expanded tree each hold a copy of the collection's Outcome and
 depth would report one collection two and three times. Where the same run is seen twice
 (`ingest` writes its run *inside* the collection, Outcome and all), the sighting with an ingest
-timing beside it wins: that is the one with tables to report. An ingested run carrying no
+timing beside it wins: that is the one with tables to report. A dataset carrying no
 Outcome at all is still a run, since its tables are worth reporting.
 
 A sealed Outcome is found by the name ORC gives it, so discovery needs no key; reading it needs
@@ -247,7 +261,7 @@ a directory is.
 
 **Logs are attributed per run.** ORC names a run's files after the run
 (`ORC_<set>_<host>_<stamp>.log` beside `ORC_<set>_<host>_<stamp>_Outcome.json`), so in a shared
-directory each collection reads its own log instead of all of them. In a run directory of its
+directory each collection reads its own log instead of all of them. In a dataset of its
 own every log belongs to the one run, which is what makes the expanded `Errors` container and
 ORC's console output show up where they should.
 
@@ -269,7 +283,7 @@ A header line naming the host and where it came from, the run's scalars, then on
 section per thing worth looking at, every row of it in columns:
 
 ```
-DESKTOP-U9N26B0  E:/runs/DESKTOP-U9N26B0
+DESKTOP-U9N26B0  E:/datasets/DESKTOP-U9N26B0
   ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
 
   failed commands (12)
@@ -354,9 +368,9 @@ DESKTOP-U9N26B0  //host/dumps/ORC_HOST
     ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
     ORC_General  Autoruns                  -          0m0s   1
 
-  tables: (no ingest timing: not an ingested run)
+  tables: (no ingest timing: not a dataset)
 
-  empty tables: (no ingest timing: not an ingested run)
+  empty tables: (no ingest timing: not a dataset)
 
   logs with errors (1 of 1)
     ORC_..._144127.log  106
@@ -489,13 +503,13 @@ summary still counts every command, since a filtered `12 failed` with no denomin
 nothing. On a clean fleet, `--list --failed` prints the summary and nothing else.
 
 The rows are the same ones `orca report outcome` writes to parquet, so the text and the table
-cannot disagree, and `--list` needs no duckdb. A run dir with no Outcome does not abort the
+cannot disagree, and `--list` needs no duckdb. A dataset with no Outcome does not abort the
 sweep: its commands are simply not there and it is named in a trailing note, because one
 machine missing an Outcome must not cost you the other eight.
 
 #### A view says so when its input is missing
 
-`report` takes an *ingested* run dir, but ORC's own files are also in a directory `extract`
+`report` takes an *ingested* dataset, but ORC's own files are also in a directory `extract`
 produced, so it is pointed at one of those often enough. Only two of the four views can be
 built from an extracted tree - `outcome` and `errors` read ORC's files; `stats` and `empty`
 read `.orca\ingest-timing.csv` and `.orca\manifest.parquet`, which only `ingest` writes:
@@ -509,9 +523,9 @@ DESKTOP-U9N26B0  //host/dumps/ORC_HOST
     ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
     ORC_General  Autoruns                  -          0m0s   1
 
-  tables: (no ingest timing: not an ingested run)
+  tables: (no ingest timing: not a dataset)
 
-  empty tables: (no ingest timing: not an ingested run)
+  empty tables: (no ingest timing: not a dataset)
 
   logs with errors (1 of 1)
     ORC_..._144127.log  106
@@ -531,14 +545,14 @@ Every `--one-line` scalar at the top level, each view's detail on a key below it
 fleet has to stay a one-liner:
 
 ```powershell
-orca report E:\runs --json | ConvertFrom-Json | ? fails -gt 0 | Select host,fails,tables
+orca report E:\datasets --json | ConvertFrom-Json | ? fails -gt 0 | Select host,fails,tables
 
 host               ok fails tables stats_available
 ----               -- ----- ------ ---------------
 DESKTOP-U9N26B0 False    12                  False
 
 # and the detail is there once the filter has found something
-orca report E:\runs --json | ConvertFrom-Json |
+orca report E:\datasets --json | ConvertFrom-Json |
     % { $_.failures } | Group-Object exit_code | Select Name,Count
 ```
 
@@ -555,19 +569,19 @@ orca diff E:\dumps\10.3.3\DFIR-ORC_HOST.7z E:\dumps\10.3.1\DFIR-ORC_HOST.7z
 orca diff --run E:\dumps\10.3.3 --reference E:\dumps\10.3.1 --private-key contoso.com.key
 
 # compare two whole runs: file-set + CRC, then per-table rows (volatile columns auto-dropped)
-orca diff --run E:\runs\host-10.3.3 --reference E:\runs\host-10.3.1
+orca diff --run E:\datasets\host-10.3.3 --reference E:\datasets\host-10.3.1
 
 # preview up to 20 differing rows per changed table (readable, column-aware)
-orca diff --run E:\runs\host-10.3.3 --reference E:\runs\host-10.3.1 --show
+orca diff --run E:\datasets\host-10.3.3 --reference E:\datasets\host-10.3.1 --show
 
 # just two files
-orca diff E:\runs\host-10.3.3\getthis.parquet E:\runs\host-10.3.1\getthis.parquet
+orca diff E:\datasets\host-10.3.3\getthis.parquet E:\datasets\host-10.3.1\getthis.parquet
 
 # focus on file identity only (ignore per-run volatile metadata)
 orca diff A\getthis.parquet B\getthis.parquet --columns FullName SHA1 SizeInBytes --show
 
 # export the differing rows to CSV instead of (or as well as) previewing
-orca diff --run NEW --reference REF --rows --out-dir E:\runs\diff
+orca diff --run NEW --reference REF --rows --out-dir E:\datasets\diff
 
 # ignore run-local files in the file-set layer (logs, per-run markers)
 orca diff --run NEW --reference REF --exclude-files "*.log" "*/Statistics.json" "Capsule#*"
@@ -640,7 +654,7 @@ leaving you with a malloc failure to interpret.
 
 ```powershell
 orca diff NEW.p7b REF.p7b --private-key contoso.com.key
-orca ingest E:\dumps\HOST.p7b --out E:\runs\host --private-key contoso.com.key
+orca ingest E:\dumps\HOST.p7b --out E:\datasets\host --private-key contoso.com.key
 orca extract E:\dumps\HOST.p7b --out E:\expanded --cms-backend openssl   # pin one backend
 ```
 
@@ -843,7 +857,7 @@ orca diff NEW.7z REF.7z --refresh                      # re-decrypt and re-inges
 
 `--work-dir` moves the runs, the decrypted output **and the scratch** somewhere else, all at
 once - a collection larger than the temp volume cannot be decrypted otherwise; there the
-run directory is named with the ingest key, because two collections' archives often share a
+dataset is named with the ingest key, because two collections' archives often share a
 basename. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
 
 A run is reused when its marker still matches the key of its sources - each archive's name,
@@ -872,9 +886,9 @@ command line, the configured archives. `ingest` captures every Outline a collect
 (sealed ones too), and `orca report outline` turns them into a table.
 
 ```powershell
-orca report outline E:\runs --out E:\runs\fleet.parquet   # across many collections
-orca report outline E:\runs\host                                  # one run -> <run>\outline.parquet
-orca report outline E:\runs\host --json                           # just print the rows
+orca report outline E:\datasets --out E:\datasets\fleet.parquet   # across many collections
+orca report outline E:\datasets\host                                  # one run -> <dataset>\outline.parquet
+orca report outline E:\datasets\host --json                           # just print the rows
 ```
 
 ```
@@ -908,8 +922,8 @@ Also a mode of `report`. Where `report outline` says what ran, `outcome` says ho
 its exit code, timing, IO counters and the archive it wrote into.
 
 ```powershell
-orca report outcome E:\runs --out E:\runs\commands.parquet
-orca report outcome E:\runs\host            # one run -> <run>\outcome.parquet
+orca report outcome E:\datasets --out E:\datasets\commands.parquet
+orca report outcome E:\datasets\host            # one run -> <dataset>\outcome.parquet
 ```
 
 ```
@@ -937,10 +951,10 @@ build; the older run's `USNInfo_offline` had failed with exit code 11 and produc
 
 ```powershell
 # scalar: most-recent value per column, fast
-orca merge --run E:\runs\host
+orca merge --dataset E:\datasets\host
 
 # lossless: keep every distinct value as a recency-ordered array (slower)
-orca merge --run E:\runs\host --lossless
+orca merge --dataset E:\datasets\host --lossless
 ```
 
 ### Ad-hoc queries
@@ -948,8 +962,8 @@ orca merge --run E:\runs\host --lossless
 Any parquet in a run is a normal DuckDB table:
 
 ```powershell
-duckdb -c "SELECT column_name FROM (DESCRIBE SELECT * FROM 'E:/runs/host/getthis.parquet')"
-duckdb -c "SELECT FullName, SizeInBytes FROM 'E:/runs/host/getthis.parquet' ORDER BY FullName LIMIT 50"
+duckdb -c "SELECT column_name FROM (DESCRIBE SELECT * FROM 'E:/datasets/host/getthis.parquet')"
+duckdb -c "SELECT FullName, SizeInBytes FROM 'E:/datasets/host/getthis.parquet' ORDER BY FullName LIMIT 50"
 ```
 
 Use forward slashes in DuckDB paths, and cast for numeric ops (`CAST(SizeInBytes AS BIGINT)`),

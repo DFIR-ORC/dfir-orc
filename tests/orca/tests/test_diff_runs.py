@@ -45,8 +45,8 @@ class TestUnreadTables(unittest.TestCase):
     that removed, which says the collection changed when what changed is that orca could not
     read the file."""
 
-    def skip(self, run_dir, name):
-        with open(layout.skipped_path(run_dir), "w", encoding="utf-8") as f:
+    def skip(self, dataset, name):
+        with open(layout.skipped_path(dataset), "w", encoding="utf-8") as f:
             f.write(f"{name}\tduckdb said no\n")
 
     def test_a_table_skipped_in_a_is_unread_not_removed(self):

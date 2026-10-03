@@ -57,7 +57,7 @@ def run_name(directory: str) -> str:
     """The name ORC gave the run in 'directory', read from the sidecars it wrote there.
 
     'ORC_WS_H2ODEV_20260921_172528_Outcome.json' -> 'ORC_WS_H2ODEV_20260921_172528', sealed or
-    not - the name is the same either way, so a collection does not change run directory the
+    not - the name is the same either way, so a collection does not change dataset the
     moment it is unsealed. A folder of loose archives carries no such sidecar and is named
     after itself.
     """
@@ -79,7 +79,7 @@ def derived_dir(source: str, work_dir: str | None = None, name: str | None = Non
     """The directory holding everything orca derives from 'source'.
 
     A collection directory holds every archive of one ORC run, and they ingest into a single
-    run, so its run directory goes inside it under the run's own name rather than beside any
+    run, so its dataset goes inside it under the run's own name rather than beside any
     one archive. 'name' overrides that, which matters under --work-dir: two collections' runs
     often share a name there.
     """
@@ -114,8 +114,8 @@ def is_writable(directory: str) -> bool:
 
 def resolve(source: str, work_dir: str | None = None,
             name: str | None = None) -> tuple[str, str]:
-    """(keep_dir, run_dir) for 'source': where the decrypted archives and unsealed sidecars are
-    kept, and where the run directory goes.
+    """(keep_dir, dataset) for 'source': where the decrypted archives and unsealed sidecars are
+    kept, and where the dataset goes.
 
     Both fall back to scratch when the collection cannot be written to - a share mounted
     read-only, a mounted image, read-only media. What orca keeps beside a collection is a
@@ -132,27 +132,27 @@ def resolve(source: str, work_dir: str | None = None,
     return fallback, os.path.join(fallback, os.path.basename(run))
 
 
-def orca_dir(run_dir: str) -> str:
-    return os.path.join(run_dir, ORCA_DIR)
+def orca_dir(dataset: str) -> str:
+    return os.path.join(dataset, ORCA_DIR)
 
 
-def name_map_path(run_dir: str) -> str:
-    return os.path.join(orca_dir(run_dir), "name-map.csv")
+def name_map_path(dataset: str) -> str:
+    return os.path.join(orca_dir(dataset), "name-map.csv")
 
 
-def timing_path(run_dir: str) -> str:
-    return os.path.join(orca_dir(run_dir), "ingest-timing.csv")
+def timing_path(dataset: str) -> str:
+    return os.path.join(orca_dir(dataset), "ingest-timing.csv")
 
 
-def skipped_path(run_dir: str) -> str:
+def skipped_path(dataset: str) -> str:
     """Where an ingest records the tables it could not produce. Absent means none."""
-    return os.path.join(orca_dir(run_dir), "skipped.txt")
+    return os.path.join(orca_dir(dataset), "skipped.txt")
 
 
-def skipped(run_dir: str) -> dict[str, str]:
+def skipped(dataset: str) -> dict[str, str]:
     """name -> why, for the tables '--skip-errors' could not produce. Empty for a full run."""
     try:
-        with open(skipped_path(run_dir), encoding="utf-8", errors="replace") as f:
+        with open(skipped_path(dataset), encoding="utf-8", errors="replace") as f:
             lines = f.read().splitlines()
     except OSError:
         return {}
@@ -165,21 +165,21 @@ def skipped(run_dir: str) -> dict[str, str]:
     return found
 
 
-def manifest_path(run_dir: str) -> str:
-    return os.path.join(orca_dir(run_dir), "manifest.parquet")
+def manifest_path(dataset: str) -> str:
+    return os.path.join(orca_dir(dataset), "manifest.parquet")
 
 
-def products_path(run_dir: str) -> str:
-    return os.path.join(orca_dir(run_dir), "products.txt")
+def products_path(dataset: str) -> str:
+    return os.path.join(orca_dir(dataset), "products.txt")
 
 
-def products(run_dir: str) -> list[str]:
-    """What the last ingest wrote into 'run_dir', by name.
+def products(dataset: str) -> list[str]:
+    """What the last ingest wrote into 'dataset', by name.
 
     A run shares its directory with the collection's own files and with whatever 'orca extract'
     expanded there, so this list - not the directory listing - is what a rebuild may remove.
     """
-    path = products_path(run_dir)
+    path = products_path(dataset)
     try:
         with open(path, encoding="utf-8") as f:
             return [line.strip() for line in f if line.strip()]
@@ -187,28 +187,28 @@ def products(run_dir: str) -> list[str]:
         return [ORCA_DIR]
 
 
-def table_names(run_dir: str) -> list[str]:
+def table_names(dataset: str) -> list[str]:
     """The tables an ingest produced, in the order it named them.
 
     Read from name-map.csv rather than globbed: the run directory holds the collection's own
     files too, and a glob would offer 'dfir-orc.parquet' and friends as if a tool had collected
     them. The glob is the fallback for a run directory written by hand.
     """
-    path = name_map_path(run_dir)
+    path = name_map_path(dataset)
     if not os.path.exists(path):
         return [os.path.basename(p)[:-len(".parquet")]
-                for p in sorted(glob.glob(os.path.join(run_dir, "*.parquet")))
+                for p in sorted(glob.glob(os.path.join(dataset, "*.parquet")))
                 if os.path.basename(p) not in DERIVED_PARQUET]
 
     with open(path, newline="", encoding="utf-8", errors="replace") as f:
         return [row["name"] for row in csv.DictReader(f) if row.get("name")]
 
 
-def table_paths(run_dir: str) -> dict[str, str]:
+def table_paths(dataset: str) -> dict[str, str]:
     """name -> parquet path, for the tables of a run that actually exist on disk."""
     found = {}
-    for name in table_names(run_dir):
-        path = os.path.join(run_dir, name + ".parquet")
+    for name in table_names(dataset):
+        path = os.path.join(dataset, name + ".parquet")
         if os.path.exists(path):
             found[name] = path
     return found

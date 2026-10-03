@@ -25,11 +25,11 @@ LAYOUT_VERSION = 4
 MARKER = "cache-source.json"
 
 
-def marker_path(run_dir: str) -> str:
-    return os.path.join(layout.orca_dir(run_dir), MARKER)
+def marker_path(dataset: str) -> str:
+    return os.path.join(layout.orca_dir(dataset), MARKER)
 
 
-def is_run_dir(path: str) -> bool:
+def is_dataset(path: str) -> bool:
     """True for a directory an ingest has already written its bookkeeping into."""
     return os.path.isdir(path) and os.path.isdir(layout.orca_dir(path))
 
@@ -86,17 +86,17 @@ def ingest_options(exclude_cols=None, password=None, engine_name="duckdb",
     return options
 
 
-def is_current(run_dir: str, key: str) -> bool:
-    """True when 'run_dir' holds a complete run ingested from this archive with these options.
+def is_current(dataset: str, key: str) -> bool:
+    """True when 'dataset' holds a complete run ingested from this archive with these options.
 
     The marker is written last, so its absence marks an interrupted ingest and the run is
     rebuilt rather than half-diffed.
     """
-    if not is_run_dir(run_dir):
+    if not is_dataset(dataset):
         return False
 
     try:
-        with open(marker_path(run_dir), encoding="utf-8") as f:
+        with open(marker_path(dataset), encoding="utf-8") as f:
             marker = json.load(f)
     except (ValueError, OSError):
         return False
@@ -104,38 +104,38 @@ def is_current(run_dir: str, key: str) -> bool:
     return marker.get("key") == key and marker.get("layout") == LAYOUT_VERSION
 
 
-def clear_run(run_dir: str) -> None:
+def clear_dataset(dataset: str) -> None:
     """Remove what the previous ingest wrote, leaving everything else in the directory alone.
 
     A run directory holds the collection's own files and whatever 'orca extract' expanded
     there, so this follows the recorded product list rather than the directory listing.
     """
-    for product in layout.products(run_dir) + list(layout.DERIVED_PARQUET):
-        path = os.path.join(run_dir, product)
+    for product in layout.products(dataset) + list(layout.DERIVED_PARQUET):
+        path = os.path.join(dataset, product)
         if os.path.isdir(path):
             shutil.rmtree(path, ignore_errors=True)
         elif os.path.exists(path):
             os.remove(path)
 
 
-def write_marker(run_dir: str, source: str, key: str, options: dict) -> None:
-    os.makedirs(layout.orca_dir(run_dir), exist_ok=True)
-    with open(marker_path(run_dir), "w", encoding="utf-8") as f:
+def write_marker(dataset: str, source: str, key: str, options: dict) -> None:
+    os.makedirs(layout.orca_dir(dataset), exist_ok=True)
+    with open(marker_path(dataset), "w", encoding="utf-8") as f:
         json.dump({"source": os.path.abspath(source), "key": key, "layout": LAYOUT_VERSION,
                    "options": options, "ingested": time.strftime("%Y-%m-%d %H:%M:%S")},
                   f, indent=2)
 
 
-def ensure_run(source: str, work_dir: str | None = None, *, password=None, private_key=None,
+def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
                refresh: bool = False, skip_errors: bool = False) -> str:
-    """Return a run directory for 'source', ingesting it when there is not a current one.
+    """Return a dataset for 'source', ingesting it when there is not a current one.
 
-    A path that is already a run directory is used in place and never copied. Runs are ingested
+    A path that is already a dataset is used in place and never copied. Datasets are ingested
     parquet-only: every consumer of one reads parquet, and skipping the CSV products makes the
     ingest substantially cheaper.
     """
-    if is_run_dir(source):
+    if is_dataset(source):
         return source
 
     if not os.path.exists(source):
@@ -145,21 +145,21 @@ def ensure_run(source: str, work_dir: str | None = None, *, password=None, priva
     key = key_for(source, options)
     # Beside the archive the directory name is the archive's; under one --work-dir two
     # collections' archives often share a basename, so the key names the directory there.
-    keep_dir, run_dir = layout.resolve(source, work_dir, name=key if work_dir else None)
+    keep_dir, dataset = layout.resolve(source, work_dir, name=key if work_dir else None)
 
-    if not refresh and is_current(run_dir, key):
-        return run_dir
+    if not refresh and is_current(dataset, key):
+        return dataset
 
-    clear_run(run_dir)
-    os.makedirs(run_dir, exist_ok=True)
-    print(f"ingesting '{source}' into '{run_dir}'")
+    clear_dataset(dataset)
+    os.makedirs(dataset, exist_ok=True)
+    print(f"ingesting '{source}' into '{dataset}'")
     # 'work_dir' as well as the two directories resolved from it: those say where the products
     # go, and run_ingest also puts its scratch there - a diff of two large collections has the
     # same no-room-on-the-temp-volume problem as anything else.
-    ingest.run_ingest(source, run_dir, make_csv=False, make_trunc=False,
+    ingest.run_ingest(source, dataset, make_csv=False, make_trunc=False,
                       exclude_cols=exclude_cols, password=password, private_key=private_key,
                       cms_backend=cms_backend, engine_name=engine_name, keep_dir=keep_dir,
                       work_dir=work_dir, refresh=refresh, skip_errors=skip_errors)
 
-    write_marker(run_dir, source, key, options)
-    return run_dir
+    write_marker(dataset, source, key, options)
+    return dataset

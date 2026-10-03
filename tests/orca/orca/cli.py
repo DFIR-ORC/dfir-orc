@@ -40,10 +40,10 @@ def _build_mode_parser(mode: str) -> argparse.ArgumentParser:
         prog=f"orca report {mode}",
         description=f"One queryable row per {'command run' if mode == 'outcome' else 'ORC run'}"
                     f", across every run dir given.")
-    parser.add_argument("run_dirs", nargs="+",
-                        help="run dir(s), collection(s), or a directory holding either")
+    parser.add_argument("paths", nargs="+",
+                        help="collection(s), ingested dataset(s), or a directory holding either")
     parser.add_argument("--out", default=None,
-                        help=f"output parquet (default: <run>/{mode}.parquet)")
+                        help=f"output parquet (default: <dataset>/{mode}.parquet)")
     parser.add_argument("--json", action="store_true",
                         help="print the rows instead (no parquet)")
     parser.add_argument("--private-key", default=None,
@@ -119,8 +119,8 @@ def _build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--json", action="store_true", help="summary JSON")
 
     mg = sub.add_parser("merge", help="run dir -> wide dfir-orc.parquet")
-    mg.add_argument("--run", required=True, help="an ingested run dir")
-    mg.add_argument("--out", default=None, help="output parquet (default: <run>/dfir-orc.parquet)")
+    mg.add_argument("--dataset", required=True, help="an ingested dataset")
+    mg.add_argument("--out", default=None, help="output parquet (default: <dataset>/dfir-orc.parquet)")
     mg.add_argument("--lossless", action="store_true", help="keep every value as arrays (slow)")
     mg.add_argument("--ts-col", nargs="*", default=None, help="override tool timestamp: Tool=Column")
     mg.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
@@ -131,8 +131,8 @@ def _build_parser() -> argparse.ArgumentParser:
                                     "per command run) and 'orca report outline' (one row per "
                                     "ORC run).",
                         epilog="orca report outcome --root E:\\runs --out fleet.parquet")
-    rp.add_argument("run_dirs", nargs="+",
-                    help="run dir(s), collection(s), or a directory holding either")
+    rp.add_argument("paths", nargs="+",
+                    help="collection(s), ingested dataset(s), or a directory holding either")
     rp.add_argument("--view", action="append", default=None,
                     choices=["outcome", "empty", "stats", "errors"], help="view(s) to show")
     shape = rp.add_mutually_exclusive_group()
@@ -155,15 +155,16 @@ def _build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
-    gt.add_argument("--run", required=True, help="an ingested run dir")
-    gt.add_argument("--out", default=None, help="output parquet (default: <run>/getthis.parquet)")
+    gt.add_argument("--dataset", required=True, help="an ingested dataset")
+    gt.add_argument("--out", default=None, help="output parquet (default: <dataset>/getthis.parquet)")
     gt.add_argument("--json", action="store_true", help="summary as JSON")
     gt.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     df = sub.add_parser("diff", help="compare two archives, run dirs, or parquet/CSV files")
     df.add_argument("paths", nargs="*",
                     help="two parquet/CSV for a file-pair diff, else two archives/run dirs")
-    df.add_argument("--run", default=None, help="run A: archive (.7z/.p7b), result dir or run dir")
+    df.add_argument("--run", default=None,
+                    help="run A: archive (.7z/.p7b), collection dir or ingested dataset")
     df.add_argument("--reference", default=None, help="run B: same forms as --run")
     df.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
     df.add_argument("--password", default=None, help="archive password")
@@ -231,7 +232,7 @@ def main(argv=None) -> int:
     if mode:
         args = _build_mode_parser(mode).parse_args(items[2:])
         runner = outcome.run_outcome if mode == "outcome" else outline.run_outline
-        runner(args.run_dirs, out=args.out, engine_name=args.engine,
+        runner(args.paths, out=args.out, engine_name=args.engine,
                as_json=args.json, private_key=args.private_key,
                cms_backend=args.cms_backend, work_dir=args.work_dir, refresh=args.refresh)
         return 0
@@ -262,13 +263,13 @@ def main(argv=None) -> int:
             tool, _, column = item.partition("=")
             if tool and column:
                 overrides[tool] = column
-        merge.run_merge(args.run, out=args.out, lossless=args.lossless,
+        merge.run_merge(args.dataset, out=args.out, lossless=args.lossless,
                         ts_overrides=overrides or None, engine_name=args.engine)
     elif args.command == "getthis":
-        getthis.run_getthis(args.run, out=args.out, engine_name=args.engine,
+        getthis.run_getthis(args.dataset, out=args.out, engine_name=args.engine,
                             as_json=args.json)
     elif args.command == "report":
-        report.run_report(args.run_dirs, views=args.view,
+        report.run_report(args.paths, views=args.view,
                           one_line=args.one_line, as_json=args.json,
                           list_commands=args.list, failed_only=args.failed,
                           private_key=args.private_key, cms_backend=args.cms_backend,

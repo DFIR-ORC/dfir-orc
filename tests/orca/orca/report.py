@@ -13,8 +13,8 @@ from . import ignores, ingest, layout, outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
-def load_timing(run_dir: str) -> list[dict]:
-    path = layout.timing_path(run_dir)
+def load_timing(directory: str) -> list[dict]:
+    path = layout.timing_path(directory)
     rows = []
     if not os.path.exists(path):
         return rows
@@ -132,7 +132,7 @@ def build_outcome_view(outcome_obj, ignore: list | None = None) -> dict:
     }
 
 
-def run_log_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
+def run_log_files(directory: str, extra_dirs: list | None = None) -> list[str]:
     """The logs of a run: the ones ingest put in it, plus the expanded 'Errors' container.
 
     Deliberately not a walk of the whole run directory - it may hold a tree 'orca extract'
@@ -141,7 +141,7 @@ def run_log_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
     'extra_dirs' is where a sealed collection's log was unsealed to.
     """
     found = []
-    for directory in [run_dir] + list(extra_dirs or []):
+    for directory in [directory] + list(extra_dirs or []):
         found += sorted(glob.glob(os.path.join(directory, "*.log")))
         for root, _dirs, files in os.walk(os.path.join(directory, "Errors")):
             found += sorted(os.path.join(root, name) for name in files)
@@ -149,17 +149,17 @@ def run_log_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
     return found
 
 
-def run_logs_of(run_dir: str, extra_dirs: list | None = None,
+def run_logs_of(directory: str, extra_dirs: list | None = None,
                 stem: str | None = None) -> list:
     """The logs of one run: every log of the directory, or only this run's when a stem says so."""
-    found = run_log_files(run_dir, extra_dirs)
+    found = run_log_files(directory, extra_dirs)
     if not stem:
         return found
 
     return [path for path in found if os.path.basename(path).startswith(stem)]
 
 
-def log_label(path: str, run_dir: str) -> str:
+def log_label(path: str, directory: str) -> str:
     """How a log is named in the report: its path within the run, else its file name alone.
 
     An unsealed sidecar sits in the work dir, which is routinely on another volume than the
@@ -168,7 +168,7 @@ def log_label(path: str, run_dir: str) -> str:
     segments, which names nothing useful.
     """
     try:
-        relative = os.path.relpath(path, run_dir)
+        relative = os.path.relpath(path, directory)
     except ValueError:
         return os.path.basename(path)
 
@@ -194,7 +194,7 @@ def log_stem(outcome_path: str) -> str | None:
     return name[:-len(OUTCOME_SUFFIX)]
 
 
-def build_errors_view(run_dir: str, extra_dirs: list | None = None,
+def build_errors_view(directory: str, extra_dirs: list | None = None,
                       stem: str | None = None, ignore: list | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
     could not read at all, which are a hole in the run rather than a message inside it.
@@ -204,12 +204,12 @@ def build_errors_view(run_dir: str, extra_dirs: list | None = None,
     its own means: the collection's log, each command's log out of the expanded Errors
     container, and ORC's console output are all one run's.
     """
-    if not os.path.isdir(run_dir):
+    if not os.path.isdir(directory):
         return {"available": False, "skipped": {}, "logs_ignored": 0, "skipped_ignored": 0}
 
     patterns = ignore or []
     logs = []
-    for path in run_logs_of(run_dir, extra_dirs, stem):
+    for path in run_logs_of(directory, extra_dirs, stem):
         size = os.path.getsize(path)
         if size == 0:
             continue
@@ -222,17 +222,17 @@ def build_errors_view(run_dir: str, extra_dirs: list | None = None,
                         count += 1
         except OSError:
             count = -1
-        logs.append({"log": log_label(path, run_dir), "bytes": size, "error_lines": count})
+        logs.append({"log": log_label(path, directory), "bytes": size, "error_lines": count})
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
     kept_logs = [log for log in logs if not ignores.matches(log["log"], patterns)]
-    skipped = layout.skipped(run_dir)
+    skipped = layout.skipped(directory)
     kept_skipped = {name: why for name, why in skipped.items()
                     if not ignores.matches(name, patterns)}
 
     # 'available' is whether there was a log to read, not whether the directory exists: a
     # sealed collection holds only '<name>.log.7z.p7b', and '0 log(s) with matches' would then
     # read as reassurance when nothing had been read at all.
-    return {"available": bool(run_logs_of(run_dir, extra_dirs, stem)), "logs": kept_logs,
+    return {"available": bool(run_logs_of(directory, extra_dirs, stem)), "logs": kept_logs,
             "skipped": kept_skipped,
             "logs_ignored": len(logs) - len(kept_logs),
             "skipped_ignored": len(skipped) - len(kept_skipped)}
@@ -255,7 +255,7 @@ def _hdur(seconds) -> str:
     return f"{s // 3600}h{(s % 3600) // 60}m" if s >= 3600 else f"{s // 60}m{s % 60}s"
 
 
-def host_of(run_dir: str, extra_dirs: list | None = None,
+def host_of(directory: str, extra_dirs: list | None = None,
             outcome_path: str | None = None) -> str:
     """The machine the collection came from, by its Outcome; the directory name as a fallback.
 
@@ -263,7 +263,7 @@ def host_of(run_dir: str, extra_dirs: list | None = None,
     otherwise be reported under the name of the folder it happens to sit in. 'outcome_path' is
     this run's own Outcome, which matters when the directory holds several.
     """
-    op = outcome_path or _outcome.outcome_file(run_dir, extra_dirs)
+    op = outcome_path or _outcome.outcome_file(directory, extra_dirs)
     if op:
         try:
             host = _outcome.parse_outcome(op).host
@@ -271,10 +271,10 @@ def host_of(run_dir: str, extra_dirs: list | None = None,
                 return host
         except (OSError, ValueError):
             pass
-    return os.path.basename(os.path.normpath(run_dir))
+    return os.path.basename(os.path.normpath(directory))
 
 
-def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None,
+def build_host_report(directory: str, engine=None, extra_dirs: list | None = None,
                       outcome_path: str | None = None, stem: str | None = None,
                       ignore: list | None = None) -> dict:
     """The four views of one run dir, each told whether its own input was there to read.
@@ -283,20 +283,20 @@ def build_host_report(run_dir: str, engine=None, extra_dirs: list | None = None,
     produced often enough - ORC's Outcome and logs are both in one - so two of the four views
     routinely have nothing to read, and have to say so rather than report a zero.
     """
-    timing = load_timing(run_dir)
-    timing_available = os.path.exists(layout.timing_path(run_dir))
-    manifest_available = bool(engine) and os.path.exists(layout.manifest_path(run_dir))
+    timing = load_timing(directory)
+    timing_available = os.path.exists(layout.timing_path(directory))
+    manifest_available = bool(engine) and os.path.exists(layout.manifest_path(directory))
 
-    op = outcome_path or _outcome.outcome_file(run_dir, extra_dirs)
+    op = outcome_path or _outcome.outcome_file(directory, extra_dirs)
     oc = _outcome.parse_outcome(op) if op else None
-    files = empty_output_files(engine, layout.manifest_path(run_dir)) if engine else []
+    files = empty_output_files(engine, layout.manifest_path(directory)) if engine else []
     return {
-        "host": host_of(run_dir, extra_dirs, op),
-        "run_dir": run_dir,
+        "host": host_of(directory, extra_dirs, op),
+        "directory": directory,
         "outcome": build_outcome_view(oc, ignore),
         "empty": build_empty_view(timing, files, timing_available, manifest_available, ignore),
         "stats": build_stats_view(timing, timing_available),
-        "errors": build_errors_view(run_dir, extra_dirs, stem, ignore),
+        "errors": build_errors_view(directory, extra_dirs, stem, ignore),
     }
 
 
@@ -367,7 +367,7 @@ def host_json(hr: dict) -> dict:
     outcome, empty, stats, errors = hr["outcome"], hr["empty"], hr["stats"], hr["errors"]
     return {
         **summary_of(hr),
-        "run_dir": hr["run_dir"],
+        "directory": hr["directory"],
         "outcome_available": outcome.get("available", True),
         "stats_available": stats.get("available", True),
         "empty_available": empty.get("available", True),
@@ -464,7 +464,7 @@ def skipped_rows(skipped: dict, width: int = MAX_WIDTH) -> list:
 def header_lines(hr: dict) -> list:
     """The host, where it came from, and the run's scalars."""
     host = hr["host"]
-    path = short_path(hr["run_dir"], MAX_WIDTH - len(host) - 2)
+    path = short_path(hr["directory"], MAX_WIDTH - len(host) - 2)
     return [f"{host}  {path}"]
 
 
@@ -648,9 +648,9 @@ def render_command_lines(rows: list[dict], failed_only: bool = False,
     return "\n".join(lines + ["", summary])
 
 
-def _extra(sealed: dict, run_dir: str) -> list | None:
+def _extra(sealed: dict, directory: str) -> list | None:
     """The 'extra_dirs' for one run: where its sidecars were unsealed, if any were."""
-    found = sealed.get(run_dir)
+    found = sealed.get(directory)
     return [found] if found else None
 
 
@@ -662,7 +662,7 @@ class Run(NamedTuple):
     reported the first of them and silently dropped the rest. 'outcome_path' is None for an
     ingested run that carries no Outcome at all, which is still worth a report of its tables.
     """
-    run_dir: str
+    directory: str
     outcome_path: str | None
     extra_dirs: list
 
@@ -678,7 +678,7 @@ def candidate_dirs(paths: list) -> list:
     found = []
     for path in paths:
         if not os.path.isdir(path):
-            raise RuntimeError(f"no such run dir: '{path}'")
+            raise RuntimeError(f"no such directory: '{path}'")
 
         found.append(path)
         found += [entry.path for entry in sorted(os.scandir(path), key=lambda e: e.name)
@@ -748,7 +748,7 @@ def run_identity(run: Run) -> str:
     same collection is visible in both and must be reported once.
     """
     if not run.outcome_path:
-        return os.path.abspath(run.run_dir)
+        return os.path.abspath(run.directory)
 
     outcome = _outcome.read_outcome(run.outcome_path) or {}
     return outcome.get("id") or os.path.basename(run.outcome_path)
@@ -765,24 +765,24 @@ def find_runs(dirs: list, sealed: dict) -> list:
         for run in runs_in(directory, _extra(sealed, directory) or []):
             identity = run_identity(run)
             current = best.get(identity)
-            if current is None or (not os.path.isfile(layout.timing_path(current.run_dir))
-                                   and os.path.isfile(layout.timing_path(run.run_dir))):
+            if current is None or (not os.path.isfile(layout.timing_path(current.directory))
+                                   and os.path.isfile(layout.timing_path(run.directory))):
                 best[identity] = run
 
-    return sorted(best.values(), key=lambda run: (host_of(run.run_dir, run.extra_dirs,
+    return sorted(best.values(), key=lambda run: (host_of(run.directory, run.extra_dirs,
                                                           run.outcome_path),
-                                                  run.run_dir))
+                                                  run.directory))
 
 
-def sidecar_dir(run_dir: str, work: str) -> str:
+def sidecar_dir(directory: str, work: str) -> str:
     """Where one run's unsealed sidecars go: a directory of its own under the work dir.
 
     Named after the collection plus a digest of its path, following the convention the run
     cache uses, because two machines' collections routinely share a folder name under one work
     dir and must not unseal over each other.
     """
-    digest = hashlib.sha256(os.path.abspath(run_dir).encode("utf-8")).hexdigest()[:12]
-    return os.path.join(work, f"{os.path.basename(os.path.normpath(run_dir))}-{digest}")
+    digest = hashlib.sha256(os.path.abspath(directory).encode("utf-8")).hexdigest()[:12]
+    return os.path.join(work, f"{os.path.basename(os.path.normpath(directory))}-{digest}")
 
 
 def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=None,
@@ -800,21 +800,21 @@ def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=N
     """
     mapped = {}
     seven = None
-    for run_dir in dirs:
-        if not ingest.sealed_sidecars(run_dir):
+    for directory in dirs:
+        if not ingest.sealed_sidecars(directory):
             continue
 
         if seven is None:
             seven = sevenzip.find_7z() or ""
         if not seven:
             # Not fatal: the views that read ORC's own files go quiet, the rest still print.
-            print(f"cannot unseal the sidecars of '{run_dir}': 7z.exe not found")
+            print(f"cannot unseal the sidecars of '{directory}': 7z.exe not found")
             continue
 
-        target = sidecar_dir(run_dir, work)
+        target = sidecar_dir(directory, work)
         os.makedirs(target, exist_ok=True)
-        ingest.unseal_sidecars(run_dir, seven, target, private_key, cms_backend, refresh)
-        mapped[run_dir] = target
+        ingest.unseal_sidecars(directory, seven, target, private_key, cms_backend, refresh)
+        mapped[directory] = target
 
     return mapped
 
@@ -823,7 +823,7 @@ def shared_dirs(runs: list) -> set:
     """The directories holding more than one run, where a log has to be attributed."""
     counts: dict = {}
     for run in runs:
-        key = os.path.abspath(run.run_dir)
+        key = os.path.abspath(run.directory)
         counts[key] = counts.get(key, 0) + 1
 
     return {directory for directory, count in counts.items() if count > 1}
@@ -846,7 +846,7 @@ def orphan_lines(dirs: list, sealed: dict) -> list:
     return blocks
 
 
-def run_report(run_dirs, views=None, one_line=False, as_json=False, list_commands=False,
+def run_report(paths, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
                refresh=False, ignore_file=None, engine_name="duckdb") -> None:
     """Report on every collection in every directory given.
@@ -861,14 +861,14 @@ def run_report(run_dirs, views=None, one_line=False, as_json=False, list_command
     # Read before anything expensive: a mistyped ignore file must not surface after a fleet's
     # worth of decryption, and must never be read as "nothing to ignore".
     ignore = ignores.load(ignore_file)
-    dirs = candidate_dirs(list(run_dirs or []))
+    dirs = candidate_dirs(list(paths or []))
 
     scratch.use(work_dir)
     sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
                                    private_key, cms_backend, refresh)
     runs = find_runs(dirs, sealed)
     if not runs:
-        raise RuntimeError(f"no collection in {', '.join(run_dirs)}: need an ingested run, a "
+        raise RuntimeError(f"no collection in {', '.join(paths)}: need an ingested run, a "
                            f"collection, or a directory holding either")
 
     orphans = orphan_lines(dirs, sealed)
@@ -878,7 +878,7 @@ def run_report(run_dirs, views=None, one_line=False, as_json=False, list_command
         # never disagree - and no engine is needed to print them.
         paths = [run.outcome_path for run in runs if run.outcome_path]
         print(render_command_lines(_outcome.command_rows_from(paths), failed_only, ignore))
-        without = [run.run_dir for run in runs if not run.outcome_path]
+        without = [run.directory for run in runs if not run.outcome_path]
         if without:
             # Named, not raised: one machine missing an Outcome must not cost you the other
             # eight, and a silent gap in a fleet sweep is worse than a short note.
@@ -896,8 +896,8 @@ def run_report(run_dirs, views=None, one_line=False, as_json=False, list_command
 
     shared = shared_dirs(runs)
     reports = [build_host_report(
-        run.run_dir, engine, run.extra_dirs, run.outcome_path,
-        log_stem(run.outcome_path) if os.path.abspath(run.run_dir) in shared else None,
+        run.directory, engine, run.extra_dirs, run.outcome_path,
+        log_stem(run.outcome_path) if os.path.abspath(run.directory) in shared else None,
         ignore)
         for run in runs]
 

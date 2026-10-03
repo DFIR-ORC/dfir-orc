@@ -165,7 +165,7 @@ def command_rows(outcome: dict, source: str) -> list[dict]:
     return rows
 
 
-def outcome_file(run_dir: str, extra_dirs: list | None = None) -> str | None:
+def outcome_file(directory: str, extra_dirs: list | None = None) -> str | None:
     """The Outcome ingest captured for a run, if it had one.
 
     Found by content, not by name: it sits in the run under the name ORC gave it, beside the
@@ -176,7 +176,7 @@ def outcome_file(run_dir: str, extra_dirs: list | None = None) -> str | None:
     stand-in made from it.
     """
     from .ingest import find_outcome_json
-    for directory in [run_dir] + list(extra_dirs or []):
+    for directory in [directory] + list(extra_dirs or []):
         found = find_outcome_json(directory)
         if found:
             return found
@@ -200,13 +200,13 @@ def command_rows_from(outcome_paths: list) -> list[dict]:
     return rows
 
 
-def run_outcome(run_dirs, out=None, engine_name="duckdb", as_json=False,
+def run_outcome(paths, out=None, engine_name="duckdb", as_json=False,
                private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
     from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
     from .report import candidate_dirs, find_runs, unsealed_sidecar_dirs
 
-    dirs = candidate_dirs(list(run_dirs or []))
+    dirs = candidate_dirs(list(paths or []))
 
     # A collection arrives with its sidecars sealed, and this table is read from one of them.
     scratch.use(work_dir)

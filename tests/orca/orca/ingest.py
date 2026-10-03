@@ -538,7 +538,7 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
 
         # Everything this ingest writes into the run, by name: a run shares its directory with
         # the collection's own files and with an expanded tree, so a rebuild has to know what
-        # it may remove (see cache.clear_run).
+        # it may remove (see cache.clear_dataset).
         products = [layout.ORCA_DIR]
         products += copy_into_run([outcome_path] if outcome_path else [], out_dir)
         products += capture_outlines(directories, out_dir)

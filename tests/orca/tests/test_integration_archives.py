@@ -292,8 +292,8 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
         sealed = report.unsealed_sidecar_dirs(dirs, self.work, PRIVATE_KEY)
         runs = report.find_runs(dirs, sealed)
 
-        self.assertIn(self.dumps, [run.run_dir for run in runs])
-        self.assertIn("SEALEDHOST", [report.host_of(r.run_dir, r.extra_dirs, r.outcome_path)
+        self.assertIn(self.dumps, [run.directory for run in runs])
+        self.assertIn("SEALEDHOST", [report.host_of(r.directory, r.extra_dirs, r.outcome_path)
                                      for r in runs])
 
 

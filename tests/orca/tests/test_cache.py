@@ -6,7 +6,7 @@ from unittest import mock
 from orca import cache, layout
 
 
-def make_run_dir(path, marker=True):
+def make_dataset(path, marker=True):
     os.makedirs(layout.orca_dir(path), exist_ok=True)
     if marker:
         with open(cache.marker_path(path), "w", encoding="utf-8") as f:
@@ -42,13 +42,13 @@ class CacheCase(unittest.TestCase):
 
 class TestIsRunDir(CacheCase):
     def test_true_with_the_bookkeeping_an_ingest_writes(self):
-        self.assertTrue(cache.is_run_dir(make_run_dir(os.path.join(self.dir.name, "run"))))
+        self.assertTrue(cache.is_dataset(make_dataset(os.path.join(self.dir.name, "run"))))
 
     def test_false_for_a_plain_directory(self):
-        self.assertFalse(cache.is_run_dir(self.dir.name))
+        self.assertFalse(cache.is_dataset(self.dir.name))
 
     def test_false_for_a_file(self):
-        self.assertFalse(cache.is_run_dir(self.archive))
+        self.assertFalse(cache.is_dataset(self.archive))
 
 
 class TestKey(CacheCase):
@@ -87,20 +87,20 @@ class TestKey(CacheCase):
 
 class TestEnsureRun(CacheCase):
     def test_an_existing_run_dir_is_used_in_place(self):
-        run = make_run_dir(os.path.join(self.dir.name, "run"))
+        run = make_dataset(os.path.join(self.dir.name, "run"))
         with mock.patch.object(cache.ingest, "run_ingest") as ingest:
-            self.assertEqual(cache.ensure_run(run), run)
+            self.assertEqual(cache.ensure_dataset(run), run)
         ingest.assert_not_called()
 
     def test_missing_source_fails_closed(self):
         with self.assertRaises(RuntimeError) as caught:
-            cache.ensure_run(os.path.join(self.dir.name, "absent.7z"))
+            cache.ensure_dataset(os.path.join(self.dir.name, "absent.7z"))
         self.assertIn("does not exist", str(caught.exception))
 
     def test_the_run_lands_beside_the_archive_under_its_name(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            run = cache.ensure_run(self.archive)
+            run = cache.ensure_dataset(self.archive)
 
         self.assertEqual(run, os.path.join(self.dir.name, "Little"))
 
@@ -114,8 +114,8 @@ class TestEnsureRun(CacheCase):
 
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            one = cache.ensure_run(self.archive, self.work_dir)
-            two = cache.ensure_run(other, self.work_dir)
+            one = cache.ensure_dataset(self.archive, self.work_dir)
+            two = cache.ensure_dataset(other, self.work_dir)
 
         self.assertNotEqual(one, two)
         for run in (one, two):
@@ -125,8 +125,8 @@ class TestEnsureRun(CacheCase):
     def test_ingests_once_then_reuses(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            first = cache.ensure_run(self.archive)
-            second = cache.ensure_run(self.archive)
+            first = cache.ensure_dataset(self.archive)
+            second = cache.ensure_dataset(self.archive)
 
         self.assertEqual(first, second)
         self.assertEqual(len(calls), 1)
@@ -137,11 +137,11 @@ class TestEnsureRun(CacheCase):
         # keeps a re-collected archive from being diffed against its own stale parquet.
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            first = cache.ensure_run(self.archive)
+            first = cache.ensure_dataset(self.archive)
             with open(self.archive, "ab") as f:
                 f.write(b"more")
             os.utime(self.archive, (1, 1))
-            second = cache.ensure_run(self.archive)
+            second = cache.ensure_dataset(self.archive)
 
         self.assertEqual(first, second)
         self.assertEqual(len(calls), 2)
@@ -149,23 +149,23 @@ class TestEnsureRun(CacheCase):
     def test_changed_ingest_options_re_ingest(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_run(self.archive)
-            cache.ensure_run(self.archive, exclude_cols=["MD5"])
+            cache.ensure_dataset(self.archive)
+            cache.ensure_dataset(self.archive, exclude_cols=["MD5"])
         self.assertEqual(len(calls), 2)
 
     def test_refresh_re_ingests(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_run(self.archive)
-            cache.ensure_run(self.archive, refresh=True)
+            cache.ensure_dataset(self.archive)
+            cache.ensure_dataset(self.archive, refresh=True)
         self.assertEqual(len(calls), 2)
 
     def test_interrupted_ingest_is_rebuilt(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            run = cache.ensure_run(self.archive)
+            run = cache.ensure_dataset(self.archive)
             os.remove(cache.marker_path(run))  # what a killed ingest leaves behind
-            cache.ensure_run(self.archive)
+            cache.ensure_dataset(self.archive)
         self.assertEqual(len(calls), 2)
 
     def test_rebuilding_removes_the_previous_products_and_nothing_else(self):
@@ -173,7 +173,7 @@ class TestEnsureRun(CacheCase):
         # 'orca extract' expanded there: a rebuild goes by the recorded product list.
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            run = cache.ensure_run(self.archive)
+            run = cache.ensure_dataset(self.archive)
 
         expanded = os.path.join(run, "GetThis_Default")
         os.makedirs(expanded)
@@ -186,7 +186,7 @@ class TestEnsureRun(CacheCase):
         # A second ingest that produces a different table must not leave the first one behind.
         _, other = self.fake_ingest(products=("USNInfo.parquet",))
         with mock.patch.object(cache.ingest, "run_ingest", other):
-            cache.ensure_run(self.archive, refresh=True)
+            cache.ensure_dataset(self.archive, refresh=True)
 
         self.assertTrue(os.path.exists(os.path.join(expanded, "GetThis.csv")))
         self.assertTrue(os.path.exists(os.path.join(run, "USNInfo.parquet")))
@@ -195,7 +195,7 @@ class TestEnsureRun(CacheCase):
     def test_runs_are_ingested_parquet_only(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_run(self.archive, private_key="k.pem")
+            cache.ensure_dataset(self.archive, private_key="k.pem")
 
         _, _, kwargs = calls[0]
         self.assertFalse(kwargs["make_csv"])
@@ -205,7 +205,7 @@ class TestEnsureRun(CacheCase):
     def test_the_ingest_is_told_where_to_keep_decrypted_output(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_run(self.archive)
+            cache.ensure_dataset(self.archive)
 
         _, _, kwargs = calls[0]
         self.assertEqual(kwargs["keep_dir"], self.dir.name)
@@ -215,7 +215,7 @@ class TestEnsureRun(CacheCase):
         # one would have failed - so the two must not share a cache entry.
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_run(self.archive, skip_errors=True)
+            cache.ensure_dataset(self.archive, skip_errors=True)
 
         _, _, kwargs = calls[0]
         self.assertTrue(kwargs["skip_errors"])
@@ -231,7 +231,7 @@ class TestEnsureRun(CacheCase):
         # two large collections needs the room as much as an ingest of one.
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_run(self.archive, work_dir=os.path.join(self.dir.name, "work"))
+            cache.ensure_dataset(self.archive, work_dir=os.path.join(self.dir.name, "work"))
 
         _, _, kwargs = calls[0]
         self.assertEqual(kwargs["work_dir"], os.path.join(self.dir.name, "work"))

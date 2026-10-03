@@ -431,7 +431,7 @@ class TestFindRuns(unittest.TestCase):
         runs = report.find_runs(report.candidate_dirs([self.dir]), {})
 
         self.assertEqual(len(runs), 2)
-        self.assertEqual(sorted(os.path.basename(r.run_dir) for r in runs),
+        self.assertEqual(sorted(os.path.basename(r.directory) for r in runs),
                          ["WS-0001", "WS-0002"])
 
     def test_a_collection_and_the_run_dir_inside_it_are_one_run(self):
@@ -446,14 +446,14 @@ class TestFindRuns(unittest.TestCase):
         runs = report.find_runs(report.candidate_dirs([self.dir]), {})
 
         self.assertEqual(len(runs), 1)
-        self.assertEqual(runs[0].run_dir, run)
+        self.assertEqual(runs[0].directory, run)
 
     def test_an_ingested_run_with_no_outcome_is_still_a_run(self):
         mark_ingested(self.dir)
 
         runs = report.find_runs(report.candidate_dirs([self.dir]), {})
 
-        self.assertEqual([r.run_dir for r in runs], [self.dir])
+        self.assertEqual([r.directory for r in runs], [self.dir])
         self.assertIsNone(runs[0].outcome_path)
 
     def test_a_sealed_outcome_is_read_from_where_it_was_unsealed(self):
@@ -468,7 +468,7 @@ class TestFindRuns(unittest.TestCase):
         runs = report.find_runs([collection], {collection: side})
 
         self.assertEqual(len(runs), 1)
-        self.assertEqual(runs[0].run_dir, collection)
+        self.assertEqual(runs[0].directory, collection)
         self.assertEqual(runs[0].extra_dirs, [side])
 
     def test_a_directory_with_nothing_in_it_yields_no_run(self):

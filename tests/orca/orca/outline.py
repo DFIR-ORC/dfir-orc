@@ -108,14 +108,14 @@ def collect_rows(paths: list[str]) -> list[dict]:
     return rows
 
 
-def outline_files(run_dir: str, extra_dirs: list | None = None) -> list[str]:
+def outline_files(directory: str, extra_dirs: list | None = None) -> list[str]:
     """The Outlines ingest captured for a run. A collection can hold several - a run that was
     restarted leaves one per attempt, and only the last may have an Outcome.
 
     'extra_dirs' is where a sealed collection's Outlines were unsealed to.
     """
     from .ingest import find_outlines
-    return find_outlines([run_dir] + list(extra_dirs or []))
+    return find_outlines([directory] + list(extra_dirs or []))
 
 
 def dedupe_by_run(rows: list) -> list:
@@ -134,22 +134,22 @@ def dedupe_by_run(rows: list) -> list:
     return unique
 
 
-def run_outline(run_dirs, out=None, engine_name="duckdb", as_json=False,
+def run_outline(paths, out=None, engine_name="duckdb", as_json=False,
                private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
     from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
     from .report import candidate_dirs, find_runs, unsealed_sidecar_dirs
 
-    dirs = candidate_dirs(list(run_dirs or []))
+    dirs = candidate_dirs(list(paths or []))
 
     # A collection arrives with its sidecars sealed, and this table is read from one of them.
     scratch.use(work_dir)
     sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
                                    private_key, cms_backend, refresh)
 
-    paths = [path for run_dir in dirs
-             for path in outline_files(run_dir,
-                                       [sealed[run_dir]] if run_dir in sealed else None)]
+    paths = [path for directory in dirs
+             for path in outline_files(directory,
+                                       [sealed[directory]] if directory in sealed else None)]
     rows = dedupe_by_run(collect_rows(paths))
     if not rows:
         raise RuntimeError(f"no Outline captured in {len(dirs)} run dir(s); "

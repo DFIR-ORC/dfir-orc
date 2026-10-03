@@ -56,7 +56,7 @@ class TestCli(unittest.TestCase):
         args = cli._build_mode_parser("outcome").parse_args(
             ["E:/runs/host", "--out", "x.parquet", "--json"])
 
-        self.assertEqual(args.run_dirs, ["E:/runs/host"])
+        self.assertEqual(args.paths, ["E:/runs/host"])
         self.assertEqual(args.out, "x.parquet")
         self.assertTrue(args.json)
 
@@ -173,9 +173,9 @@ class TestCli(unittest.TestCase):
 
     def test_parser_merge_requires_run(self):
         parser = cli._build_parser()
-        args = parser.parse_args(["merge", "--run", "run"])
+        args = parser.parse_args(["merge", "--dataset", "E:/runs/host"])
         self.assertEqual(args.command, "merge")
-        self.assertEqual(args.run, "run")
+        self.assertEqual(args.dataset, "E:/runs/host")
 
     def test_main_is_callable(self):
         self.assertTrue(callable(cli.main))
