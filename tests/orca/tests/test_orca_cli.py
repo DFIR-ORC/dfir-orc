@@ -89,6 +89,22 @@ class TestCli(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 parser.parse_args([command])
 
+    def test_stopping_at_the_first_error_is_the_thing_you_ask_for(self):
+        # Carrying on is what you want nearly every time, so it is the default and --strict is
+        # the question you have to ask.
+        parser = cli._build_parser()
+
+        for argv in (["ingest", "a.7z"], ["extract", "a.7z"], ["diff", "a.7z", "b.7z"],
+                     ["merge", "E:/datasets/host"], ["getthis", "E:/datasets/host"]):
+            self.assertFalse(parser.parse_args(argv).strict, argv)
+            self.assertTrue(parser.parse_args(argv + ["--strict"]).strict, argv)
+
+        # The flags that used to say it are gone, not kept as aliases.
+        for argv in (["ingest", "a.7z", "--skip-errors"],
+                     ["ingest", "a.7z", "--ignore-errors"]):
+            with self.assertRaises(SystemExit):
+                parser.parse_args(argv)
+
     def test_merge_and_getthis_take_what_an_ingest_needs(self):
         # They ingest on demand, so they need the keys an ingest needs.
         parser = cli._build_parser()
@@ -96,14 +112,14 @@ class TestCli(unittest.TestCase):
         for command in ("merge", "getthis"):
             args = parser.parse_args([command, "E:/dumps/HOST.7z.p7b", "--private-key",
                                       "k.pem", "--work-dir", "E:/work", "--refresh",
-                                      "--skip-errors", "--password", "s3cret",
+                                      "--strict", "--password", "s3cret",
                                       "--cms-backend", "cng"])
             self.assertEqual(args.private_key, "k.pem", command)
             self.assertEqual(args.work_dir, "E:/work", command)
             self.assertEqual(args.password, "s3cret", command)
             self.assertEqual(args.cms_backend, "cng", command)
             self.assertTrue(args.refresh, command)
-            self.assertTrue(args.skip_errors, command)
+            self.assertTrue(args.strict, command)
 
     def test_report_recurses_only_when_asked(self):
         parser = cli._build_parser()
@@ -183,11 +199,11 @@ class TestCli(unittest.TestCase):
         args = cli._build_parser().parse_args(["extract", "arch.p7b"])
         self.assertEqual(args.out, ".")
 
-    def test_skip_errors_is_on_both_commands_that_ingest(self):
+    def test_strict_is_on_both_commands_that_ingest(self):
         parser = cli._build_parser()
         for argv in (["ingest", "arch.7z"], ["diff", "NEW.7z", "REF.7z"]):
-            self.assertFalse(parser.parse_args(argv).skip_errors, argv)
-            self.assertTrue(parser.parse_args(argv + ["--skip-errors"]).skip_errors, argv)
+            self.assertFalse(parser.parse_args(argv).strict, argv)
+            self.assertTrue(parser.parse_args(argv + ["--strict"]).strict, argv)
 
     def test_extract_refresh_is_off_unless_asked(self):
         parser = cli._build_parser()

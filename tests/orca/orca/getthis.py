@@ -57,7 +57,7 @@ def render_summary(total: int, by_archive: list[tuple[str, int]]) -> str:
 
 def run_getthis(source: str, out: str | None = None, engine_name: str = "duckdb",
                 as_json: bool = False, password=None, private_key=None, cms_backend=None,
-                work_dir=None, refresh: bool = False, skip_errors: bool = False) -> str | None:
+                work_dir=None, refresh: bool = False, strict: bool = False) -> str | None:
     """Summarise what GetThis collected, ingesting 'source' first when it is not a dataset yet.
 
     Same reasoning as merge: this reads the GetThis tables of a dataset, and only 'ingest'
@@ -67,13 +67,14 @@ def run_getthis(source: str, out: str | None = None, engine_name: str = "duckdb"
         dataset = cache.ensure_dataset(source, work_dir, password=password,
                                        private_key=private_key, cms_backend=cms_backend,
                                        engine_name=engine_name, refresh=refresh,
-                                       skip_errors=skip_errors)
+                                       strict=strict)
     except RuntimeError as error:
-        # One collected file orca cannot read otherwise costs the whole command, and the
-        # reason arrives as a page of duckdb SQL. Say what it was and what gets past it; the
-        # hint goes last because that is the line a reader sees first.
-        raise RuntimeError(f"could not ingest '{source}': {error}\n"
-                           f"  add --skip-errors to ingest the tables that do read") from error
+        # The reason arrives as a page of duckdb SQL, so the last line says what to do about
+        # it - but only when '--strict' is what refused: an ingest can also fail because the
+        # key is wrong or there is no archive there, and 'drop --strict' would be nonsense.
+        hint = ("\n  that is what --strict asks for; without it the tables that do read are "
+                "ingested" if strict else "")
+        raise RuntimeError(f"could not ingest '{source}': {error}{hint}") from error
     engine = get_engine(engine_name)
     paths = discover_getthis(dataset)
     if not paths:

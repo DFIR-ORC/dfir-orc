@@ -85,17 +85,34 @@ E:\dumps\ORC_WS_H2ODEV_Offline\
     manifest.parquet          every leaf file: relpath, size, crc, isCsv (sample blobs included)
     products.txt              what this ingest wrote, so a rebuild removes only that
     cache-source.json         which archive and options produced this run
-    skipped.txt               tables --skip-errors could not read (absent when there are none)
+    skipped.txt               tables orca could not read (absent when there are none)
 ```
 
-**`--skip-errors`** (on `ingest` and `diff`). One unreadable collected file otherwise costs
-every other table: the first failing job aborts the whole ingest. It happens - on one w11
-collection `autoruns.csv` is UTF-16 text of `autorunsc`'s own usage message, saved under a
-`.csv` name because the tool failed to run, and duckdb refuses to sniff it. With the flag that
-table is skipped and the other 26 are produced.
+**One unreadable collected file costs only itself.** It happens - on one w11 collection
+`autoruns.csv` is UTF-16 text of `autorunsc`'s own usage message, saved under a `.csv` name
+because the tool failed to run, and duckdb refuses to sniff it. That table is skipped and the
+other 26 are produced, which is what you want nearly every time: having to ask for it with a
+flag would mean asking every time.
 
-A run that skipped a table is *incomplete*, and nothing else on disk says so, which is why the
-tables and their reasons are recorded in `.orca\skipped.txt`. `diff` reads that file and calls
+**`--strict` is the other answer**, on `ingest`, `extract`, `diff`, `merge` and `getthis`: the
+first thing that cannot be read stops the run. For a collection you are about to rely on, a
+dataset quietly missing a table is worse than a command that refused to finish. On `extract` it
+covers the same ground - an archive the Outcome names and the directory lacks, an empty one, a
+container 7-Zip warned about - each of which is otherwise reported and stepped over.
+
+A dataset that skipped a table is *incomplete*, and nothing else on disk says so - which is
+why skipping is never quiet. The reason is printed as it happens, the end of the ingest names
+the tables where the eye lands, and both go into `.orca\skipped.txt`:
+
+```
+skipped 'autoruns': duckdb failed: Invalid Input Error: Error when sniffing file
+"...csv_e02gj6sg/autoruns.csv". It was not possible to automatically detect the CSV
+parsing dialect The search space used was
+1 table(s) skipped, recorded in .orca\skipped.txt: autoruns
+```
+
+The per-table line scrolls away behind the 26 tables that worked, which is why the names come
+back at the end. `diff` reads that file and calls
 such a table **unread** rather than added or removed - "the collection stopped producing it"
 and "orca could not read it" are not the same finding - and never compares it:
 
@@ -992,25 +1009,24 @@ orca merge E:\datasets\host
 orca merge E:\datasets\host --lossless
 
 # straight from a collection: it is ingested first, then merged
-orca merge \\host\dumps\ORC_HOST.7z.p7b --private-key contoso.com.key --skip-errors
+orca merge \\host\dumps\ORC_HOST.7z.p7b --private-key contoso.com.key
 ```
 
 **It ingests what it is given if it is not a dataset yet.** There is nothing to ask: `merge`
 reads per-table parquet and only `ingest` writes it, so an archive or a collection has exactly
 one way to become mergeable. The run cache means the second `merge` of the same collection pays
 nothing, and `diff` resolves its two sides the same way. It takes the flags an ingest needs -
-`--private-key`, `--password`, `--cms-backend`, `--work-dir`, `--refresh`, `--skip-errors` - and
+`--private-key`, `--password`, `--cms-backend`, `--work-dir`, `--refresh`, `--strict` - and
 `getthis` does all of this too.
 
-One collected file orca cannot read otherwise costs the whole command, and the reason arrives
-as a page of duckdb SQL, so the last line of the failure says what gets past it:
+On the real sealed collection, `merge` straight from the `.p7b` decrypts, ingests and merges in
+11.8 s (455369 rows, 72 columns), skipping the one table duckdb will not read and naming it.
+Under `--strict` it stops instead, and the last line of the failure says so, because an ingest
+can also fail for a reason `--strict` had nothing to do with:
 
 ```
-  add --skip-errors to ingest the tables that do read
+  that is what --strict asks for; without it the tables that do read are ingested
 ```
-
-On the real sealed collection, `merge --skip-errors` straight from the `.p7b` decrypts, ingests
-and merges in 9.3 s (455369 rows, 72 columns).
 
 ### Ad-hoc queries
 

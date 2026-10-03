@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import types
 import struct
 import tempfile
 import unittest
@@ -309,27 +310,28 @@ class Job:
 
 
 class TestCollectResults(unittest.TestCase):
-    """One malformed collected file used to cost every other table in the collection: the
-    first failing job's exception came straight out of the result loop."""
+    """One malformed collected file once cost every other table in the collection: the first
+    failing job's exception came straight out of the result loop. It costs only itself now,
+    and '--strict' is how you ask for the old behaviour."""
 
-    def collect(self, futures, jobs, skip_errors):
+    def collect(self, futures, jobs, strict=False):
         out = io.StringIO()
         with redirect_stdout(out):
-            records, skipped = ingest.collect_results(futures, jobs, skip_errors)
+            records, skipped = ingest.collect_results(futures, jobs, strict)
         return records, skipped, out.getvalue()
 
-    def test_a_failure_aborts_by_default(self):
+    def test_strict_aborts_at_the_first_failure(self):
         futures = [Done(["a"]), Done(error=RuntimeError("duckdb said no")), Done(["c"])]
         jobs = [Job("first"), Job("autoruns"), Job("third")]
 
         with self.assertRaises(RuntimeError):
-            self.collect(futures, jobs, skip_errors=False)
+            self.collect(futures, jobs, strict=True)
 
-    def test_skip_errors_costs_only_that_table(self):
+    def test_a_failure_costs_only_that_table(self):
         futures = [Done(["a"]), Done(error=RuntimeError("duckdb said no")), Done(["c"])]
         jobs = [Job("first"), Job("autoruns"), Job("third")]
 
-        records, skipped, printed = self.collect(futures, jobs, skip_errors=True)
+        records, skipped, printed = self.collect(futures, jobs)
 
         self.assertEqual(records, ["a", "c"])
         self.assertEqual([name for name, _ in skipped], ["autoruns"])
@@ -339,7 +341,7 @@ class TestCollectResults(unittest.TestCase):
         # A duckdb error carries the whole failing statement, newlines and all.
         futures = [Done(error=RuntimeError("Invalid Input\nSQL: COPY (SELECT\n *)"))]
 
-        _, skipped, _ = self.collect(futures, [Job("autoruns")], skip_errors=True)
+        _, skipped, _ = self.collect(futures, [Job("autoruns")])
 
         self.assertNotIn("\n", skipped[0][1])
         self.assertIn("Invalid Input", skipped[0][1])
@@ -347,12 +349,12 @@ class TestCollectResults(unittest.TestCase):
     def test_an_os_error_is_skipped_too(self):
         futures = [Done(error=OSError("no such file"))]
 
-        _, skipped, _ = self.collect(futures, [Job("autoruns")], skip_errors=True)
+        _, skipped, _ = self.collect(futures, [Job("autoruns")])
 
         self.assertEqual(len(skipped), 1)
 
     def test_nothing_skipped_when_every_job_worked(self):
-        records, skipped, _ = self.collect([Done(["a"])], [Job("first")], skip_errors=True)
+        records, skipped, _ = self.collect([Done(["a"])], [Job("first")])
 
         self.assertEqual(records, ["a"])
         self.assertEqual(skipped, [])
@@ -681,6 +683,79 @@ class TestArchivesNotNamed(unittest.TestCase):
         self.touch("ORC_A_Outcome.json.7z.p7b")
 
         self.assertEqual(ingest.archives_not_named(self.dir.name, []), [])
+
+
+class TestSkippedTablesAreVisible(unittest.TestCase):
+    """Skipping is the default, so saying so is not optional.
+
+    A dataset that skipped a table is incomplete and nothing else on disk says so, so every
+    failure is printed as it happens AND the end of the ingest names the tables, because the
+    per-table lines scroll away behind the timings of the 26 that worked.
+    """
+
+    def jobs(self, *names):
+        return [types.SimpleNamespace(output_name=name) for name in names]
+
+    def futures(self, *errors):
+        class Future:
+            def __init__(self, error):
+                self.error = error
+
+            def result(self):
+                if self.error:
+                    raise self.error
+                return []
+
+        return [Future(error) for error in errors]
+
+    def test_each_failure_is_printed_as_it_happens(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            records, skipped = ingest.collect_results(
+                self.futures(RuntimeError("duckdb failed: sniffing autoruns.csv"), None),
+                self.jobs("autoruns", "NTFSInfo"), strict=False)
+
+        self.assertEqual(len(skipped), 1)
+        self.assertIn("autoruns", out.getvalue())
+        self.assertIn("duckdb failed", out.getvalue())
+
+    def test_the_end_of_the_ingest_names_what_it_skipped(self):
+        # A count alone sends you looking for a file; the names are what you act on.
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stdout(out):
+                ingest.report_skipped([("autoruns", "duckdb failed: sniffing"),
+                                       ("VSS_list", "7z said no")], directory)
+
+        text = out.getvalue()
+        self.assertIn("2 table(s) skipped", text)
+        self.assertIn("autoruns", text)
+        self.assertIn("VSS_list", text)
+        self.assertIn("skipped.txt", text)
+
+    def test_nothing_skipped_says_nothing(self):
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stdout(out):
+                ingest.report_skipped([], directory)
+
+        self.assertEqual(out.getvalue(), "")
+
+    def test_by_default_a_table_that_will_not_read_costs_only_itself(self):
+        # The common case by far: one malformed collected file should not cost the other 26
+        # tables, and typing a flag every time to say so is typing it every time.
+        out = io.StringIO()
+        with redirect_stdout(out):
+            records, skipped = ingest.collect_results(
+                self.futures(RuntimeError("duckdb failed"), None),
+                self.jobs("autoruns", "NTFSInfo"), strict=False)
+
+        self.assertEqual([name for name, _reason in skipped], ["autoruns"])
+
+    def test_strict_stops_at_the_first_failure(self):
+        with self.assertRaises(RuntimeError):
+            ingest.collect_results(self.futures(RuntimeError("duckdb failed")),
+                                   self.jobs("autoruns"), strict=True)
 
 
 if __name__ == "__main__":

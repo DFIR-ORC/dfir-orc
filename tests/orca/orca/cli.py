@@ -72,8 +72,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ing.add_argument("--refresh", action="store_true",
                      help="re-decrypt and re-ingest even if products are already there")
     ing.add_argument("--jobs", type=int, default=None, help="parallel workers (default: CPUs)")
-    ing.add_argument("--skip-errors", action="store_true",
-                     help="skip a table orca cannot read instead of failing the whole ingest")
+    ing.add_argument("--strict", action="store_true",
+        help="stop at the first collected file orca cannot "
+             "read, instead of skipping it and saying so")
     ing.add_argument("--no-csv", action="store_true", help="skip CSV output")
     ing.add_argument("--no-trunc", action="store_true", help="skip truncated CSV")
     ing.add_argument("--exclude-cols", nargs="*", default=None, help="volatile columns to drop")
@@ -95,6 +96,9 @@ def _build_parser() -> argparse.ArgumentParser:
                          "when the temp dir has no room for it or a later run will want it")
     ex.add_argument("--refresh", action="store_true",
                     help="re-decrypt and re-unseal even if the products are already there")
+    ex.add_argument("--strict", action="store_true",
+                    help="stop at the first archive or container that cannot be opened, "
+                         "instead of skipping it and saying so")
     ex.add_argument("--depth", type=int, default=None,
                     help="stop after this many layers of container: 1 decrypts the .p7b, "
                          "2 also expands the archive, 3 also expands its containers "
@@ -135,8 +139,9 @@ def _build_parser() -> argparse.ArgumentParser:
                          "archive")
     mg.add_argument("--refresh", action="store_true",
                     help="re-ingest even if a dataset is already there")
-    mg.add_argument("--skip-errors", action="store_true",
-                    help="skip a table orca cannot read instead of failing the ingest")
+    mg.add_argument("--strict", action="store_true",
+       help="stop at the first collected file orca cannot "
+            "read, instead of skipping it and saying so")
     mg.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     rp = sub.add_parser("report", help="run dir(s) -> per-host views, or a row table",
@@ -185,8 +190,9 @@ def _build_parser() -> argparse.ArgumentParser:
                          "archive")
     gt.add_argument("--refresh", action="store_true",
                     help="re-ingest even if a dataset is already there")
-    gt.add_argument("--skip-errors", action="store_true",
-                    help="skip a table orca cannot read instead of failing the ingest")
+    gt.add_argument("--strict", action="store_true",
+       help="stop at the first collected file orca cannot "
+            "read, instead of skipping it and saying so")
     gt.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     df = sub.add_parser("diff", help="compare two archives, run dirs, or parquet/CSV files")
@@ -203,8 +209,9 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="put runs and decrypted output here instead of beside each archive")
     df.add_argument("--refresh", action="store_true",
                     help="re-decrypt and re-ingest even if products are already there")
-    df.add_argument("--skip-errors", action="store_true",
-                    help="skip a table orca cannot read instead of failing the ingest")
+    df.add_argument("--strict", action="store_true",
+       help="stop at the first collected file orca cannot "
+            "read, instead of skipping it and saying so")
     df.add_argument("--columns", nargs="*", default=None, help="restrict compare to these columns")
     df.add_argument("--exclude-cols", nargs="*", default=None, help="extra columns to exclude")
     df.add_argument("--exclude-files", nargs="*", default=None,
@@ -275,12 +282,13 @@ def main(argv=None) -> int:
             exclude_cols=args.exclude_cols, password=args.password,
             private_key=args.private_key, cms_backend=args.cms_backend,
             engine_name=args.engine, work_dir=args.work_dir, refresh=args.refresh,
-            skip_errors=args.skip_errors,
+            strict=args.strict,
         )
     elif args.command == "extract":
         extract.run_extract(args.archive, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
-                            work_dir=args.work_dir, depth=args.depth, refresh=args.refresh)
+                            work_dir=args.work_dir, depth=args.depth, refresh=args.refresh,
+                            strict=args.strict)
     elif args.command == "check":
         return check.run_check(args.archive, password=args.password,
                                private_key=args.private_key, cms_backend=args.cms_backend,
@@ -297,13 +305,13 @@ def main(argv=None) -> int:
                         ts_overrides=overrides or None, engine_name=args.engine,
                         password=args.password, private_key=args.private_key,
                         cms_backend=args.cms_backend, work_dir=args.work_dir,
-                        refresh=args.refresh, skip_errors=args.skip_errors)
+                        refresh=args.refresh, strict=args.strict)
     elif args.command == "getthis":
         getthis.run_getthis(args.dataset, out=args.out, engine_name=args.engine,
                             as_json=args.json, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
                             work_dir=args.work_dir, refresh=args.refresh,
-                            skip_errors=args.skip_errors)
+                            strict=args.strict)
     elif args.command == "report":
         report.run_report(args.paths, views=args.view,
                           one_line=args.one_line, as_json=args.json,
@@ -322,7 +330,7 @@ def main(argv=None) -> int:
                       work_dir=args.work_dir, refresh=args.refresh,
                       password=args.password, private_key=args.private_key,
                       cms_backend=args.cms_backend, exclude_files=args.exclude_files,
-                      skip_errors=args.skip_errors)
+                      strict=args.strict)
     elif args.command == "collect":
         return collect.run_collect(
             orc=args.orc, out=args.out, offline=args.offline, vm=args.vm,

@@ -84,27 +84,38 @@ class TestIngestingOnDemand(unittest.TestCase):
 
         self.assertEqual(out, os.path.join("/cache/Little-abc123", "dfir-orc.parquet"))
 
-    def test_an_ingest_that_fails_says_what_to_do_about_it(self):
-        # One unreadable collected file otherwise costs the whole merge, and the reason
-        # arrives as a page of duckdb SQL: on a real w11 collection 'autoruns.csv' is UTF-16
-        # text of autorunsc's own usage message, saved under a .csv name.
+    def refusing_ingest(self):
         def refuse(*_args, **_kwargs):
             raise RuntimeError("duckdb failed: It was not possible to automatically detect "
                                "the CSV parsing dialect")
 
-        with mock.patch.object(cache, "ensure_dataset", refuse):
+        return mock.patch.object(cache, "ensure_dataset", refuse)
+
+    def test_a_strict_ingest_that_fails_says_what_to_do_about_it(self):
+        # The reason arrives as a page of duckdb SQL: on a real w11 collection 'autoruns.csv'
+        # is UTF-16 text of autorunsc's own usage message, saved under a .csv name.
+        with self.refusing_ingest():
             with self.assertRaises(RuntimeError) as caught:
-                merge.run_merge("E:/dumps/Little.7z")
+                merge.run_merge("E:/dumps/Little.7z", strict=True)
 
         message = str(caught.exception)
         self.assertIn("could not ingest", message)
-        self.assertIn("--skip-errors", message)
         self.assertIn("duckdb failed", message)
+        self.assertIn("--strict", message)
+
+    def test_a_failure_that_strict_did_not_cause_offers_no_such_advice(self):
+        # A wrong key or an empty directory fails the ingest too, and 'drop --strict' would be
+        # nonsense there.
+        with self.refusing_ingest():
+            with self.assertRaises(RuntimeError) as caught:
+                merge.run_merge("E:/dumps/Little.7z")
+
+        self.assertNotIn("--strict", str(caught.exception))
 
     def test_the_keys_and_the_work_dir_are_handed_to_the_ingest(self):
         # Without them a sealed collection could not be ingested at all.
         merge.run_merge("E:/dumps/Little.7z.p7b", private_key="k.pem", work_dir="E:/work",
-                        password="s3cret", cms_backend="cng", refresh=True, skip_errors=True)
+                        password="s3cret", cms_backend="cng", refresh=True, strict=True)
 
         source, work_dir, options = self.asked[0]
         self.assertEqual(work_dir, "E:/work")
@@ -112,7 +123,7 @@ class TestIngestingOnDemand(unittest.TestCase):
         self.assertEqual(options["password"], "s3cret")
         self.assertEqual(options["cms_backend"], "cng")
         self.assertTrue(options["refresh"])
-        self.assertTrue(options["skip_errors"])
+        self.assertTrue(options["strict"])
 
 
 if __name__ == "__main__":

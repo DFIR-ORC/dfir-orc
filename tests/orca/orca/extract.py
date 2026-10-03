@@ -28,6 +28,44 @@ def nested_containers(root: str) -> list[str]:
     return sorted(found)
 
 
+def check_archive_readable(archive: str, strict: bool = False) -> bool:
+    """True when 'archive' is there and not empty; says so and returns False when it is not.
+
+    A partial collection is the ordinary case: an archive the Outcome names was never written,
+    or the transfer dropped it, or ORC wrote it empty. The other archives are independent
+    deliverables, so one gap must not cost them - 'strict' is for a collection you are about to
+    rely on, where the first thing that cannot be opened should stop the run.
+    """
+    if not os.path.exists(archive):
+        if strict:
+            raise RuntimeError(f"missing archive '{archive}'")
+
+        print(f"skipped missing archive '{archive}'")
+        return False
+
+    if os.path.getsize(archive) == 0:
+        if strict:
+            raise RuntimeError(f"empty archive '{archive}'")
+
+        print(f"skipped empty archive '{archive}'")
+        return False
+
+    return True
+
+
+def handle_container_warning(name: str, strict: bool = False) -> None:
+    """What to do about a container 7-Zip warned about: keep it, or stop.
+
+    7-Zip's warning code means something did not come out, and the container is the only copy
+    of whatever that was - so by default it stays in the tree, which beats an entry lost from
+    it. Under 'strict' an entry that did not come out is the whole point of asking.
+    """
+    if strict:
+        raise RuntimeError(f"7-Zip reported warnings on '{name}': an entry did not come out")
+
+    print(f"kept '{name}' in the tree: 7z reported warnings")
+
+
 def container_password(container: str, password: str | None) -> str | None:
     """An explicit password wins; otherwise read the one ORC recorded next to the container."""
     if password:
@@ -55,9 +93,12 @@ def retire_container(container: str, root: str, containers_dir: str) -> None:
 
 
 def expand_one_container(seven_zip: str, container: str, root: str, password: str | None,
-                         containers_dir: str) -> bool:
+                         containers_dir: str, strict: bool = False) -> bool:
     """Expand one container beside itself. True when it was opened at all."""
     if os.path.getsize(container) == 0:
+        if strict:
+            raise RuntimeError(f"empty container '{container}'")
+
         print(f"skipped empty container '{container}'")
         return False
 
@@ -66,9 +107,7 @@ def expand_one_container(seven_zip: str, container: str, root: str, password: st
     code = sevenzip.extract_all(seven_zip, container, destination,
                                 container_password(container, password))
     if code:
-        # 7-Zip's warning code: something did not come out, and this archive is the only copy
-        # of it. A container left in the tree beats an entry lost from it.
-        print(f"kept '{os.path.basename(container)}' in the tree: 7z reported warnings")
+        handle_container_warning(os.path.basename(container), strict)
         return True
 
     retire_container(container, root, containers_dir)
@@ -76,7 +115,7 @@ def expand_one_container(seven_zip: str, container: str, root: str, password: st
 
 
 def expand_containers(seven_zip: str, root: str, password: str | None, containers_dir: str,
-                      depth: int | None = None) -> int:
+                      depth: int | None = None, strict: bool = False) -> int:
     """Expand nested containers level by level, until none are left or 'depth' levels are done.
 
     Level by level rather than one pass over the containers found at the start: expanding one
@@ -96,7 +135,8 @@ def expand_containers(seven_zip: str, root: str, password: str | None, container
 
         for container in containers:
             tried.add(container)
-            if expand_one_container(seven_zip, container, root, password, containers_dir):
+            if expand_one_container(seven_zip, container, root, password, containers_dir,
+                                    strict):
                 expanded += 1
         level += 1
 
@@ -134,6 +174,9 @@ class Unwrap(NamedTuple):
     cms_backend: str | None = None
     depth: int | None = None
     refresh: bool = False
+    # Stop at the first archive or container that cannot be opened, instead of saying so and
+    # carrying on with the rest of the collection.
+    strict: bool = False
 
 
 def unwrap_archive(seven_zip: str, top: str, out_dir: str, work: str, how: Unwrap,
@@ -162,13 +205,15 @@ def unwrap_archive(seven_zip: str, top: str, out_dir: str, work: str, how: Unwra
         remaining -= 1
 
     count = expand_containers(seven_zip, destination, how.password,
-                              os.path.join(work, layout.archive_stem(top)), remaining)
+                              os.path.join(work, layout.archive_stem(top)), remaining,
+                              how.strict)
     print(f"extracted '{os.path.basename(top)}' -> {destination} "
           f"({count} nested container(s))")
 
 
 def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
-                cms_backend=None, work_dir=None, depth=None, refresh=False) -> str:
+                cms_backend=None, work_dir=None, depth=None, refresh=False,
+                strict=False) -> str:
     seven = sevenzip.find_7z()
     if not seven:
         raise RuntimeError("7z.exe not found")
@@ -202,16 +247,9 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
     # because the expanded tree supersedes it. Either way nothing is written to the collection:
     # an extract must leave what it reads exactly as it found it.
     work = work_dir or scratch.directory("extract_")
-    how = Unwrap(password, private_key, cms_backend, depth, refresh)
+    how = Unwrap(password, private_key, cms_backend, depth, refresh, strict)
     for top in resolve_archives(source, out_dir):
-        if not os.path.exists(top):
-            # A partial collection: an archive the Outcome names was never written, or the
-            # transfer dropped it. The other archives are independent deliverables, so say
-            # which one is gone and keep going rather than losing them to the first gap.
-            print(f"skipped missing archive '{top}'")
-            continue
-        if os.path.getsize(top) == 0:
-            print(f"skipped empty archive '{top}'")
+        if not check_archive_readable(top, strict):
             continue
 
         unwrap_archive(seven, top, out_dir, work, how, bool(work_dir))

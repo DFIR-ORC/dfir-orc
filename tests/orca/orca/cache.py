@@ -64,7 +64,7 @@ def key_for(source: str, options: dict) -> str:
 
 
 def ingest_options(exclude_cols=None, password=None, engine_name="duckdb",
-                   skip_errors=False) -> dict:
+                   strict=False) -> dict:
     """The part of an ingest that changes its output, as it goes into the key.
 
     The private key is left out on purpose: two different keys decrypt the same archive to the
@@ -77,11 +77,12 @@ def ingest_options(exclude_cols=None, password=None, engine_name="duckdb",
         "csv": False,
     }
 
-    # A run that skipped a table is not the run a strict ingest would have produced - that one
-    # would have failed - so the two must not share a key. Added only when set, so turning the
-    # flag on does not invalidate every run ingested before it existed.
-    if skip_errors:
-        options["skip_errors"] = True
+    # A dataset that skipped a table is not the dataset a strict ingest would have produced -
+    # that one would have failed - so the two must not share a key. Only '--strict' is written
+    # in: it is the exception, and recording the default would change the key of every dataset
+    # ingested before today and re-ingest it for nothing.
+    if strict:
+        options["strict"] = True
 
     return options
 
@@ -128,7 +129,7 @@ def write_marker(dataset: str, source: str, key: str, options: dict) -> None:
 
 def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
-               refresh: bool = False, skip_errors: bool = False) -> str:
+               refresh: bool = False, strict: bool = False) -> str:
     """Return a dataset for 'source', ingesting it when there is not a current one.
 
     A path that is already a dataset is used in place and never copied. Datasets are ingested
@@ -141,7 +142,7 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     if not os.path.exists(source):
         raise RuntimeError(f"cache: '{source}' does not exist")
 
-    options = ingest_options(exclude_cols, password, engine_name, skip_errors)
+    options = ingest_options(exclude_cols, password, engine_name, strict)
     key = key_for(source, options)
     # Beside the archive the directory name is the archive's; under one --work-dir two
     # collections' archives often share a basename, so the key names the directory there.
@@ -159,7 +160,7 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     ingest.run_ingest(source, dataset, make_csv=False, make_trunc=False,
                       exclude_cols=exclude_cols, password=password, private_key=private_key,
                       cms_backend=cms_backend, engine_name=engine_name, keep_dir=keep_dir,
-                      work_dir=work_dir, refresh=refresh, skip_errors=skip_errors)
+                      work_dir=work_dir, refresh=refresh, strict=strict)
 
     write_marker(dataset, source, key, options)
     return dataset

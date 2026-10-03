@@ -210,21 +210,23 @@ class TestEnsureRun(CacheCase):
         _, _, kwargs = calls[0]
         self.assertEqual(kwargs["keep_dir"], self.dir.name)
 
-    def test_skip_errors_reaches_the_ingest_and_the_key(self):
-        # A run that skipped a table is not the run a strict ingest would have produced - that
-        # one would have failed - so the two must not share a cache entry.
+    def test_strict_reaches_the_ingest_and_the_key(self):
+        # A dataset that skipped a table is not the dataset a strict ingest would have
+        # produced - that one would have failed - so the two must not share a cache entry.
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
-            cache.ensure_dataset(self.archive, skip_errors=True)
+            cache.ensure_dataset(self.archive, strict=True)
 
         _, _, kwargs = calls[0]
-        self.assertTrue(kwargs["skip_errors"])
-        self.assertNotEqual(cache.key_for(self.archive, cache.ingest_options(skip_errors=True)),
+        self.assertTrue(kwargs["strict"])
+        self.assertNotEqual(cache.key_for(self.archive, cache.ingest_options(strict=True)),
                             cache.key_for(self.archive, cache.ingest_options()))
 
-    def test_a_strict_run_keeps_the_key_it_always_had(self):
-        # Adding the option must not invalidate every run ingested before it existed.
-        self.assertNotIn("skip_errors", cache.ingest_options())
+    def test_the_ordinary_dataset_keeps_the_key_it_always_had(self):
+        # Skipping is the default now, and the default must not be written into the key: every
+        # dataset ingested before today would go stale and re-ingest for nothing.
+        self.assertEqual(cache.ingest_options(), cache.ingest_options(strict=False))
+        self.assertNotIn("strict", cache.ingest_options())
 
     def test_the_work_dir_is_passed_on_and_not_only_resolved_away(self):
         # It decides where the scratch goes too, and only run_ingest can set that - a diff of

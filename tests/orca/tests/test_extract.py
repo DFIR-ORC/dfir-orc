@@ -616,5 +616,74 @@ class TestRunExtractDepth(ExtractCase):
         self.assertTrue(os.path.isfile(os.path.join(work, "ORC_G.7z")))
 
 
+class TestStrictExtract(unittest.TestCase):
+    """What 'extract --strict' refuses to carry on past.
+
+    Carrying on is right by default - the other archives of a collection are independent
+    deliverables, and one missing file should not cost them - but a collection you are about to
+    rely on is worth a run that stops at the first thing it could not open.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.out = os.path.join(self.dir.name, "out")
+        os.makedirs(self.out)
+
+    def test_a_missing_archive_stops_a_strict_extract(self):
+        with self.assertRaises(RuntimeError) as caught:
+            extract.check_archive_readable(os.path.join(self.dir.name, "absent.7z"),
+                                           strict=True)
+
+        self.assertIn("absent.7z", str(caught.exception))
+
+    def test_an_empty_archive_stops_a_strict_extract(self):
+        empty = os.path.join(self.dir.name, "Empty.7z")
+        with open(empty, "wb"):
+            pass
+
+        with self.assertRaises(RuntimeError) as caught:
+            extract.check_archive_readable(empty, strict=True)
+
+        self.assertIn("Empty.7z", str(caught.exception))
+
+    def test_by_default_both_are_only_reported(self):
+        empty = os.path.join(self.dir.name, "Empty.7z")
+        with open(empty, "wb"):
+            pass
+
+        out = io.StringIO()
+        with redirect_stdout(out):
+            missing = extract.check_archive_readable(
+                os.path.join(self.dir.name, "absent.7z"), strict=False)
+            blank = extract.check_archive_readable(empty, strict=False)
+
+        self.assertFalse(missing)
+        self.assertFalse(blank)
+        self.assertIn("absent.7z", out.getvalue())
+        self.assertIn("Empty.7z", out.getvalue())
+
+    def test_a_sound_archive_is_readable_either_way(self):
+        archive = os.path.join(self.dir.name, "Good.7z")
+        with open(archive, "wb") as f:
+            f.write(b"7z\xbc\xaf\x27\x1c" + b"x" * 64)
+
+        self.assertTrue(extract.check_archive_readable(archive, strict=True))
+        self.assertTrue(extract.check_archive_readable(archive, strict=False))
+
+    def test_a_container_7zip_warned_about_stops_a_strict_extract(self):
+        with self.assertRaises(RuntimeError) as caught:
+            extract.handle_container_warning("GetSamples.7z", strict=True)
+
+        self.assertIn("GetSamples.7z", str(caught.exception))
+
+    def test_by_default_such_a_container_is_kept_in_the_tree(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            extract.handle_container_warning("GetSamples.7z", strict=False)
+
+        self.assertIn("GetSamples.7z", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
