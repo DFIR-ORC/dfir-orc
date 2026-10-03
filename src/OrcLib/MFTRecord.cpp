@@ -638,6 +638,15 @@ HRESULT MFTRecord::ParseAttribute(
                 }
 
                 m_bIsOverlayFile = true;
+
+                // A file big enough to spill over several records can hold its $REPARSE_POINT in a child
+                // record, while every consumer asks the base record whether the file is WOF compressed. Left
+                // unmarked, the base record's sparse $DATA was read as the zeros it holds on disk instead of
+                // being decompressed, and the collected sample was silently empty.
+                if (m_pBaseFileRecord != nullptr)
+                {
+                    m_pBaseFileRecord->m_bIsOverlayFile = true;
+                }
             }
             else
             {
