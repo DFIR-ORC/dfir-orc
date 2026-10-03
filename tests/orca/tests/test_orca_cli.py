@@ -7,7 +7,7 @@ class TestCli(unittest.TestCase):
         parser = cli._build_parser()
         args = parser.parse_args(["ingest", "arch.7z", "--out", "run"])
         self.assertEqual(args.command, "ingest")
-        self.assertEqual(args.archive, "arch.7z")
+        self.assertEqual(args.collection, "arch.7z")
         self.assertEqual(args.out, "run")
 
     def test_check_takes_the_archive_options_extract_takes(self):
@@ -16,7 +16,7 @@ class TestCli(unittest.TestCase):
              "--work-dir", "E:/work"])
 
         self.assertEqual(args.command, "check")
-        self.assertEqual(args.archive, "ORC.7z.p7b")
+        self.assertEqual(args.collection, "ORC.7z.p7b")
         self.assertEqual(args.private_key, "k.pem")
         self.assertEqual(args.depth, 2)
         self.assertEqual(args.work_dir, "E:/work")
@@ -258,3 +258,41 @@ class TestCollectParsing(unittest.TestCase):
             ["collect", "--orc", "orc.exe", "--out", "r", "--offline", "d.dd",
              "--", "/key=GetEvt", "/utf8"])
         self.assertEqual(cli.orc_passthrough(args.orc_args), ["/key=GetEvt", "/utf8"])
+
+
+class TestHelp(unittest.TestCase):
+    """What 'orca --help' and 'orca <command> --help' owe a reader.
+
+    The help is the documentation most people read, so every command carries a paragraph of
+    its own rather than only the one line the listing shows.
+    """
+
+    def commands(self) -> dict:
+        action = next(a for a in cli._build_parser()._actions if a.dest == "command")
+        return action.choices
+
+    def test_collect_comes_first(self):
+        # The pipeline starts there: it is the command that produces what the rest read.
+        self.assertEqual(list(self.commands())[0], "collect")
+
+    def test_every_command_has_a_one_line_summary_for_the_listing(self):
+        action = next(a for a in cli._build_parser()._actions if a.dest == "command")
+
+        for pseudo in action._choices_actions:
+            self.assertTrue((pseudo.help or "").strip(), pseudo.dest)
+
+    def test_every_command_has_a_paragraph_of_its_own(self):
+        for name, parser in self.commands().items():
+            description = (parser.description or "").strip()
+            self.assertTrue(description, f"{name} has no description")
+            self.assertGreater(len(description), 120,
+                               f"{name}'s description is a line, not a paragraph")
+
+    def test_the_paragraph_is_what_the_command_help_prints(self):
+        self.assertIn("without expanding", self.commands()["check"].format_help())
+
+    def test_orca_itself_says_what_it_is_and_shows_the_way_through(self):
+        parser = cli._build_parser()
+
+        self.assertGreater(len((parser.description or "").strip()), 120)
+        self.assertIn("orca collect", parser.epilog or "")
