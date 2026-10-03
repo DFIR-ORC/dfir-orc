@@ -461,7 +461,11 @@ HRESULT MftRecordAttribute::GetStreams(
             hr = wofReparsePoint->GetStreams(pVolReader, rawStream, dataStream);
             if (FAILED(hr))
             {
-                Log::Error("Failed to retrieve wof stream [{}]", SystemError(hr));
+                Log::Error(
+                    L"Failed to retrieve wof stream (algorithm: {}, id: {}) [{}]",
+                    Ntfs::ToWString(wofReparsePoint->Algorithm()),
+                    std::underlying_type_t<Ntfs::WofAlgorithm>(wofReparsePoint->Algorithm()),
+                    SystemError(hr));
                 return hr;
             }
 
@@ -1006,13 +1010,6 @@ WOFReparseAttribute::WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRe
     }
 
     m_algorithm = wofHeader.value().CompressionFormat();
-
-    if (m_algorithm == Ntfs::WofAlgorithm::kLzx)
-    {
-        Log::Debug("Unsupported wof algorithm");
-        ec = std::make_error_code(std::errc::function_not_supported);
-        return;
-    }
 };
 
 HRESULT WOFReparseAttribute::GetStreams(
@@ -1020,6 +1017,15 @@ HRESULT WOFReparseAttribute::GetStreams(
     std::shared_ptr<ByteStream>& rawStream,
     std::shared_ptr<ByteStream>& dataStream)
 {
+    // An algorithm with no decompressor here (LZX has none) only costs the file's content. Refusing the
+    // reparse point instead made 'ParseRecord' void the whole MFT record, so the file disappeared from the
+    // enumeration: the algorithm is therefore checked here and not when the reparse point is parsed.
+    if (Ntfs::ToNtAlgorithm(m_algorithm) == NtAlgorithm::kUnknown)
+    {
+        Log::Debug("No wof decompressor for algorithm id {}", std::underlying_type_t<Ntfs::WofAlgorithm>(m_algorithm));
+        return HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED);
+    }
+
     auto baseRecord = GetBaseRecord();
     if (!baseRecord)
     {

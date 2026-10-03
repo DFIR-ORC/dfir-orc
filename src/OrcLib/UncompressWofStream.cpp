@@ -35,7 +35,11 @@ std::unique_ptr<UncompressWofStream::WofStreamT> CreateWofStream(
     auto decompressor = std::make_unique<NtDecompressorConcept>(algorithm, ec);
     if (ec)
     {
-        Log::Error("Failed to create decompressor [{}]", ec);
+        Log::Error(
+            "Failed to create decompressor (algorithm: {}, id: {}) [{}]",
+            ToString(algorithm),
+            std::underlying_type_t<WofAlgorithm>(algorithm),
+            ec);
         return nullptr;
     }
 

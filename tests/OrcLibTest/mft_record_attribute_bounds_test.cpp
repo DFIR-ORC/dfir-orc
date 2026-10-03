@@ -95,9 +95,10 @@ TEST_CLASS(MftRecordAttributeBoundsTest)
         return data;
     }
 
-    static std::vector<BYTE> MakeWofData()
+    static std::vector<BYTE> MakeWofData(DWORD algorithm = 0)
     {
-        const std::array<DWORD, 4> layout {1, 2, 1, 0};  // version, provider (file), provider version, XPRESS4K
+        // version, provider (file), provider version, compression format (XPRESS4K by default)
+        const std::array<DWORD, 4> layout {1, 2, 1, algorithm};
 
         std::vector<BYTE> data(layout.size() * sizeof(DWORD), 0);
         const BufferSpan bytes(data.data(), data.size());
@@ -202,6 +203,35 @@ public:
         std::error_code ec;
         WOFReparseAttribute truncated(guard.Place(MakeResident($REPARSE_POINT, headerOnly, kValueOffset + headerOnly.size())), nullptr, ec);
         Assert::IsTrue(static_cast<bool>(ec));
+    }
+
+    // Every compression format the file provider defines must parse, LZX included: there is no LZX decompressor
+    // here, but refusing the reparse point made 'ParseRecord' void the whole MFT record, so the file disappeared
+    // from the enumeration instead of just losing its content. An id the provider never writes stays refused,
+    // 0xffffffff included - it casts onto this code's own 'kUnknown' sentinel.
+    TEST_METHOD(WofReparseKeepsEveryDefinedCompressionFormat)
+    {
+        GuardedBuffer guard;
+        const DWORD kWofTag = 0x80000017;
+
+        for (const DWORD algorithm : {0u, 1u, 2u, 3u})
+        {
+            const std::vector<BYTE> data = MakeWofData(algorithm);
+            const std::vector<BYTE> value = MakeReparseValue(kWofTag, data, static_cast<USHORT>(data.size()));
+            std::error_code ec;
+            WOFReparseAttribute wof(guard.Place(MakeResident($REPARSE_POINT, value, kValueOffset + value.size())), nullptr, ec);
+            Assert::IsFalse(static_cast<bool>(ec), std::to_wstring(algorithm).c_str());
+            Assert::AreEqual(static_cast<int>(algorithm), static_cast<int>(wof.Algorithm()), std::to_wstring(algorithm).c_str());
+        }
+
+        for (const DWORD algorithm : {4u, 0xFFFFFFFFu})
+        {
+            const std::vector<BYTE> data = MakeWofData(algorithm);
+            const std::vector<BYTE> value = MakeReparseValue(kWofTag, data, static_cast<USHORT>(data.size()));
+            std::error_code ec;
+            WOFReparseAttribute wof(guard.Place(MakeResident($REPARSE_POINT, value, kValueOffset + value.size())), nullptr, ec);
+            Assert::IsTrue(static_cast<bool>(ec), std::to_wstring(algorithm).c_str());
+        }
     }
 
     // An $INDEX_ROOT is mapped only over a value holding a whole INDEX_ROOT; Open() finds the same value.

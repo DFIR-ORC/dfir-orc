@@ -60,7 +60,10 @@ NtDecompressorConcept::NtDecompressorConcept(Ntfs::WofAlgorithm algorithm, std::
     m_ntAlgorithm = ToNtAlgorithm(algorithm);
     if (m_ntAlgorithm == NtAlgorithm::kUnknown)
     {
-        Log::Debug("Failed to convert WofAlgorithm to NtAlgorithm (input value: {})", ToString(algorithm));
+        Log::Debug(
+            "Failed to convert WofAlgorithm to NtAlgorithm (algorithm: {}, id: {})",
+            ToString(algorithm),
+            std::underlying_type_t<Ntfs::WofAlgorithm>(algorithm));
         ec = std::make_error_code(std::errc::operation_not_supported);
         return;
     }

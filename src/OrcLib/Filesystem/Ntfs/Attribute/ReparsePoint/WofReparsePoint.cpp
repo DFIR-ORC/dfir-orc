@@ -41,7 +41,7 @@ Result<WofReparsePoint> WofReparsePoint::Parse(const WofReparsePoint::Layout& la
 
     if (layout.provider != std::underlying_type_t<WofProviderType>(WofProviderType::kFile))
     {
-        Log::Debug("Failed to parse wof reparse point: unsupported provider (version: {})", layout.provider);
+        Log::Debug("Failed to parse wof reparse point: unsupported provider (provider: {})", layout.provider);
         return std::errc::bad_message;
     }
 
@@ -49,7 +49,7 @@ Result<WofReparsePoint> WofReparsePoint::Parse(const WofReparsePoint::Layout& la
     const auto algorithm = ToWofAlgorithm(layout.compressionFormat, ec);
     if (ec)
     {
-        Log::Debug("Failed while reading wof algorithm [{}]", ec);
+        Log::Debug("Failed while reading wof algorithm (id: {}) [{}]", layout.compressionFormat, ec);
         return ec;
     }
 

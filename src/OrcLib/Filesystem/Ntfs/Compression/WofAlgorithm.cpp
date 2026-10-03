@@ -170,12 +170,15 @@ WofAlgorithm ToWofAlgorithm(uint32_t algorithm, std::error_code& ec)
 {
     switch (static_cast<WofAlgorithm>(algorithm))
     {
-        case WofAlgorithm::kUnknown:
         case WofAlgorithm::kXpress4k:
         case WofAlgorithm::kXpress8k:
         case WofAlgorithm::kXpress16k:
         case WofAlgorithm::kLzx:
             return static_cast<WofAlgorithm>(algorithm);
+        case WofAlgorithm::kUnknown:
+            // This code's own sentinel, never an id a provider writes: the 0xffffffff that casts onto it
+            // is as invalid as any other unknown id.
+            break;
     }
 
     ec = std::make_error_code(std::errc::invalid_argument);

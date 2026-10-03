@@ -137,7 +137,10 @@ WofBitOrder ToWofBitOrder(WofAlgorithm algorithm)
             return WofBitOrder::kLzx;
     }
 
-    Log::Debug("ToWofBitOrder: failed conversion from WofAlgorithm with value {}", ToString(algorithm));
+    Log::Debug(
+        "ToWofBitOrder: failed conversion from WofAlgorithm (algorithm: {}, id: {})",
+        ToString(algorithm),
+        std::underlying_type_t<WofAlgorithm>(algorithm));
     return WofBitOrder::kUnknown;
 }
 
