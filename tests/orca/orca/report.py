@@ -489,10 +489,19 @@ def outcome_lines(hr: dict, explicit: bool) -> list:
     return lines
 
 
+def not_ingested(hr: dict, label: str) -> str:
+    """What a view says when it needs a dataset and was given a collection.
+
+    'report' never ingests: it is fast, and fetching what is missing is not - a fleet sweep
+    would turn into a fleet ingest. So it names the command instead of running it.
+    """
+    return f"  {label}: (not ingested; orca ingest {hr['directory']})"
+
+
 def stats_lines(hr: dict, explicit: bool) -> list:
     stats = hr["stats"]
     if not stats.get("available", True):
-        return ["  tables: (no ingest timing: not an ingested run)"]
+        return [not_ingested(hr, "tables")]
 
     rows = table_rows(stats)
     if not rows and not explicit:
@@ -506,7 +515,7 @@ def stats_lines(hr: dict, explicit: bool) -> list:
 def empty_lines(hr: dict, explicit: bool) -> list:
     empty = hr["empty"]
     if not empty.get("available", True):
-        return ["  empty tables: (no ingest timing: not an ingested run)"]
+        return [not_ingested(hr, "empty tables")]
 
     lines = []
     tables = [[name] for name in empty.get("empty_tables", [])]
@@ -667,13 +676,16 @@ class Run(NamedTuple):
     extra_dirs: list
 
 
-def candidate_dirs(paths: list) -> list:
-    """The directories to look in: each path given, plus its immediate children.
+def candidate_dirs(paths: list, recurse: bool = False) -> list:
+    """The directories to look in: the ones given, and with 'recurse' everything under them.
 
-    One rule for both shapes a fleet arrives in - a directory of per-host folders, and one
-    directory holding every machine's files side by side. Not a deeper walk: an ingested run
-    and an expanded tree each hold a copy of the collection's Outcome, and depth would report
-    one collection two and three times over.
+    Asked about a directory, a report answers about that directory: a merged dump holds every
+    machine's files side by side, so its collections are right there. Looking inside is the
+    surprising half - a directory of per-host folders, a tree of dumps by date - so it is
+    asked for. The de-duplication by run id is what makes it safe: a collection, the dataset
+    'ingest' wrote inside it and an expanded tree all hold a copy of the same Outcome.
+
+    '.orca' is skipped: it holds orca's own bookkeeping, never a collection.
     """
     found = []
     for path in paths:
@@ -681,8 +693,12 @@ def candidate_dirs(paths: list) -> list:
             raise RuntimeError(f"no such directory: '{path}'")
 
         found.append(path)
-        found += [entry.path for entry in sorted(os.scandir(path), key=lambda e: e.name)
-                  if entry.is_dir() and os.path.basename(entry.path) != layout.ORCA_DIR]
+        if not recurse:
+            continue
+
+        for root, children, _files in os.walk(path):
+            children[:] = sorted(name for name in children if name != layout.ORCA_DIR)
+            found += [os.path.join(root, name) for name in children]
 
     return found
 
@@ -848,7 +864,7 @@ def orphan_lines(dirs: list, sealed: dict) -> list:
 
 def run_report(paths, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
-               refresh=False, ignore_file=None, engine_name="duckdb") -> None:
+               refresh=False, ignore_file=None, recurse=False, engine_name="duckdb") -> None:
     """Report on every collection in every directory given.
 
     A directory is read for what it holds rather than taken for one run: a fleet arrives either
@@ -861,15 +877,18 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     # Read before anything expensive: a mistyped ignore file must not surface after a fleet's
     # worth of decryption, and must never be read as "nothing to ignore".
     ignore = ignores.load(ignore_file)
-    dirs = candidate_dirs(list(paths or []))
+    dirs = candidate_dirs(list(paths or []), recurse)
 
     scratch.use(work_dir)
     sealed = unsealed_sidecar_dirs(dirs, work_dir or scratch.directory("report_"),
                                    private_key, cms_backend, refresh)
     runs = find_runs(dirs, sealed)
     if not runs:
-        raise RuntimeError(f"no collection in {', '.join(paths)}: need an ingested run, a "
-                           f"collection, or a directory holding either")
+        # Name the flag: a parent of per-host folders is the likeliest reason, and the fix is
+        # one word rather than a hunt for which directory to point at.
+        inside = "" if recurse else " (--recurse to look inside)"
+        raise RuntimeError(f"no collection in {', '.join(paths)}{inside}: need a collection, "
+                           f"an ingested dataset, or a directory holding either")
 
     orphans = orphan_lines(dirs, sealed)
 

@@ -1,7 +1,9 @@
 import os
 import tempfile
+import os
 import unittest
-from orca import getthis, layout
+from unittest import mock
+from orca import cache, getthis, layout
 
 
 class FakeCountEngine:
@@ -74,6 +76,38 @@ class TestGetThis(unittest.TestCase):
         self.assertIn("412873", out)
         self.assertNotIn("SHA1", out)
         self.assertNotIn("distinct", out)
+
+
+class TestIngestingOnDemand(unittest.TestCase):
+    """getthis reads the GetThis tables of a dataset, so it ingests what it is given if it is
+    not one yet - the same reasoning as merge."""
+
+    def setUp(self):
+        self.asked = []
+
+        def ensure_dataset(source, work_dir=None, **options):
+            self.asked.append((source, work_dir, options))
+            return "/cache/Little-abc123"
+
+        for target, attribute, value in (
+                (cache, "ensure_dataset", ensure_dataset),
+                (getthis, "get_engine", lambda *a, **k: mock.Mock()),
+                (getthis, "discover_getthis", lambda *a, **k: ["GetThis_Default.parquet"]),
+                (getthis, "counts_by_archive", lambda *a, **k: [("GetThis_Default.7z", 3)])):
+            patcher = mock.patch.object(target, attribute, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_an_archive_is_ingested_before_it_is_summarised(self):
+        getthis.run_getthis("E:/dumps/Little.7z")
+
+        self.assertEqual([source for source, _work, _options in self.asked],
+                         ["E:/dumps/Little.7z"])
+
+    def test_the_parquet_lands_in_the_dataset_that_came_back(self):
+        out = getthis.run_getthis("E:/dumps/Little.7z")
+
+        self.assertEqual(out, os.path.join("/cache/Little-abc123", "getthis.parquet"))
 
 
 if __name__ == "__main__":

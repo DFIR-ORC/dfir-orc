@@ -1,5 +1,7 @@
+import os
 import unittest
-from orca import merge
+from unittest import mock
+from orca import cache, merge
 
 
 class TestMerge(unittest.TestCase):
@@ -43,6 +45,74 @@ class TestMerge(unittest.TestCase):
         self.assertIn("count(DISTINCT val)", sql)
         self.assertIn("ORDER BY __recency DESC", sql)
         self.assertIn("AS VolumeID", sql)
+
+
+class TestIngestingOnDemand(unittest.TestCase):
+    """What merge does when handed something that is not a dataset yet.
+
+    merge reads per-table parquet and only 'ingest' writes it, so there is nothing to ask: an
+    archive or a collection is ingested first, the same way 'diff' does it, and the cache means
+    the second merge of the same collection pays nothing.
+    """
+
+    def setUp(self):
+        self.asked = []
+
+        def ensure_dataset(source, work_dir=None, **options):
+            self.asked.append((source, work_dir, options))
+            return "/cache/Little-abc123"
+
+        tables = [{"name": "NTFSInfo_x", "path": "p.parquet",
+                   "columns": ["VolumeID", "FRN", "MD5"], "ts_col": None, "mtime": ""}]
+        for target, attribute, value in (
+                (cache, "ensure_dataset", ensure_dataset),
+                (merge, "get_engine", lambda *a, **k: mock.Mock()),
+                (merge, "_discover_tables", lambda *a, **k: tables),
+                (merge, "build_scalar_sql", lambda *a, **k: "SELECT 1")):
+            patcher = mock.patch.object(target, attribute, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_an_archive_is_ingested_before_it_is_merged(self):
+        merge.run_merge("E:/dumps/Little.7z")
+
+        self.assertEqual([source for source, _work, _options in self.asked],
+                         ["E:/dumps/Little.7z"])
+
+    def test_the_output_lands_in_the_dataset_that_came_back(self):
+        out = merge.run_merge("E:/dumps/Little.7z")
+
+        self.assertEqual(out, os.path.join("/cache/Little-abc123", "dfir-orc.parquet"))
+
+    def test_an_ingest_that_fails_says_what_to_do_about_it(self):
+        # One unreadable collected file otherwise costs the whole merge, and the reason
+        # arrives as a page of duckdb SQL: on a real w11 collection 'autoruns.csv' is UTF-16
+        # text of autorunsc's own usage message, saved under a .csv name.
+        def refuse(*_args, **_kwargs):
+            raise RuntimeError("duckdb failed: It was not possible to automatically detect "
+                               "the CSV parsing dialect")
+
+        with mock.patch.object(cache, "ensure_dataset", refuse):
+            with self.assertRaises(RuntimeError) as caught:
+                merge.run_merge("E:/dumps/Little.7z")
+
+        message = str(caught.exception)
+        self.assertIn("could not ingest", message)
+        self.assertIn("--skip-errors", message)
+        self.assertIn("duckdb failed", message)
+
+    def test_the_keys_and_the_work_dir_are_handed_to_the_ingest(self):
+        # Without them a sealed collection could not be ingested at all.
+        merge.run_merge("E:/dumps/Little.7z.p7b", private_key="k.pem", work_dir="E:/work",
+                        password="s3cret", cms_backend="cng", refresh=True, skip_errors=True)
+
+        source, work_dir, options = self.asked[0]
+        self.assertEqual(work_dir, "E:/work")
+        self.assertEqual(options["private_key"], "k.pem")
+        self.assertEqual(options["password"], "s3cret")
+        self.assertEqual(options["cms_backend"], "cng")
+        self.assertTrue(options["refresh"])
+        self.assertTrue(options["skip_errors"])
 
 
 if __name__ == "__main__":

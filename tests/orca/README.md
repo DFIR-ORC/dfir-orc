@@ -58,7 +58,10 @@ orca's commands hand each other three different things, and it helps to keep the
 
 A **run** is one execution of ORC on one machine: what the Outline describes, what `run_id`
 identifies, and what a collection is the product of. `check` and `extract` read a collection;
-`merge` and `getthis` read a dataset; `report` and `diff` take either.
+`merge` and `getthis` read a dataset and take it as their argument (`orca merge
+E:\datasets\host`) since they read exactly one - and they **ingest it for you** if you hand
+them a collection or an archive instead. `report` and `diff` take either kind; `diff` ingests
+on demand as well, `report` never does.
 
 ## What a dataset contains
 
@@ -207,10 +210,10 @@ orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --exclude-cols Samp
 
 ```powershell
 # how many files each container archive collected, plus the grand total
-orca getthis --dataset E:\datasets\host
+orca getthis E:\datasets\host
 
 # machine-readable
-orca getthis --dataset E:\datasets\host --json
+orca getthis E:\datasets\host --json
 ```
 
 ### Report (run health)
@@ -237,8 +240,8 @@ orca report \\host\archive\merged --private-key contoso.com.key --one-line
 DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ...
 w11test:         ok=False cmds=35 fails=12 ...
 
-# a directory of per-host folders: the same command
-orca report E:\datasets --one-line
+# a directory of per-host folders: ask to look inside
+orca report E:\datasets --recurse --one-line
 ```
 
 **The Outcome identifies a run, not the directory.** A fleet arrives either as a directory of
@@ -248,12 +251,28 @@ three, with nothing saying so. Every Outcome in a directory is now its own run, 
 child directory that holds one. There was a `--root` for the first shape; it has no job left and
 is gone.
 
-What is looked at is the directory given plus its immediate children - not a deeper walk,
-because a dataset and an expanded tree each hold a copy of the collection's Outcome and
-depth would report one collection two and three times. Where the same run is seen twice
-(`ingest` writes its run *inside* the collection, Outcome and all), the sighting with an ingest
-timing beside it wins: that is the one with tables to report. A dataset carrying no
-Outcome at all is still a run, since its tables are worth reporting.
+**Only the directories you name, unless you ask for more.** Asked about a directory, `report`
+answers about that directory - which is all a merged dump needs, its collections being right
+there. `--recurse` looks in everything underneath, which is what a directory of per-host
+folders or a tree of dumps by date needs:
+
+```powershell
+orca report \\host\archive --recurse --private-key contoso.com.key --one-line
+DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ... dur=8m2s
+DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ... dur=6m47s
+H2ODEV:          ok=False cmds=12 fails=7  ... dur=54m35s
+w11test:         ok=False cmds=35 fails=12 ... dur=7m37s
+```
+
+One machine with several collections is several runs, as above: each Outcome is one. When a
+directory holds no collection, the error says `--recurse to look inside`, since a parent of
+per-host folders is the likeliest reason.
+
+Where the same run is seen twice - `ingest` writes its dataset *inside* the collection, Outcome
+and all, and an expanded tree holds another copy - the sighting with an ingest timing beside it
+wins: that is the one with tables to report. That de-duplication by run id is what makes
+`--recurse` safe to point at a tree. A dataset carrying no Outcome at all is still a run, since
+its tables are worth reporting.
 
 A sealed Outcome is found by the name ORC gives it, so discovery needs no key; reading it needs
 one. Only an Outcome makes a directory a collection - a stray sealed log says nothing about what
@@ -388,9 +407,25 @@ They are a few KB, so paying for the decryption again costs nothing.
 or no key or certificate can open them, each failure is named and the report prints the views
 it can still build.
 
-**A directory means every collection in it.** There is no `--root`: a directory is read for
-what it holds, and both shapes a fleet arrives in are the same command (see *What a directory
-means* below).
+**A directory means every collection in it**, and `--recurse` means every collection under it.
+There is no `--root`: a directory is read for what it holds (see *What a directory means*
+below).
+
+#### `report` never ingests
+
+`report` is fast - under a second on a sealed two-machine share - and that is the point of it:
+the question "is this fleet healthy" should not turn into a fleet ingest. So where a view needs
+a dataset it was not given, it names the command rather than running it:
+
+```
+  tables: (not ingested; orca ingest \\host\archive\merged)
+  empty tables: (not ingested; orca ingest \\host\archive\merged)
+```
+
+The outcome, the failures, `--list` and the errors view all read ORC's own sidecars, so they
+work on a collection as it arrives; only the two views built from `.orca` need the ingest. This
+is the opposite choice from `merge` and `diff` on purpose: for them the ingest *is* the work,
+and for `report` it would be a surprise.
 
 #### `--ignore`: the findings you have already decided about
 
@@ -951,11 +986,31 @@ build; the older run's `USNInfo_offline` had failed with exit code 11 and produc
 
 ```powershell
 # scalar: most-recent value per column, fast
-orca merge --dataset E:\datasets\host
+orca merge E:\datasets\host
 
 # lossless: keep every distinct value as a recency-ordered array (slower)
-orca merge --dataset E:\datasets\host --lossless
+orca merge E:\datasets\host --lossless
+
+# straight from a collection: it is ingested first, then merged
+orca merge \\host\dumps\ORC_HOST.7z.p7b --private-key contoso.com.key --skip-errors
 ```
+
+**It ingests what it is given if it is not a dataset yet.** There is nothing to ask: `merge`
+reads per-table parquet and only `ingest` writes it, so an archive or a collection has exactly
+one way to become mergeable. The run cache means the second `merge` of the same collection pays
+nothing, and `diff` resolves its two sides the same way. It takes the flags an ingest needs -
+`--private-key`, `--password`, `--cms-backend`, `--work-dir`, `--refresh`, `--skip-errors` - and
+`getthis` does all of this too.
+
+One collected file orca cannot read otherwise costs the whole command, and the reason arrives
+as a page of duckdb SQL, so the last line of the failure says what gets past it:
+
+```
+  add --skip-errors to ingest the tables that do read
+```
+
+On the real sealed collection, `merge --skip-errors` straight from the `.p7b` decrypts, ingests
+and merges in 9.3 s (455369 rows, 72 columns).
 
 ### Ad-hoc queries
 

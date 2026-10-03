@@ -78,6 +78,42 @@ class TestCli(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 cli._build_parser().parse_args(argv)
 
+    def test_the_dataset_is_the_argument_of_merge_and_getthis(self):
+        # A command that reads exactly one dataset should not make you name the obvious.
+        parser = cli._build_parser()
+
+        for command in ("merge", "getthis"):
+            args = parser.parse_args([command, "E:/datasets/host"])
+            self.assertEqual(args.dataset, "E:/datasets/host", command)
+
+            with self.assertRaises(SystemExit):
+                parser.parse_args([command])
+
+    def test_merge_and_getthis_take_what_an_ingest_needs(self):
+        # They ingest on demand, so they need the keys an ingest needs.
+        parser = cli._build_parser()
+
+        for command in ("merge", "getthis"):
+            args = parser.parse_args([command, "E:/dumps/HOST.7z.p7b", "--private-key",
+                                      "k.pem", "--work-dir", "E:/work", "--refresh",
+                                      "--skip-errors", "--password", "s3cret",
+                                      "--cms-backend", "cng"])
+            self.assertEqual(args.private_key, "k.pem", command)
+            self.assertEqual(args.work_dir, "E:/work", command)
+            self.assertEqual(args.password, "s3cret", command)
+            self.assertEqual(args.cms_backend, "cng", command)
+            self.assertTrue(args.refresh, command)
+            self.assertTrue(args.skip_errors, command)
+
+    def test_report_recurses_only_when_asked(self):
+        parser = cli._build_parser()
+
+        self.assertFalse(parser.parse_args(["report", "E:/dumps"]).recurse)
+        self.assertTrue(parser.parse_args(["report", "E:/dumps", "--recurse"]).recurse)
+        for mode in cli.REPORT_TABLE_MODES:
+            self.assertTrue(cli._build_mode_parser(mode)
+                            .parse_args(["E:/dumps", "--recurse"]).recurse)
+
     def test_report_has_no_root_option_any_more(self):
         # A directory means every collection in it, so there is nothing left for --root to do.
         with self.assertRaises(SystemExit):
@@ -173,9 +209,9 @@ class TestCli(unittest.TestCase):
 
     def test_parser_merge_requires_run(self):
         parser = cli._build_parser()
-        args = parser.parse_args(["merge", "--dataset", "E:/runs/host"])
+        args = parser.parse_args(["merge", "E:/datasets/host"])
         self.assertEqual(args.command, "merge")
-        self.assertEqual(args.dataset, "E:/runs/host")
+        self.assertEqual(args.dataset, "E:/datasets/host")
 
     def test_main_is_callable(self):
         self.assertTrue(callable(cli.main))

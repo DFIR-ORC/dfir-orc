@@ -84,16 +84,22 @@ class TestRender(unittest.TestCase):
         hr["errors"]["skipped"] = {"autoruns": "duckdb said no"}
         return hr
 
-    def test_the_stats_view_says_the_dir_was_never_ingested(self):
-        text = report.render_human(self._hr_not_ingested(), ["stats"])
+    def test_the_stats_view_names_the_command_that_would_fill_it(self):
+        # report never ingests - it is fast and fetching what is missing is not - so it says
+        # what to run instead of quietly doing it.
+        hr = self._hr_not_ingested()
+        hr["directory"] = "E:/dumps/ORC_HOST"
 
-        self.assertIn("no ingest timing", text)
+        text = report.render_human(hr, ["stats"])
+
+        self.assertIn("not ingested", text)
+        self.assertIn("orca ingest E:/dumps/ORC_HOST", text)
         self.assertNotIn("0 tables", text)
 
     def test_the_empty_view_does_not_claim_zero_empty_tables(self):
         text = report.render_human(self._hr_not_ingested(), ["empty"])
 
-        self.assertIn("no ingest timing", text)
+        self.assertIn("not ingested", text)
         self.assertNotIn("(none)", text)
 
     def test_the_empty_file_half_says_when_there_is_no_manifest(self):
@@ -438,7 +444,7 @@ class TestRenderSections(unittest.TestCase):
     def test_a_view_whose_input_is_missing_still_says_so(self):
         text = self.render(host_report_not_ingested())
 
-        self.assertIn("no ingest timing", text)
+        self.assertIn("not ingested", text)
 
     def test_the_unread_table_names_the_reason(self):
         line = next(l for l in self.lines() if "autoruns" in l)

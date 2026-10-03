@@ -282,13 +282,13 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
 
         self.assertEqual(sorted(os.listdir(source)), before)
 
-    def test_a_parent_directory_finds_the_sealed_collection(self):
-        # The collection is a child of what was asked about, and its Outcome is sealed: it is
-        # found by unsealing, which is why the key is passed here and not at discovery.
+    def test_a_parent_directory_finds_the_sealed_collection_with_recurse(self):
+        # The collection is a child of what was asked about, so looking inside is asked for;
+        # its Outcome is sealed, which is why the key is passed here and not at discovery.
         self.sealed_collection()
 
         scratch.use(self.work)
-        dirs = report.candidate_dirs([self.dir.name])
+        dirs = report.candidate_dirs([self.dir.name], recurse=True)
         sealed = report.unsealed_sidecar_dirs(dirs, self.work, PRIVATE_KEY)
         runs = report.find_runs(dirs, sealed)
 

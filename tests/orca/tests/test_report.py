@@ -422,17 +422,37 @@ class TestFindRuns(unittest.TestCase):
                           "ORC_WS-0002_20260925_144127_Outcome.json",
                           "ORC_WS-0003_20260925_144127_Outcome.json"])
 
-    def test_a_directory_of_per_host_folders_is_found_the_same_way(self):
+    def test_a_directory_of_per_host_folders_needs_recurse(self):
+        # Looking inside is the surprising half: asked about a directory, report answers about
+        # that directory.
         for host in ("WS-0001", "WS-0002"):
             child = os.path.join(self.dir, host)
             os.makedirs(child)
             write_outcome(child, host)
 
-        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir]), {}), [])
+
+        runs = report.find_runs(report.candidate_dirs([self.dir], recurse=True), {})
 
         self.assertEqual(len(runs), 2)
         self.assertEqual(sorted(os.path.basename(r.directory) for r in runs),
                          ["WS-0001", "WS-0002"])
+
+    def test_recurse_goes_all_the_way_down(self):
+        deep = os.path.join(self.dir, "2026", "october", "WS-0007")
+        os.makedirs(deep)
+        write_outcome(deep, "WS-0007")
+
+        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir]), {}), [])
+        self.assertEqual(len(report.find_runs(report.candidate_dirs([self.dir], recurse=True),
+                                              {})), 1)
+
+    def test_a_merged_directory_needs_no_recurse(self):
+        # The Outcomes are in the directory itself, which is the shape a merged dump arrives in.
+        for host in ("WS-0001", "WS-0002"):
+            write_outcome(self.dir, host)
+
+        self.assertEqual(len(report.find_runs(report.candidate_dirs([self.dir]), {})), 2)
 
     def test_a_collection_and_the_run_dir_inside_it_are_one_run(self):
         # 'ingest' copies the Outcome into the run it writes inside the collection, so the same
@@ -443,7 +463,7 @@ class TestFindRuns(unittest.TestCase):
         write_outcome(run, "WS-0001")
         mark_ingested(run)
 
-        runs = report.find_runs(report.candidate_dirs([self.dir]), {})
+        runs = report.find_runs(report.candidate_dirs([self.dir], recurse=True), {})
 
         self.assertEqual(len(runs), 1)
         self.assertEqual(runs[0].directory, run)
@@ -488,7 +508,8 @@ class TestFindRuns(unittest.TestCase):
         with open(os.path.join(child, "ORC_HOST.log.7z.p7b"), "wb") as f:
             f.write(b"sealed log")
 
-        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir]), {}), [])
+        self.assertEqual(report.find_runs(report.candidate_dirs([self.dir], recurse=True),
+                                          {}), [])
 
     def test_runs_come_back_in_host_order(self):
         for host in ("WS-0003", "WS-0001", "WS-0002"):
@@ -614,11 +635,29 @@ class TestRunReport(unittest.TestCase):
         for host in ("WS-0001", "WS-0002", "WS-0003"):
             self.assertIn(host, output)
 
-    def test_a_directory_of_per_host_folders_reports_each_of_them(self):
+    def test_a_directory_of_per_host_folders_reports_each_of_them_with_recurse(self):
         for host in ("WS-0001", "WS-0002"):
             child = os.path.join(self.dir, host)
             os.makedirs(child)
             write_outcome(child, host)
+
+        output = self.invoke(one_line=True, recurse=True)
+
+        self.assertEqual(len(output.strip().splitlines()), 2)
+
+    def test_without_recurse_a_parent_of_collections_says_it_found_nothing(self):
+        child = os.path.join(self.dir, "WS-0001")
+        os.makedirs(child)
+        write_outcome(child, "WS-0001")
+
+        with self.assertRaises(RuntimeError) as caught:
+            self.invoke()
+
+        self.assertIn("--recurse", str(caught.exception))
+
+    def test_a_merged_directory_of_two_collections_needs_nothing_extra(self):
+        write_outcome(self.dir, "WS-0001")
+        write_outcome(self.dir, "WS-0002")
 
         output = self.invoke(one_line=True)
 

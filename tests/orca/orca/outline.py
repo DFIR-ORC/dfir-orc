@@ -135,12 +135,13 @@ def dedupe_by_run(rows: list) -> list:
 
 
 def run_outline(paths, out=None, engine_name="duckdb", as_json=False,
-               private_key=None, cms_backend=None, work_dir=None, refresh=False) -> None:
+               private_key=None, cms_backend=None, work_dir=None, refresh=False,
+               recurse=False) -> None:
     from . import scratch
     from .engine import get_engine, rows_to_parquet, single_process_memory_limit
     from .report import candidate_dirs, find_runs, unsealed_sidecar_dirs
 
-    dirs = candidate_dirs(list(paths or []))
+    dirs = candidate_dirs(list(paths or []), recurse)
 
     # A collection arrives with its sidecars sealed, and this table is read from one of them.
     scratch.use(work_dir)

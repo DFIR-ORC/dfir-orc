@@ -46,6 +46,8 @@ def _build_mode_parser(mode: str) -> argparse.ArgumentParser:
                         help=f"output parquet (default: <dataset>/{mode}.parquet)")
     parser.add_argument("--json", action="store_true",
                         help="print the rows instead (no parquet)")
+    parser.add_argument("--recurse", action="store_true",
+                        help="look in every directory under the ones given")
     parser.add_argument("--private-key", default=None,
                         help="PEM key to unseal a sealed Outcome or Outline")
     parser.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
@@ -118,11 +120,23 @@ def _build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--one-line", action="store_true", help="one summary line")
     ck.add_argument("--json", action="store_true", help="summary JSON")
 
-    mg = sub.add_parser("merge", help="run dir -> wide dfir-orc.parquet")
-    mg.add_argument("--dataset", required=True, help="an ingested dataset")
-    mg.add_argument("--out", default=None, help="output parquet (default: <dataset>/dfir-orc.parquet)")
+    mg = sub.add_parser("merge", help="dataset -> wide dfir-orc.parquet (ingests if needed)")
+    mg.add_argument("dataset", help="a dataset, or a collection to ingest first")
+    mg.add_argument("--out", default=None,
+                    help="output parquet (default: <dataset>/dfir-orc.parquet)")
     mg.add_argument("--lossless", action="store_true", help="keep every value as arrays (slow)")
     mg.add_argument("--ts-col", nargs="*", default=None, help="override tool timestamp: Tool=Column")
+    mg.add_argument("--password", default=None, help="archive password")
+    mg.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
+    mg.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
+                    help="pin the .p7b decryption backend")
+    mg.add_argument("--work-dir", default=None,
+                    help="put the dataset and decrypted output here instead of beside the "
+                         "archive")
+    mg.add_argument("--refresh", action="store_true",
+                    help="re-ingest even if a dataset is already there")
+    mg.add_argument("--skip-errors", action="store_true",
+                    help="skip a table orca cannot read instead of failing the ingest")
     mg.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     rp = sub.add_parser("report", help="run dir(s) -> per-host views, or a row table",
@@ -142,6 +156,8 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="one line per command, every host, no headers")
     rp.add_argument("--failed", action="store_true",
                     help="with --list: only the commands that did not exit 0")
+    rp.add_argument("--recurse", action="store_true",
+                    help="look in every directory under the ones given")
     rp.add_argument("--ignore", default=None,
                     help="JSON list of names (fnmatch) this report should pass over")
     rp.add_argument("--private-key", default=None,
@@ -154,10 +170,23 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="unseal again even if the sidecars are already there")
     rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
-    gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
-    gt.add_argument("--dataset", required=True, help="an ingested dataset")
-    gt.add_argument("--out", default=None, help="output parquet (default: <dataset>/getthis.parquet)")
+    gt = sub.add_parser("getthis",
+                        help="dataset -> getthis.parquet + collected/distinct counts")
+    gt.add_argument("dataset", help="a dataset, or a collection to ingest first")
+    gt.add_argument("--out", default=None,
+                    help="output parquet (default: <dataset>/getthis.parquet)")
     gt.add_argument("--json", action="store_true", help="summary as JSON")
+    gt.add_argument("--password", default=None, help="archive password")
+    gt.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
+    gt.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
+                    help="pin the .p7b decryption backend")
+    gt.add_argument("--work-dir", default=None,
+                    help="put the dataset and decrypted output here instead of beside the "
+                         "archive")
+    gt.add_argument("--refresh", action="store_true",
+                    help="re-ingest even if a dataset is already there")
+    gt.add_argument("--skip-errors", action="store_true",
+                    help="skip a table orca cannot read instead of failing the ingest")
     gt.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     df = sub.add_parser("diff", help="compare two archives, run dirs, or parquet/CSV files")
@@ -234,7 +263,8 @@ def main(argv=None) -> int:
         runner = outcome.run_outcome if mode == "outcome" else outline.run_outline
         runner(args.paths, out=args.out, engine_name=args.engine,
                as_json=args.json, private_key=args.private_key,
-               cms_backend=args.cms_backend, work_dir=args.work_dir, refresh=args.refresh)
+               cms_backend=args.cms_backend, work_dir=args.work_dir, refresh=args.refresh,
+               recurse=args.recurse)
         return 0
 
     args = _build_parser().parse_args(items)
@@ -264,17 +294,24 @@ def main(argv=None) -> int:
             if tool and column:
                 overrides[tool] = column
         merge.run_merge(args.dataset, out=args.out, lossless=args.lossless,
-                        ts_overrides=overrides or None, engine_name=args.engine)
+                        ts_overrides=overrides or None, engine_name=args.engine,
+                        password=args.password, private_key=args.private_key,
+                        cms_backend=args.cms_backend, work_dir=args.work_dir,
+                        refresh=args.refresh, skip_errors=args.skip_errors)
     elif args.command == "getthis":
         getthis.run_getthis(args.dataset, out=args.out, engine_name=args.engine,
-                            as_json=args.json)
+                            as_json=args.json, password=args.password,
+                            private_key=args.private_key, cms_backend=args.cms_backend,
+                            work_dir=args.work_dir, refresh=args.refresh,
+                            skip_errors=args.skip_errors)
     elif args.command == "report":
         report.run_report(args.paths, views=args.view,
                           one_line=args.one_line, as_json=args.json,
                           list_commands=args.list, failed_only=args.failed,
                           private_key=args.private_key, cms_backend=args.cms_backend,
                           work_dir=args.work_dir, refresh=args.refresh,
-                          ignore_file=args.ignore, engine_name=args.engine)
+                          ignore_file=args.ignore, recurse=args.recurse,
+                          engine_name=args.engine)
     elif args.command == "diff":
         pa, pb = (args.paths + [None, None])[:2]
         diff.run_diff(path_a=pa, path_b=pb, run_a=args.run, run_b=args.reference,
