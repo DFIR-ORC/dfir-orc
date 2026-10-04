@@ -150,22 +150,6 @@ WofAlgorithm ToWofAlgorithm(NtAlgorithm algorithm, uint64_t chunkSize, std::erro
     return WofAlgorithm::kUnknown;
 }
 
-WofAlgorithm ToWofAlgorithm(WimlibAlgorithm algorithm, uint64_t chunkSize, std::error_code& ec)
-{
-    switch (algorithm)
-    {
-        case WimlibAlgorithm::kUnknown:
-            return WofAlgorithm::kUnknown;
-        case WimlibAlgorithm::kXpress:
-            return ToWofAlgorithmXpress(chunkSize, ec);
-        case WimlibAlgorithm::kLzx:
-            return WofAlgorithm::kLzx;
-    }
-
-    ec = std::make_error_code(std::errc::invalid_argument);
-    return WofAlgorithm::kUnknown;
-}
-
 WofAlgorithm ToWofAlgorithm(uint32_t algorithm, std::error_code& ec)
 {
     switch (static_cast<WofAlgorithm>(algorithm))

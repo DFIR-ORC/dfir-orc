@@ -12,7 +12,6 @@
 #include <system_error>
 
 #include "Filesystem/Ntfs/Compression/Engine/Nt/NtAlgorithm.h"
-#include "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibAlgorithm.h"
 
 namespace Orc {
 
@@ -40,8 +39,6 @@ NtAlgorithm ToNtAlgorithm(WofAlgorithm algorithm);
 WofAlgorithm ToWofAlgorithm(uint32_t algorithm, std::error_code& ec);
 
 WofAlgorithm ToWofAlgorithm(NtAlgorithm algorithm, uint64_t chunkSize, std::error_code& ec);
-
-WofAlgorithm ToWofAlgorithm(WimlibAlgorithm algorithm, uint64_t chunkSize, std::error_code& ec);
 
 }  // namespace Ntfs
 
