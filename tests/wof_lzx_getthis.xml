@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  GetThis configuration for tests/Test-WofLzx.ps1: collect every file under the Microsoft directory of the
+  mounted image, where Windows 11 keeps its LZX compressed Edge install. The script rewrites <location> from
+  its -Volume and -Root parameters before running GetThis; the values below are the defaults.
+-->
+<getthis>
+    <location>D:</location>
+    <samples>
+        <sample name="lzx">
+            <ntfs_find path_match="\Program Files (x86)\Microsoft\*" />
+        </sample>
+    </samples>
+</getthis>
