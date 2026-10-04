@@ -1017,15 +1017,6 @@ HRESULT WOFReparseAttribute::GetStreams(
     std::shared_ptr<ByteStream>& rawStream,
     std::shared_ptr<ByteStream>& dataStream)
 {
-    // An algorithm with no decompressor here (LZX has none) only costs the file's content. Refusing the
-    // reparse point instead made 'ParseRecord' void the whole MFT record, so the file disappeared from the
-    // enumeration: the algorithm is therefore checked here and not when the reparse point is parsed.
-    if (Ntfs::ToNtAlgorithm(m_algorithm) == NtAlgorithm::kUnknown)
-    {
-        Log::Debug("No wof decompressor for algorithm id {}", std::underlying_type_t<Ntfs::WofAlgorithm>(m_algorithm));
-        return HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED);
-    }
-
     auto baseRecord = GetBaseRecord();
     if (!baseRecord)
     {

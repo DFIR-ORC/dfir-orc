@@ -575,6 +575,8 @@ set(SRC_FILESYSTEM
     "Filesystem/Ntfs/Compression/WofStreamConcept.h"
     "Filesystem/Ntfs/Compression/WofAlgorithm.h"
     "Filesystem/Ntfs/Compression/WofAlgorithm.cpp"
+    "Filesystem/Ntfs/Compression/WofDecompressor.h"
+    "Filesystem/Ntfs/Compression/WofDecompressor.cpp"
     "Filesystem/Ntfs/Compression/DecompressorConcept.h"
     "Filesystem/Ntfs/Compression/Engine/Nt/NtAlgorithm.h"
     "Filesystem/Ntfs/Compression/Engine/Nt/NtAlgorithm.cpp"

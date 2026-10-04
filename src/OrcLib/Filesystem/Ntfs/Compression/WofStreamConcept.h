@@ -285,7 +285,7 @@ private:
             outputSize = std::min(output.size(), static_cast<size_t>(m_chunks.ChunkSize()));
         }
 
-        m_decompressor->Decompress(m_inputBuffer, output.subspan(0, outputSize), ec);
+        const size_t processed = m_decompressor->Decompress(m_inputBuffer, output.subspan(0, outputSize), ec);
         if (ec)
         {
             Log::Debug(
@@ -295,6 +295,23 @@ private:
                 ToString(m_chunks.Algorithm()),
                 m_chunks.ChunkSize(),
                 m_inputBuffer.size(),
+                outputSize,
+                ec);
+            return 0;
+        }
+
+        // A short chunk is a failure, not a partial success. Returning 'outputSize' regardless would tell the
+        // caller the buffer is full while its tail still holds whatever was there, which is how a collected file
+        // ends up silently padded instead of reported as unreadable.
+        if (processed != outputSize)
+        {
+            ec = std::make_error_code(std::errc::bad_message);
+            Log::Debug(
+                "Decompressed chunk {}/{} short of its size (algorithm: {}, produced: {}, expected: {}) [{}]",
+                chunkIndex,
+                m_chunks.ChunkCount(),
+                ToString(m_chunks.Algorithm()),
+                processed,
                 outputSize,
                 ec);
             return 0;

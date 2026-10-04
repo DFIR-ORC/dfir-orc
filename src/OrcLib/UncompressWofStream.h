@@ -18,7 +18,7 @@
 #include "Stream/ByteStreamConcept.h"
 #include "Filesystem/Ntfs/Compression/WofAlgorithm.h"
 #include "Filesystem/Ntfs/Compression/WofStreamConcept.h"
-#include "Filesystem/Ntfs/Compression/Engine/Nt/NtDecompressorConcept.h"
+#include "Filesystem/Ntfs/Compression/WofDecompressor.h"
 
 #pragma managed(push, off)
 
@@ -28,7 +28,7 @@ class UncompressWofStream : public ChainingStream
 {
 public:
     using ByteStreamT = ByteStreamConcept<std::shared_ptr<ByteStream>>;
-    using WofStreamT = Ntfs::WofStreamConcept<ByteStreamT, std::unique_ptr<NtDecompressorConcept>>;
+    using WofStreamT = Ntfs::WofStreamConcept<ByteStreamT, std::unique_ptr<Ntfs::WofDecompressor>>;
 
     UncompressWofStream();
     virtual ~UncompressWofStream();

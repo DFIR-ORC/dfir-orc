@@ -30,16 +30,14 @@ std::unique_ptr<UncompressWofStream::WofStreamT> CreateWofStream(
     uint64_t uncompressedSize,
     uint64_t compressedSize)
 {
-    std::error_code ec;
-
-    auto decompressor = std::make_unique<NtDecompressorConcept>(algorithm, ec);
-    if (ec)
+    Result<WofDecompressor> decompressor = WofDecompressor::Create(algorithm);
+    if (!decompressor.has_value())
     {
         Log::Error(
             "Failed to create decompressor (algorithm: {}, id: {}) [{}]",
             ToString(algorithm),
             std::underlying_type_t<WofAlgorithm>(algorithm),
-            ec);
+            decompressor.error());
         return nullptr;
     }
 
@@ -47,8 +45,9 @@ std::unique_ptr<UncompressWofStream::WofStreamT> CreateWofStream(
     // cluster-rounded allocated stream size. The last chunk's size is derived from it
     // (compressedSize - lastChunkOffset); an inflated value appends trailing padding to the last
     // chunk, breaking its decompression (STATUS_BAD_COMPRESSION_BUFFER).
+    std::error_code ec;
     auto wofStream = std::make_unique<UncompressWofStream::WofStreamT>(
-        std::move(decompressor),
+        std::make_unique<WofDecompressor>(std::move(decompressor.value())),
         ByteStreamConcept(rawStream),
         0,
         algorithm,

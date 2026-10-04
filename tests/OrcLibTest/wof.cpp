@@ -12,10 +12,13 @@
 #include "MemoryStream.h"
 #include "UncompressWofStream.h"
 #include "Filesystem/Ntfs/Compression/WofAlgorithm.h"
+#include "Filesystem/Ntfs/Compression/WofDecompressor.h"
 
 #include "CompressAPIExtension.h"
 
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <vector>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -170,6 +173,81 @@ public:
             Assert::IsFalse(
                 SUCCEEDED(hr) && out == original, L"Padded allocated size unexpectedly reproduced the original");
         }
+    }
+
+    // An LZX file read end to end through the public stream, which is what GetThis and FastFind do. The blob is
+    // the fixture's whole WofCompressedData, so this exercises the chunk table, all seven chunks and the short
+    // last one together.
+    TEST_METHOD(WofLzxStreamDecodesAWholeFile)
+    {
+        using namespace Orc::Ntfs;
+
+        std::ifstream fixture(
+            helper.GetDirectoryName(__WFILE__) + L"\\binaries\\wof_lzx_known_plaintext.wofdata", std::ios::binary);
+        const std::vector<uint8_t> blob(
+            (std::istreambuf_iterator<char>(fixture)), std::istreambuf_iterator<char>());
+        Assert::AreEqual(size_t(2764), blob.size(), L"fixture wof_lzx_known_plaintext.wofdata is missing");
+
+        auto raw = std::make_shared<MemoryStream>();
+        Assert::IsTrue(SUCCEEDED(raw->OpenForReadWrite()));
+        ULONGLONG written = 0;
+        Assert::IsTrue(SUCCEEDED(raw->Write(const_cast<uint8_t*>(blob.data()), blob.size(), &written)));
+
+        auto wof = std::make_shared<UncompressWofStream>();
+        Assert::IsTrue(SUCCEEDED(wof->Open(raw, WofAlgorithm::kLzx, 200000, blob.size())));
+
+        std::vector<uint8_t> out(200000, 0xCC);
+        ULONGLONG read = 0;
+        Assert::IsTrue(SUCCEEDED(wof->Read(out.data(), out.size(), &read)));
+        Assert::AreEqual(ULONGLONG(200000), read);
+
+        std::vector<uint8_t> expected(200000);
+        for (size_t i = 0; i < expected.size(); ++i)
+        {
+            expected[i] = static_cast<uint8_t>((i * 31 + 7) % 251);
+        }
+
+        const auto mismatch = std::mismatch(out.begin(), out.end(), expected.begin());
+        Assert::IsTrue(
+            mismatch.first == out.end(),
+            (L"decoded file differs from the plaintext at offset " + std::to_wstring(mismatch.first - out.begin()))
+                .c_str());
+    }
+
+    // Review Focus 1: a chunk Microsoft chose not to compress is stored raw and signalled only by the size
+    // equality. It must be copied, whichever engine is selected.
+    TEST_METHOD(WofDecompressorCopiesARawChunk)
+    {
+        using namespace Orc::Ntfs;
+
+        std::vector<uint8_t> chunk(4096);
+        for (size_t i = 0; i < chunk.size(); ++i)
+        {
+            chunk[i] = static_cast<uint8_t>(i & 0xFF);
+        }
+
+        for (const WofAlgorithm algorithm : {WofAlgorithm::kXpress4k, WofAlgorithm::kLzx})
+        {
+            Result<WofDecompressor> decompressor = WofDecompressor::Create(algorithm);
+            Assert::IsTrue(decompressor.has_value());
+
+            std::vector<uint8_t> out(chunk.size(), 0xCC);
+            std::error_code ec;
+            const size_t produced =
+                decompressor.value().Decompress(BufferView(chunk.data(), chunk.size()), gsl::make_span(out), ec);
+
+            Assert::IsFalse(static_cast<bool>(ec));
+            Assert::AreEqual(chunk.size(), produced);
+            Assert::IsTrue(out == chunk);
+        }
+    }
+
+    // 'kUnknown' has no engine and must be refused at construction, which is the only remaining way for
+    // 'Create' to fail now that all four defined formats are supported.
+    TEST_METHOD(WofDecompressorRefusesAnUnknownAlgorithm)
+    {
+        Result<Ntfs::WofDecompressor> decompressor = Ntfs::WofDecompressor::Create(Ntfs::WofAlgorithm::kUnknown);
+        Assert::IsFalse(decompressor.has_value());
     }
 
 #ifdef BASIC_WOLF_DECOMPRESSION

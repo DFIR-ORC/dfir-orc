@@ -90,12 +90,7 @@ NtDecompressorConcept::NtDecompressorConcept(NtAlgorithm algorithm, std::error_c
 
 size_t NtDecompressorConcept::Decompress(BufferView input, gsl::span<uint8_t> output, std::error_code& ec)
 {
-    if (input.size() == output.size())
-    {
-        std::copy(std::cbegin(input), std::cend(input), std::begin(output));
-        return output.size();
-    }
-
+    // A chunk stored raw (input and output of equal size) is copied by WofDecompressor, for every engine at once.
     ULONG processed = 0;
     switch (m_ntAlgorithm)
     {
