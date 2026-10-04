@@ -131,7 +131,7 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
     if (!hFile)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed CreateFile for '{}' [{}]", pwszPath, SystemError(hr));
+        Log::Debug(L"Failed CreateFile for '{}' [{}]", pwszPath, SystemError(hr));
         return hr;
     }
 

@@ -270,7 +270,10 @@ HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteToFile(const WCHAR* szFileName
 
     // ... create it
     if (FAILED(hr = pFileStream->WriteTo(szFileName)))  // no attr.	template
+    {
+        Log::Error(L"Could not create output file: '{}' [{}]", szFileName, SystemError(hr));
         return hr;
+    }
 
     return WriteToStream(pFileStream, true);
 }
