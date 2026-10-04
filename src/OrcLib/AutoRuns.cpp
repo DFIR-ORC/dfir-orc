@@ -10,7 +10,6 @@
 
 #include "WideAnsi.h"
 
-#include <regex>
 #include <string>
 #include <algorithm>
 
@@ -46,6 +45,58 @@ static const auto AUTORUNS_IMPHASH_ITEM = 16L;
 using namespace std;
 
 using namespace Orc;
+
+namespace {
+
+constexpr auto kFileNotFoundPrefix = L"File not found: ";
+
+bool HasPrefix(const WCHAR* value, const WCHAR* prefix)
+{
+    // wcsncmp stops at the terminator, so a value shorter than the prefix never matches
+    return wcsncmp(value, prefix, wcslen(prefix)) == 0;
+}
+
+AutoRunItem MakeAutoRunItem(const ConfigItem& item)
+{
+    AutoRunItem autorun = {
+        item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
+        item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
+        item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
+        item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
+        item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
+        item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
+        item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
+        item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
+        item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
+        item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
+        item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
+        item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
+        item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
+        item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
+        item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
+        false,
+        true};
+
+    // Autorunsc reports a dangling autostart entry as "File not found: <target>". Strip the prefix so the
+    // target is usable as a path, and keep the verdict: there is no file to open, hash or verify.
+    if (HasPrefix(autorun.ImagePath, kFileNotFoundPrefix))
+    {
+        autorun.ImagePath += wcslen(kFileNotFoundPrefix);
+        autorun.IsImageFound = false;
+    }
+
+    if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
+    {
+        if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
+        {
+            autorun.IsVerified = true;
+        }
+    }
+
+    return autorun;
+}
+
+}  // namespace
 
 AutoRuns::AutoRuns()
     : m_Reader()
@@ -157,46 +208,13 @@ HRESULT AutoRuns::LoadAutoRunsXml(const CBinaryBuffer& XmlData)
 
 HRESULT AutoRuns::GetAutoRuns(AutoRunsVector& autoruns)
 {
-    static wregex filenotfound(L"(File not found: )(.*)");
-
     autoruns.clear();
     autoruns.reserve(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList.size());
 
     std::for_each(
         begin(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
         end(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
-        [&autoruns](const ConfigItem& item) {
-            AutoRunItem autorun_item = {
-                item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
-                item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
-                item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
-                item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
-                item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
-                item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
-                item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
-                item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
-                item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
-                item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
-                item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
-                item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
-                item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
-                item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
-                item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
-                false};
-
-            if (!wcsncmp(
-                    autorun_item.ImagePath,
-                    L"File not found: ",
-                    min(wcslen(autorun_item.ImagePath), wcslen(L"File not found: "))))
-            {
-                autorun_item.ImagePath += wcslen(L"File not found: ");
-            }
-            if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
-                if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
-                    autorun_item.IsVerified = true;
-
-            autoruns.push_back(autorun_item);
-        });
+        [&autoruns](const ConfigItem& item) { autoruns.push_back(MakeAutoRunItem(item)); });
 
     return S_OK;
 }
@@ -220,36 +238,7 @@ HRESULT AutoRuns::PrintAutoRuns()
 HRESULT AutoRuns::EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext)
 {
     std::for_each(begin(m_AutoRuns.NodeList), end(m_AutoRuns.NodeList), [pCallBack, pContext](const ConfigItem& item) {
-        AutoRunItem autorun_item = {
-            item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
-            item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
-            item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
-            item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
-            item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
-            item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
-            item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
-            item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
-            item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
-            item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
-            item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
-            item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
-            item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
-            item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
-            item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
-            false};
-
-        if (!wcsncmp(
-                autorun_item.ImagePath,
-                L"File not found: ",
-                min(wcslen(autorun_item.ImagePath), wcslen(L"File not found: "))))
-        {
-            autorun_item.ImagePath += wcslen(L"File not found: ");
-        }
-        if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
-            if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
-                autorun_item.IsVerified = true;
-
-        pCallBack(autorun_item, pContext);
+        pCallBack(MakeAutoRunItem(item), pContext);
     });
     return S_OK;
 }

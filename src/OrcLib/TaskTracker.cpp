@@ -608,6 +608,9 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
                     if (auto result = InsertSampleInformation(sample))
                     {
                         result->Status.Registry = Registered;
+                        if (!item.IsImageFound)
+                            result->IsImageMissing = true;
+
                         if (item.IsVerified)
                             result->Status.Authenticode = SignedVerified;
                     }
@@ -902,6 +905,15 @@ HRESULT TaskTracker::CheckSampleSignatureStatus(const std::shared_ptr<SampleItem
         status = sample->Status.Authenticode;
         return S_OK;
     };
+
+    // Nothing on disk to verify: autorunsc already reported the target as absent. Opening it would fail
+    // with ERROR_FILE_NOT_FOUND for every dangling autostart entry on the host.
+    if (sample->IsImageMissing)
+    {
+        Log::Debug(L"Skipping signature check, image is missing: '{}'", sample->FullPath);
+        status = sample->Status.Authenticode;
+        return S_OK;
+    }
 
     Authenticode::AuthenticodeData data;
 

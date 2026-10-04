@@ -165,9 +165,15 @@ public:
     std::wstring FullPath;
     std::wstring Path;
     std::wstring FileName;
+
+    // Set when the sample is only known from a dangling autostart entry: autorunsc reported its target as
+    // absent, so there is no file to open, hash or verify.
+    bool IsImageMissing;
+
     SampleItem()
         : Status()
-        , Type(STUndertermined) {};
+        , Type(STUndertermined)
+        , IsImageMissing(false) {};
 
     SampleItem(SampleItem&& other)
     {
@@ -175,6 +181,8 @@ public:
         other.Status = SampleStatus();
         Type = other.Type;
         other.Type = STUndertermined;
+        IsImageMissing = other.IsImageMissing;
+        other.IsImageMissing = false;
         std::swap(Location, other.Location);
         std::swap(FullPath, other.FullPath);
         std::swap(Path, other.Path);

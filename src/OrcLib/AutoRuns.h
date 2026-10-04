@@ -33,6 +33,10 @@ struct AutoRunItem
     const WCHAR* PESHA256;
     const WCHAR* ImpHash;
     bool IsVerified;
+
+    // False when autorunsc reported the registered target as absent ("File not found: " in the image path).
+    // The path is kept, stripped of the prefix, so the dangling autostart entry is still reported.
+    bool IsImageFound;
 };
 
 using AutoRunsEnumItemCallback = void(const AutoRunItem& item, LPVOID pContext);
