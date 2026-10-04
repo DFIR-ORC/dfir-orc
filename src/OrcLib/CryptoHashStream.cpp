@@ -39,7 +39,13 @@ Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::A
     auto fileStream = std::make_shared<FileStream>();
 
     HRESULT hr = fileStream->OpenFile(
-        path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to open: '{}' [{}]", path, SystemError(hr));

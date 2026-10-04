@@ -415,7 +415,13 @@ HRESULT RESTAgent::UploadFile(
     uint64_t totalSize = 0;
     {
         Guard::FileHandle hFile(CreateFileW(
-            strLocalName.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+            strLocalName.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_DELETE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL));
         if (!hFile.IsValid())
         {
             DWORD dwError = GetLastError();
@@ -666,8 +672,14 @@ HRESULT RESTAgent::RunBodyStep(
     const std::wstring bodyPath =
         ResolveUploadTemplate(step.bodySource, {0, 0, totalSize, remoteFileName, strLocalName}, captures);
 
-    Guard::FileHandle hBody(
-        CreateFileW(bodyPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+    Guard::FileHandle hBody(CreateFileW(
+        bodyPath.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL));
     if (!hBody.IsValid())
     {
         DWORD dwError = GetLastError();

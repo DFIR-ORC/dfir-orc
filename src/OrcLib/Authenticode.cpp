@@ -701,7 +701,8 @@ HRESULT Authenticode::EvaluateCheck(LONG lStatus, AuthenticodeData& data)
 HRESULT Authenticode::Verify(LPCWSTR path, AuthenticodeData& data)
 {
     auto stream = std::make_shared<FileStream>();
-    HRESULT hr = stream->OpenFile(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    HRESULT hr =
+        stream->OpenFile(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to open file '{}' [{}]", path, SystemError(hr));

@@ -58,7 +58,13 @@ HRESULT OfflineMFTReader::LoadDiskProperties()
     }
 
     auto hMFT = CreateFileApi(
-        m_szMFTFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+        m_szMFTFileName,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_SEQUENTIAL_SCAN,
+        NULL);
     if (!hMFT)
     {
         Log::Error(L"Could not open offline MFT file '{}' [{}]", m_szMFTFileName, hMFT.error());
