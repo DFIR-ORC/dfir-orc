@@ -8,56 +8,115 @@
 
 #include "WofChunks.h"
 
+#include <limits>
+
 #include "Log/Log.h"
+#include "Text/Fmt/std_error_code.h"
 
 using namespace Orc::Ntfs;
 using namespace Orc;
 
 namespace {
 
+// Whole range check, overflow safe: 'size' bytes starting at 'offset' must lie inside 'bufferSize'.
+bool IsRangeValid(size_t bufferSize, uint64_t offset, uint64_t size)
+{
+    return offset <= bufferSize && size <= bufferSize - offset;
+}
+
+// One chunk table entry, little endian, read byte by byte. The table is raw bytes off the volume: it carries no
+// alignment guarantee for a 64 bit load, and aliasing it with a pointer cast would be undefined.
+template <typename ChunkOffsetType>
+uint64_t ReadChunkTableEntry(BufferView table, size_t index)
+{
+    uint64_t value = 0;
+    const size_t at = index * sizeof(ChunkOffsetType);
+    for (size_t byte = 0; byte < sizeof(ChunkOffsetType); ++byte)
+    {
+        value |= static_cast<uint64_t>(table[at + byte]) << (8 * byte);
+    }
+
+    return value;
+}
+
+// The table holds one offset per chunk except the first, each relative to the end of the table: chunk 0 starts
+// where the table ends, chunk i where entry i-1 says, and the last chunk runs to the end of the compressed data.
+//
+// Every offset here comes off the volume. The loop is bound by 'chunkCount', which the caller has already checked
+// against both the buffer and the output span, never by the buffer's own length; and each location is validated
+// before being written, because an offset or size the compressed stream could not contain would send a later read
+// outside it.
 template <typename ChunkOffsetType>
 void ParseLocations(
-    BufferView& buffer,
+    BufferView buffer,
     uint64_t compressedSize,
     uint64_t chunkCount,
-    gsl::span<WofChunks::ChunkLocation>& table)
+    gsl::span<WofChunks::ChunkLocation> table,
+    std::error_code& ec)
 {
-    using ChunkOffsets = std::basic_string_view<ChunkOffsetType>;
-
-    ChunkOffsets offsets(
-        reinterpret_cast<const ChunkOffsetType*>(buffer.data()), buffer.size() / sizeof(ChunkOffsetType));
-
-    if (chunkCount == 0 || offsets.empty() || table.empty())
+    const uint64_t entryCount = chunkCount - 1;  // 'chunkCount' is at least one, checked by the caller
+    const uint64_t tableSize = entryCount * sizeof(ChunkOffsetType);
+    if (!IsRangeValid(buffer.size(), 0, tableSize) || chunkCount > table.size())
     {
+        ec = std::make_error_code(std::errc::message_size);
+        Log::Debug(
+            "Failed to parse chunk offset table: {} chunks need {} bytes of {} and {} entries of {} [{}]",
+            chunkCount,
+            tableSize,
+            buffer.size(),
+            chunkCount,
+            table.size(),
+            ec);
         return;
     }
 
-    auto shift = std::is_same_v<ChunkOffsetType, uint32_t> ? 2 : 3;
-    const auto tableSize = (chunkCount - 1) << shift;
-
-    uint64_t tableOffset = 0;
-
-    uint64_t base = tableSize;
-    base = base + tableSize;
-
-    if (offsets.size() == 1)
+    if (tableSize > compressedSize)
     {
-        table[0].offset = 0;
-        table[0].size = compressedSize;
+        ec = std::make_error_code(std::errc::bad_message);
+        Log::Debug(
+            "Failed to parse chunk offset table: table of {} bytes exceeds the {} compressed [{}]",
+            tableSize,
+            compressedSize,
+            ec);
+        return;
     }
-    else
-    {
-        table[0].offset = tableSize;
-        table[0].size = offsets[0];
 
-        for (size_t i = 1; i < offsets.size(); ++i)
+    uint64_t begin = tableSize;
+    for (uint64_t index = 0; index < chunkCount; ++index)
+    {
+        // The last chunk has no entry of its own: it ends where the compressed data does.
+        uint64_t end = compressedSize;
+        if (index < entryCount)
         {
-            table[i].offset = offsets[i - 1] + tableSize;
-            table[i].size = offsets[i] - offsets[i - 1];  // wrong for last item but fixed out the loop
+            // A wrapped sum lands below 'begin' and is caught with everything else below.
+            end = ReadChunkTableEntry<ChunkOffsetType>(buffer, static_cast<size_t>(index)) + tableSize;
         }
 
-        auto& last = table[offsets.size() - 1];
-        last.size = compressedSize - last.offset;
+        if (end < begin || end > compressedSize)
+        {
+            ec = std::make_error_code(std::errc::bad_message);
+            Log::Debug(
+                "Failed to parse chunk offset table: chunk {} spans {} to {} of {} compressed bytes [{}]",
+                index,
+                begin,
+                end,
+                compressedSize,
+                ec);
+            return;
+        }
+
+        const uint64_t size = end - begin;
+        if (size == 0 || size > std::numeric_limits<uint32_t>::max())
+        {
+            ec = std::make_error_code(std::errc::bad_message);
+            Log::Debug("Failed to parse chunk offset table: chunk {} is {} bytes [{}]", index, size, ec);
+            return;
+        }
+
+        WofChunks::ChunkLocation& location = table[static_cast<size_t>(index)];
+        location.offset = begin;
+        location.size = static_cast<uint32_t>(size);
+        begin = end;
     }
 }
 
@@ -83,23 +142,25 @@ WofChunks::WofChunks(WofAlgorithm algorithm, uint64_t compressedSize, uint64_t u
     , m_chunkCount(GetWofChunkCount(algorithm, uncompressedSize))
 {
 }
+
 void WofChunks::ParseLocations(BufferView buffer, gsl::span<ChunkLocation> table, std::error_code& ec) const
 {
     if (m_chunkCount == 0)
     {
         ec = std::make_error_code(std::errc::message_size);
-        Log::Debug("Failed to parse chunk offset table: chunk count is zero");
+        Log::Debug("Failed to parse chunk offset table: chunk count is zero [{}]", ec);
         return;
     }
 
-    const auto expectedBufferSize = m_chunkCount * GetChunkOffsetSize();
+    const uint64_t expectedBufferSize = m_chunkCount * GetChunkOffsetSize();
     if (buffer.size() < expectedBufferSize)
     {
         ec = std::make_error_code(std::errc::message_size);
         Log::Debug(
-            "Failed to parse chunk offset table: input buffer is too small (expected: {}, got: {})",
+            "Failed to parse chunk offset table: input buffer is too small (expected: {}, got: {}) [{}]",
             expectedBufferSize,
-            buffer.size());
+            buffer.size(),
+            ec);
         return;
     }
 
@@ -107,19 +168,22 @@ void WofChunks::ParseLocations(BufferView buffer, gsl::span<ChunkLocation> table
     {
         ec = std::make_error_code(std::errc::message_size);
         Log::Debug(
-            "Failed to parse chunk offset table: output table is too small (expected: {}, got: {})",
+            "Failed to parse chunk offset table: output table is too small (expected: {}, got: {}) [{}]",
             m_chunkCount,
-            table.size());
+            table.size(),
+            ec);
         return;
     }
 
+    // A file at or past 4GB uncompressed needs 64 bit offsets to address its own compressed data. Either way a
+    // failure is reported through 'ec', logged where the offending entry was read.
     if (GetChunkOffsetSize() == sizeof(uint64_t))
     {
-        ::ParseLocations<uint64_t>(buffer, m_compressedSize, m_chunkCount, table);
+        ::ParseLocations<uint64_t>(buffer, m_compressedSize, m_chunkCount, table, ec);
     }
     else
     {
-        ::ParseLocations<uint32_t>(buffer, m_compressedSize, m_chunkCount, table);
+        ::ParseLocations<uint32_t>(buffer, m_compressedSize, m_chunkCount, table, ec);
     }
 }
 
@@ -186,7 +250,14 @@ uint8_t GetWofChunkOffsetSize(uint64_t uncompressedSize)
 
 uint32_t GetWofLastChunkSize(uint64_t uncompressedSize, uint32_t chunkSize)
 {
-    return ((uncompressedSize - 1) & (chunkSize - 1)) + 1;
+    // An empty file has no last chunk, and a chunk size of zero comes from an algorithm with no chunk geometry:
+    // both would wrap the mask below into a nonsense size rather than say so.
+    if (uncompressedSize == 0 || chunkSize == 0)
+    {
+        return 0;
+    }
+
+    return static_cast<uint32_t>(((uncompressedSize - 1) & (chunkSize - 1)) + 1);
 }
 
 }  // namespace Ntfs
