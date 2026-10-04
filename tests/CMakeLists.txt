@@ -9,6 +9,10 @@
 
 add_subdirectory(OrcLibTest)
 
+if(ORC_BUILD_LZX_FUZZ)
+    add_subdirectory(OrcLzxFuzz)
+endif()
+
 if(ORC_BUILD_APACHE_ORC)
     add_subdirectory(OrcApacheOrcTest)
 endif()
