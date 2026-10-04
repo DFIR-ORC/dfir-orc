@@ -80,6 +80,7 @@ set(SRC_DISK
     "reparse_point.cpp"
     "ntfs_security_descriptor_entry_test.cpp"
     "mft_record_attribute_bounds_test.cpp"
+    "lzx_decompressor_test.cpp"
     "wof.cpp"
 )
 
