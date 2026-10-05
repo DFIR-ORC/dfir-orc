@@ -243,6 +243,23 @@ constexpr auto CONFIG_UPLOAD_AWS_CLOCK = 33U;
 constexpr auto CONFIG_UPLOAD_RETRY = 34U;
 constexpr auto CONFIG_UPLOAD_RETRY_DELAY = 35U;
 
+// <uploads>: several destinations, each one an <upload> fallback chain of its own. Attributes first,
+// then the <destination> list: AddAttribute and AddChildNodeList both require
+// dwIndex == SubItems.size(), so the order of these constants IS the registration order.
+constexpr auto CONFIG_UPLOADS_FILTER_INC = 0U;
+constexpr auto CONFIG_UPLOADS_FILTER_EXC = 1U;
+constexpr auto CONFIG_UPLOADS_DELETE_WHEN_DONE = 2U;
+constexpr auto CONFIG_UPLOADS_DESTINATION = 3U;
+
+// Attributes/children of a single <destination> (indices local to the destination item), same
+// ascending-registration rule.
+constexpr auto CONFIG_DESTINATION_NAME = 0U;
+constexpr auto CONFIG_DESTINATION_REQUIRED = 1U;
+constexpr auto CONFIG_DESTINATION_ARTIFACTS = 2U;
+constexpr auto CONFIG_DESTINATION_FILTER_INC = 3U;
+constexpr auto CONFIG_DESTINATION_FILTER_EXC = 4U;
+constexpr auto CONFIG_DESTINATION_UPLOAD = 5U;
+
 // Attributes/children of a single <rest> step (indices local to the step item).
 constexpr auto CONFIG_REST_HTTP_METHOD = 0U;
 constexpr auto CONFIG_REST_PATH = 1U;

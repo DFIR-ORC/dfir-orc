@@ -34,6 +34,12 @@ HRESULT upload_attributes(ConfigItem& item);
 // silently drops every proxy setting at parse time).
 HRESULT upload_proxy_attributes(ConfigItem& item);
 HRESULT upload(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"upload");
+// The <upload> NODELIST form (a fallback chain), as opposed to upload()'s single node. Lives here
+// rather than in OrcCommand so both the Wolf schema and <destination> register the identical
+// attribute set, <header> list, <rest> steps and proxy attributes from one place.
+HRESULT upload_list(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"upload");
+// The <uploads> block: several <destination> entries, each one an <upload> fallback chain.
+HRESULT uploads(ConfigItem& parent, DWORD dwIndex);
 HRESULT rest_step(ConfigItem& parent, DWORD dwIndex);
 
 // SAMPLE content attribute

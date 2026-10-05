@@ -62,6 +62,7 @@ set(SRC_UTILITIES
     "registry.cpp"
     "temporary.cpp"
     "upload_validate_test.cpp"
+    "upload_destinations_test.cpp"
     "webdav_upload_test.cpp"
     "http_client_test.cpp"
     "rest_form_login_test.cpp"

@@ -81,5 +81,7 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item[ORC_OUTCOME].AddAttribute(L"upload", WOLFLAUNCHER_OUTCOME_UPLOAD, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = Orc::Config::Common::uploads(item, ORC_UPLOADS)))
+        return hr;
     return S_OK;
 }

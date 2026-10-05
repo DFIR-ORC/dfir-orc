@@ -175,30 +175,12 @@ HRESULT Orc::Config::Wolf::recipient(ConfigItem& parent, DWORD dwIndex)
     return S_OK;
 }
 
+// The Wolf <upload> list is the shared OrcLib schema. Kept as a named entry point because both root
+// schemas call it by name, and because OrcLibTest links OrcLib only: the registration itself has to
+// live there to be unit-testable, and one copy of it is the only way the two forms cannot drift.
 HRESULT Orc::Config::Wolf::upload(ConfigItem& parent, DWORD dwIndex)
 {
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNodeList(L"upload", dwIndex, ConfigItem::OPTION)))
-        return hr;
-    // Register attributes directly on the NodeList template so the parser can populate
-    // them into each NodeList entry without an extra level of nesting.
-    if (FAILED(hr = Orc::Config::Common::upload_attributes(parent[dwIndex])))
-        return hr;
-    // The <header> child carries custom HTTP headers (e.g. Authorization, Content-Range for
-    // chunked offsets). Without registering it here the parser rejects it as an unexpected
-    // element and the headers are silently dropped (mirrors Orc::Config::Common::upload).
-    if (FAILED(hr = parent[dwIndex].AddChildNodeList(L"header", CONFIG_UPLOAD_HEADER_LIST, ConfigItem::OPTION)))
-        return hr;
-    // The <rest> step list drives REST multi-step uploads (MKCOL/PUT/MOVE/PROPFIND...); same schema
-    // as Orc::Config::Common::upload so /local and the embedded WolfLauncher config behave identically.
-    if (FAILED(hr = Orc::Config::Common::rest_step(parent[dwIndex], CONFIG_UPLOAD_REST_LIST)))
-        return hr;
-    // Proxy attributes (same set/order as Orc::Config::Common::upload), via the shared helper so the
-    // two upload schemas cannot drift. Without this, every proxy setting in an embedded WolfLauncher
-    // config or /local.xml parses to nothing (the upload silently runs with no proxy).
-    if (FAILED(hr = Orc::Config::Common::upload_proxy_attributes(parent[dwIndex])))
-        return hr;
-    return S_OK;
+    return Orc::Config::Common::upload_list(parent, dwIndex);
 }
 
 HRESULT Orc::Config::Wolf::root(ConfigItem& item)
@@ -259,6 +241,8 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
     if (FAILED(hr = item.AddAttribute(L"MultipleInstance", WOLFLAUNCHER_MULTIPLE_INSTANCE, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"InstanceId", WOLFLAUNCHER_INSTANCE_ID, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = Orc::Config::Common::uploads(item, WOLFLAUNCHER_UPLOADS)))
         return hr;
 
     return S_OK;

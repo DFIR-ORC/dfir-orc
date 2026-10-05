@@ -31,6 +31,9 @@ constexpr auto ORC_MULTIPLE_INSTANCE = 14L;
 constexpr auto ORC_INSTANCE_ID = 15L;
 constexpr auto ORC_OUTLINE = 16L;
 constexpr auto ORC_OUTCOME = 17L;
+// The <uploads> block. Attributes and child nodes share one index sequence in this schema, so this
+// is only valid once everything numbered up to 17 is registered: it goes last.
+constexpr auto ORC_UPLOADS = 18L;
 
 constexpr auto ORC_ORC = 0L;
 

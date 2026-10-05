@@ -140,6 +140,67 @@ HRESULT Orc::Config::Common::upload(ConfigItem& parent, DWORD dwIndex, std::wstr
     return S_OK;
 }
 
+// The repeatable form of <upload>: a NodeList whose entries are one fallback chain. Same schema as
+// upload() above, registered on the NodeList template so the parser populates each entry without an
+// extra level of nesting. Both the Wolf <upload> list and <destination> call this, so the attribute
+// set, the <header> list, the <rest> steps and the proxy attributes cannot drift between them.
+HRESULT Orc::Config::Common::upload_list(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
+{
+    HRESULT hr = E_FAIL;
+    // std::wstring_view::data() is not guaranteed NUL-terminated, and AddChildNodeList takes LPCWSTR;
+    // materialise it rather than relying on every caller passing a literal.
+    const std::wstring element(elementName);
+    if (FAILED(hr = parent.AddChildNodeList(element.c_str(), dwIndex, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = upload_attributes(parent.SubItems[dwIndex])))
+        return hr;
+    if (FAILED(
+            hr = parent.SubItems[dwIndex].AddChildNodeList(L"header", CONFIG_UPLOAD_HEADER_LIST, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = rest_step(parent.SubItems[dwIndex], CONFIG_UPLOAD_REST_LIST)))
+        return hr;
+    if (FAILED(hr = upload_proxy_attributes(parent.SubItems[dwIndex])))
+        return hr;
+    return S_OK;
+}
+
+// The <uploads> block: several <destination> entries, each one an <upload> fallback chain of its own.
+// Registered beside upload_list() rather than in place of it: a top-level <upload> list keeps its own
+// meaning, and the reader refuses a configuration that uses both forms.
+HRESULT Orc::Config::Common::uploads(ConfigItem& parent, DWORD dwIndex)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = parent.AddChildNode(L"uploads", dwIndex, ConfigItem::OPTION)))
+        return hr;
+
+    ConfigItem& uploadsItem = parent.SubItems[dwIndex];
+    if (FAILED(hr = uploadsItem.AddAttribute(L"include", CONFIG_UPLOADS_FILTER_INC, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = uploadsItem.AddAttribute(L"exclude", CONFIG_UPLOADS_FILTER_EXC, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = uploadsItem.AddAttribute(L"delete_when_done", CONFIG_UPLOADS_DELETE_WHEN_DONE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = uploadsItem.AddChildNodeList(L"destination", CONFIG_UPLOADS_DESTINATION, ConfigItem::OPTION)))
+        return hr;
+
+    ConfigItem& destination = uploadsItem.SubItems[CONFIG_UPLOADS_DESTINATION];
+    // 'name' is mandatory: every log line and every refusal names the destination, and two unnamed
+    // ones cannot be told apart.
+    if (FAILED(hr = destination.AddAttribute(L"name", CONFIG_DESTINATION_NAME, ConfigItem::MANDATORY)))
+        return hr;
+    if (FAILED(hr = destination.AddAttribute(L"required", CONFIG_DESTINATION_REQUIRED, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = destination.AddAttribute(L"artifacts", CONFIG_DESTINATION_ARTIFACTS, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = destination.AddAttribute(L"include", CONFIG_DESTINATION_FILTER_INC, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = destination.AddAttribute(L"exclude", CONFIG_DESTINATION_FILTER_EXC, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = upload_list(destination, CONFIG_DESTINATION_UPLOAD)))
+        return hr;
+    return S_OK;
+}
+
 // The shared tail of the <upload> schema: proxy attributes (indices 22-26), follow_redirects (27), the
 // AWS SigV4 attributes (28-33) and the retry policy (34-35). Must be registered AFTER the <header> list
 // (20) and <rest> list (21) because ConfigItem::AddAttribute requires dwIndex == SubItems.size() (strictly

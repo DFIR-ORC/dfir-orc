@@ -82,6 +82,9 @@ constexpr auto WOLFLAUNCHER_UPLOAD = 10L;
 constexpr auto WOLFLAUNCHER_PRIORITY = 11L;
 constexpr auto WOLFLAUNCHER_MULTIPLE_INSTANCE = 12L;
 constexpr auto WOLFLAUNCHER_INSTANCE_ID = 13L;
+// The <uploads> block, appended last: ConfigItem::AddAttribute and AddChildNodeList both require
+// index == SubItems.size(), so a new root item can only go at the end.
+constexpr auto WOLFLAUNCHER_UPLOADS = 14L;
 
 // 'encrypt' is added here, on nodes whose own items are registered elsewhere, so every index must
 // continue that node's numbering: ConfigItem::AddAttribute requires index == SubItems.size(). Outline
