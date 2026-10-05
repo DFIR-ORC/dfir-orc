@@ -267,9 +267,25 @@ public:
     std::wstring Compression;
     std::wstring Password;
 
-    // Ordered upload fallback list: front() is the primary, each later entry is tried only when the ones before it
-    // failed. An <upload> that fails Configure is skipped, so this may be shorter than the configuration.
-    std::vector<std::shared_ptr<Upload>> UploadOutputs;
+    // One upload destination: a fallback chain plus how the run treats its failure. Destinations run
+    // one after another, never concurrently, to protect the uplink of the collected host.
+    struct UploadDestination
+    {
+        std::wstring Name;  // empty for a legacy top-level <upload> list
+        bool Required = true;  // a failed required destination is Critical, an optional one Error
+        bool Artifacts = true;  // outline/outcome/log/console reach this destination
+        // Ordered fallback chain: front() is the primary, each later entry is tried only when the ones
+        // before it failed. An <upload> that fails Configure is skipped, so this may be shorter than
+        // the configuration.
+        std::vector<std::shared_ptr<Upload>> Chain;
+    };
+
+    std::vector<UploadDestination> UploadDestinations;
+
+    // <uploads delete_when_done="yes">: delete a local file once every required destination that
+    // wanted it confirmed receipt. Replaces operation="move", which is refused with more than one
+    // destination because it deletes the source under a peer.
+    bool DeleteWhenDone = false;
 
 public:
     Encoding OutputEncoding = Encoding::UTF8;

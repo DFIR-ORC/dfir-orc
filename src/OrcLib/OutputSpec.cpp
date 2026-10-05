@@ -1277,7 +1277,7 @@ HRESULT OutputSpec::Upload::ApplyServerScheme(const std::wstring& server)
         //
         // Refused only for REST, like the other new hard rules (see the TODO in Validate). BITS and FileCopy
         // have always accepted a path here: refusing one would drop the upload of a config that works today
-        // - AppendUploadOutputs skips it, and refuses to run when it was the only upload - and would
+        // - the config reader skips it, and refuses to run when it was the only upload - and would
         // hard-abort ToolEmbed on it. Warn instead, and expand the refusal in a NEXT MAJOR VERSION.
         if (bitsMode != BITSMode::SMB && ServerName.find_first_of(L"/\\") != std::wstring::npos)
         {

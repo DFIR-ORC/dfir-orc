@@ -937,12 +937,12 @@ WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue, std:
             archiveSize());
     }
 
-    if (m_Output.UploadOutputs.empty())
+    if (m_Output.UploadDestinations.empty() || m_Output.UploadDestinations.front().Chain.empty())
     {
         return S_OK;
     }
 
-    const OutputSpec::Upload& primary = *m_Output.UploadOutputs.front();
+    const OutputSpec::Upload& primary = *m_Output.UploadDestinations.front().Chain.front();
 
     // The archive is recorded whatever the primary decides: a fallback <upload> applies its own
     // 'operation' and its own filters when the request is replayed to it (see MakeReplayRequest), so a

@@ -264,7 +264,8 @@ public:
 
     bool ShouldUpload() const
     {
-        if (!m_Output.UploadOutputs.empty() && m_Output.UploadOutputs.front()->IsFileUploaded(m_strOutputFileName))
+        if (!m_Output.UploadDestinations.empty() && !m_Output.UploadDestinations.front().Chain.empty()
+            && m_Output.UploadDestinations.front().Chain.front()->IsFileUploaded(m_strOutputFileName))
             return true;
         return false;
     }

@@ -11,6 +11,7 @@
 #include "Configuration/ConfigFile.h"
 #include "Configuration/ConfigFile_Common.h"
 #include "Configuration/ConfigFileReader.h"
+#include "Configuration/UploadDestinationReader.h"
 #include "MemoryStream.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -112,6 +113,123 @@ public:
             root.SubItems[0].SubItems[CONFIG_UPLOADS_DESTINATION].NodeList[0].SubItems[CONFIG_DESTINATION_UPLOAD];
         Assert::AreEqual(size_t(1), uploadNode.NodeList.size());
         Assert::AreEqual(size_t(1), uploadNode.NodeList[0].SubItems[CONFIG_UPLOAD_REST_LIST].NodeList.size());
+    }
+};
+
+// A top-level <upload> list must keep meaning exactly what it means today: one destination, one
+// chain, required. This is the compatibility assertion the whole design rests on.
+TEST_CLASS(LegacyUploadChainTest)
+{
+private:
+    static HRESULT ReadLegacyXml(const std::string& xmlUtf8, std::vector<OutputSpec::UploadDestination>& out)
+    {
+        ConfigItem root;
+        root.strName = L"dfir-orc";
+        root.Flags = ConfigItem::MANDATORY;
+        root.dwIndex = 0L;
+        root.Status = ConfigItem::MISSING;
+
+        HRESULT hr = Orc::Config::Common::upload_list(root, 0);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        auto stream = std::make_shared<MemoryStream>();
+        hr = stream->OpenForReadOnly(const_cast<char*>(xmlUtf8.data()), xmlUtf8.size());
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        ConfigFileReader reader;
+        hr = reader.ReadConfig(stream, root);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        return Orc::Config::ReadLegacyUploadChain(root.SubItems[0], out);
+    }
+
+public:
+    TEST_METHOD(TwoSiblingsBecomeOneRequiredUnnamedDestination)
+    {
+        const std::string xml =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<dfir-orc>\n"
+            "  <upload method=\"REST\" server=\"http://a.example\"/>\n"
+            "  <upload method=\"REST\" server=\"http://b.example\"/>\n"
+            "</dfir-orc>\n";
+
+        std::vector<OutputSpec::UploadDestination> destinations;
+        Assert::IsTrue(SUCCEEDED(ReadLegacyXml(xml, destinations)));
+
+        Assert::AreEqual(size_t(1), destinations.size());
+        Assert::IsTrue(destinations[0].Name.empty());
+        Assert::IsTrue(destinations[0].Required);
+        Assert::IsTrue(destinations[0].Artifacts);
+        Assert::AreEqual(size_t(2), destinations[0].Chain.size());
+        Assert::AreEqual(std::wstring(L"a.example"), destinations[0].Chain[0]->ServerName);
+        Assert::AreEqual(std::wstring(L"b.example"), destinations[0].Chain[1]->ServerName);
+    }
+
+    // Today's rule, preserved: one bad entry does not cost the others. 'uri' together with 'server'
+    // is a real Configure failure (E_INVALIDARG), unlike an unknown method, which is documented to
+    // become NoUpload and configure fine.
+    TEST_METHOD(UnconfigurableEntryIsSkippedWhileAnotherRemains)
+    {
+        const std::string xml =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<dfir-orc>\n"
+            "  <upload method=\"REST\" server=\"http://a.example\" uri=\"http://a.example\"/>\n"
+            "  <upload method=\"REST\" server=\"http://b.example\"/>\n"
+            "</dfir-orc>\n";
+
+        std::vector<OutputSpec::UploadDestination> destinations;
+        Assert::IsTrue(SUCCEEDED(ReadLegacyXml(xml, destinations)));
+
+        Assert::AreEqual(size_t(1), destinations.size());
+        Assert::AreEqual(size_t(1), destinations[0].Chain.size());
+        Assert::AreEqual(std::wstring(L"b.example"), destinations[0].Chain[0]->ServerName);
+    }
+
+    TEST_METHOD(NoUsableEntryFails)
+    {
+        const std::string xml =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<dfir-orc>\n"
+            "  <upload method=\"REST\" server=\"http://a.example\" uri=\"http://a.example\"/>\n"
+            "</dfir-orc>\n";
+
+        std::vector<OutputSpec::UploadDestination> destinations;
+        Assert::IsTrue(FAILED(ReadLegacyXml(xml, destinations)));
+    }
+
+    // The embedded WolfLauncher config and /local are read by two different functions into the SAME
+    // vector. Two legacy lists used to concatenate into one fallback chain; they must still do so,
+    // rather than becoming two independent destinations that each get a copy of the collection.
+    TEST_METHOD(TwoLegacyListsConcatenateIntoOneChain)
+    {
+        const std::string first =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<dfir-orc>\n"
+            "  <upload method=\"REST\" server=\"http://a.example\"/>\n"
+            "</dfir-orc>\n";
+        const std::string second =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<dfir-orc>\n"
+            "  <upload method=\"REST\" server=\"http://b.example\"/>\n"
+            "</dfir-orc>\n";
+
+        std::vector<OutputSpec::UploadDestination> destinations;
+        Assert::IsTrue(SUCCEEDED(ReadLegacyXml(first, destinations)));
+        Assert::IsTrue(SUCCEEDED(ReadLegacyXml(second, destinations)));
+
+        Assert::AreEqual(size_t(1), destinations.size(), L"two legacy lists must stay one destination");
+        Assert::AreEqual(size_t(2), destinations[0].Chain.size());
+        Assert::AreEqual(std::wstring(L"a.example"), destinations[0].Chain[0]->ServerName);
+        Assert::AreEqual(std::wstring(L"b.example"), destinations[0].Chain[1]->ServerName);
     }
 };
 

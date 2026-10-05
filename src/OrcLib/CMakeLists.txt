@@ -61,6 +61,8 @@ set(SRC_CONFIG
     "Configuration/ConfigFile_Common.h"
     "Configuration/ConfigFileReader.cpp"
     "Configuration/ConfigFileReader.h"
+    "Configuration/UploadDestinationReader.cpp"
+    "Configuration/UploadDestinationReader.h"
     "Configuration/ConfigFileWriter.cpp"
     "Configuration/ConfigFileWriter.h"
     "Configuration/ConfigItem.cpp"

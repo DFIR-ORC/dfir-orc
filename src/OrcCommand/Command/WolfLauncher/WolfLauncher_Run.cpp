@@ -336,7 +336,7 @@ HRESULT CloseStructuredOutput(
 // Rebuild one recorded upload request for the spec it is about to be replayed to.
 //
 // Every file the run produces is recorded when it is produced, whatever the PRIMARY spec
-// (UploadOutputs.front()) makes of it, so a fallback can be handed the same files later. The recorded
+// (the first destination's first entry) makes of it, so a fallback can be handed the same files later. The recorded
 // message carries the primary's decisions though, so replaying it as recorded applies them to somebody
 // else's destination: a file that fallback excludes is sent to it anyway, and a primary
 // operation="move" deletes a local archive the fallback asked to keep with operation="copy".
@@ -986,12 +986,12 @@ void Orc::Command::Wolf::Main::UploadSingleFile(
         return;
     }
 
-    if (config.Output.UploadOutputs.empty())
+    if (config.Output.UploadDestinations.empty() || config.Output.UploadDestinations.front().Chain.empty())
     {
         return;
     }
 
-    const OutputSpec::Upload& primary = *config.Output.UploadOutputs.front();
+    const OutputSpec::Upload& primary = *config.Output.UploadDestinations.front().Chain.front();
     const bool filtered = (subject == UploadSubject::CollectedData);
 
     // Collected data is what 'include'/'exclude' select, so an archive reaching the upload agents here -
@@ -1082,9 +1082,13 @@ HRESULT Main::CompleteUpload()
     // like any other rather than only being fallen back from.
     bool needsFreshAgent = (m_pUploadAgent == nullptr);
 
-    for (size_t i = 0; i < config.Output.UploadOutputs.size() && !uploaded; ++i)
+    // Only the first destination's chain for now; the outer loop over every destination lands with the
+    // <uploads> runtime.
+    const std::vector<std::shared_ptr<OutputSpec::Upload>>& chain = config.Output.UploadDestinations.front().Chain;
+
+    for (size_t i = 0; i < chain.size() && !uploaded; ++i)
     {
-        const OutputSpec::Upload& uploadSpec = *config.Output.UploadOutputs[i];
+        const OutputSpec::Upload& uploadSpec = *chain[i];
 
         // What this entry has already received, so a retry does not send it a second time. Scoped to the
         // entry on purpose: the next destination has none of it.
@@ -1152,7 +1156,7 @@ HRESULT Main::CompleteUpload()
             }
         }
 
-        if (!uploaded && i + 1 < config.Output.UploadOutputs.size())
+        if (!uploaded && i + 1 < chain.size())
         {
             // attemptsMade is 0 when the entry never got as far as a live agent, which is a different
             // story from an attempt that ran and failed.
@@ -1175,7 +1179,7 @@ HRESULT Main::CompleteUpload()
         Log::Critical(
             L"UPLOAD: no configured upload succeeded ({} configured); the files that were not uploaded remain "
             L"on this host",
-            config.Output.UploadOutputs.size());
+            chain.size());
     }
 
     return S_OK;
@@ -1585,9 +1589,9 @@ HRESULT Main::Run_Execute()
 {
     HRESULT hr = E_FAIL;
 
-    if (!config.Output.UploadOutputs.empty())
+    if (!config.Output.UploadDestinations.empty() && !config.Output.UploadDestinations.front().Chain.empty())
     {
-        if (FAILED(hr = InitializeUpload(*config.Output.UploadOutputs.front())))
+        if (FAILED(hr = InitializeUpload(*config.Output.UploadDestinations.front().Chain.front())))
         {
             Log::Error(
                 L"Failed to initialize upload #1; files are kept for the fallback uploads, tried at the end of the run "
@@ -1920,7 +1924,7 @@ HRESULT Main::Run_Execute()
 
         // The log is closed, sealed and uploaded before the upload completes, so it can never hold the result of
         // that upload. Say so in the file itself, for whoever reads it without the console output.
-        if (!config.Output.UploadOutputs.empty())
+        if (!config.Output.UploadDestinations.empty())
         {
             Log::Info(
                 L"The log file ends here: the upload is completed after it is closed, and its result is reported on "
@@ -1950,7 +1954,7 @@ HRESULT Main::Run_Execute()
         }
     }
 
-    if (!config.Output.UploadOutputs.empty())
+    if (!config.Output.UploadDestinations.empty())
     {
         hr = CompleteUpload();
         if (FAILED(hr))

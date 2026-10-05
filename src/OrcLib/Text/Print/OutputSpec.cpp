@@ -74,15 +74,15 @@ void Print(Tree& node, const OutputSpec& output)
 
     Print(node, outputPath);
 
-    if (!output.UploadOutputs.empty())
+    if (!output.UploadDestinations.empty())
     {
-        for (size_t i = 0; i < output.UploadOutputs.size(); ++i)
+        const std::vector<std::shared_ptr<OutputSpec::Upload>>& chain = output.UploadDestinations.front().Chain;
+        for (size_t i = 0; i < chain.size(); ++i)
         {
-            const std::wstring uploadLabel = output.UploadOutputs.size() > 1
-                ? fmt::format(L"Upload configuration #{}:", i + 1)
-                : std::wstring(L"Upload configuration:");
+            const std::wstring uploadLabel = chain.size() > 1 ? fmt::format(L"Upload configuration #{}:", i + 1)
+                                                              : std::wstring(L"Upload configuration:");
             auto uploadNode = node.AddNode(4, uploadLabel);
-            Print(uploadNode, *(output.UploadOutputs[i]));
+            Print(uploadNode, *(chain[i]));
         }
     }
 }
