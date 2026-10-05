@@ -498,10 +498,28 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
+    // One form or the other, never both: merging them would mean guessing which the author meant, and
+    // guessing wrong loses a collection.
+    if (configitem[WOLFLAUNCHER_UPLOAD] && configitem[WOLFLAUNCHER_UPLOADS])
+    {
+        Log::Error(L"Config file uses both a top-level <upload> list and an <uploads> block; use one or the other");
+        return E_INVALIDARG;
+    }
+
     if (configitem[WOLFLAUNCHER_UPLOAD])
     {
         if (auto hr =
                 Orc::Config::ReadLegacyUploadChain(configitem[WOLFLAUNCHER_UPLOAD], config.Output.UploadDestinations);
+            FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+    if (configitem[WOLFLAUNCHER_UPLOADS])
+    {
+        if (auto hr = Orc::Config::ReadUploadDestinations(
+                configitem[WOLFLAUNCHER_UPLOADS], config.Output.UploadDestinations, config.Output.DeleteWhenDone);
             FAILED(hr))
         {
             return hr;
@@ -688,9 +706,26 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     }
 
+    // Same rule as the embedded WolfLauncher config: one form or the other, never both.
+    if (configitem[ORC_UPLOAD] && configitem[ORC_UPLOADS])
+    {
+        Log::Error(L"Config file uses both a top-level <upload> list and an <uploads> block; use one or the other");
+        return E_INVALIDARG;
+    }
+
     if (configitem[ORC_UPLOAD])
     {
         if (auto hr = Orc::Config::ReadLegacyUploadChain(configitem[ORC_UPLOAD], config.Output.UploadDestinations);
+            FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+    if (configitem[ORC_UPLOADS])
+    {
+        if (auto hr = Orc::Config::ReadUploadDestinations(
+                configitem[ORC_UPLOADS], config.Output.UploadDestinations, config.Output.DeleteWhenDone);
             FAILED(hr))
         {
             return hr;

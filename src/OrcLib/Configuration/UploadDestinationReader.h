@@ -27,6 +27,16 @@ namespace Config {
 // with no upload leaves every archive on the host behind a single Error line.
 HRESULT ReadLegacyUploadChain(const ConfigItem& uploadNode, std::vector<OutputSpec::UploadDestination>& destinations);
 
+// Read a <uploads> block: each <destination> is one sequential destination, its <upload> children are
+// its fallback chain. Filters inherit <uploads> -> <destination> -> <upload>, nearest wins, each
+// attribute independently and keyed on attribute presence, so include="" means "deliberately empty,
+// do not inherit". Refused (error returned): an empty block, a destination with no usable <upload>
+// when it is required, a duplicate name (case-insensitively), and nothing left after the drops.
+HRESULT ReadUploadDestinations(
+    const ConfigItem& uploadsNode,
+    std::vector<OutputSpec::UploadDestination>& destinations,
+    bool& deleteWhenDone);
+
 }  // namespace Config
 }  // namespace Orc
 

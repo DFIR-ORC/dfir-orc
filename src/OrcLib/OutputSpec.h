@@ -34,6 +34,11 @@ class ConfigItem;
 struct ProxySettings;
 struct HttpClientConfig;
 
+// Split an 'include'/'exclude' attribute on ',' or ';', trimming each pattern and dropping empty ones.
+// Shared by every level that reads one, so they agree: an empty attribute means NO filter, never a
+// single empty pattern, which PathMatchSpecW would match against nothing and so exclude everything.
+std::vector<std::wstring> SplitFilterPatterns(const std::wstring& value);
+
 class OutputSpec
 {
 public:

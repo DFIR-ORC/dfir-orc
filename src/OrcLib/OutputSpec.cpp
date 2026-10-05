@@ -1320,6 +1320,24 @@ void OutputSpec::Upload::NormalizeRootPath(const std::wstring& root)
     }
 }
 
+std::vector<std::wstring> Orc::SplitFilterPatterns(const std::wstring& value)
+{
+    std::vector<std::wstring> raw;
+    boost::split(raw, value, boost::is_any_of(L",;"));
+
+    std::vector<std::wstring> patterns;
+    for (auto& pattern : raw)
+    {
+        boost::trim(pattern);
+        if (!pattern.empty())
+        {
+            patterns.push_back(pattern);
+        }
+    }
+
+    return patterns;
+}
+
 void OutputSpec::Upload::ParseUploadCommon(const ConfigItem& item)
 {
     Operation = OutputSpec::UploadOperation::Copy;
@@ -1396,14 +1414,12 @@ void OutputSpec::Upload::ParseUploadCommon(const ConfigItem& item)
 
     if (::HasValue(item, CONFIG_UPLOAD_FILTER_INC))
     {
-        boost::split(
-            FilterInclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC], boost::is_any_of(L",;"));
+        FilterInclude = SplitFilterPatterns((const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC]);
     }
 
     if (::HasValue(item, CONFIG_UPLOAD_FILTER_EXC))
     {
-        boost::split(
-            FilterExclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_EXC], boost::is_any_of(L",;"));
+        FilterExclude = SplitFilterPatterns((const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_EXC]);
     }
 
     ParseRetryPolicy(item, Retry, RetryDelay, RetryInvalid);
