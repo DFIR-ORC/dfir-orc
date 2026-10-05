@@ -61,6 +61,23 @@ constexpr bool EqualsAsciiCaseInsensitive(std::wstring_view left, std::wstring_v
     return true;
 }
 
+// Parent path of a FULL path: everything before the last separator, the trailing separator dropped. An
+// empty view when there is none (no parent to name). A relative path without a separator keeps nothing,
+// not even a drive letter, which is why callers must hand over a full path.
+//
+// Preferred over _wsplitpath_s(), whose drive and dir buffers are capped at _MAX_DRIVE and _MAX_DIR: a
+// parent over 255 characters made it fail with ERANGE, and an NTFS path reaches 32767.
+constexpr std::wstring_view ParentPath(std::wstring_view path) noexcept
+{
+    const size_t separator = path.find_last_of(L"\\/");
+    if (separator == std::wstring_view::npos)
+    {
+        return {};
+    }
+
+    return path.substr(0, separator);
+}
+
 // 'text' with spaces and tabs removed from BOTH ends - on a header line, RFC 9110's OWS. An empty view
 // when 'text' holds nothing else.
 constexpr std::wstring_view TrimSpacesAndTabs(std::wstring_view text) noexcept

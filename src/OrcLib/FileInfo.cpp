@@ -16,6 +16,7 @@
 #include "MFTRecordFileInfo.h"
 #include "VolumeReader.h"
 #include "Text/CryptString.h"
+#include "Utils/String.h"
 
 #include "TableOutput.h"
 #include "TableOutputWriter.h"
@@ -1030,23 +1031,18 @@ HRESULT FileInfo::WriteFileName(ITableOutput& output)
     return output.WriteFormated(L"{}{}", fname, ext);
 }
 
+// ParentPath() drops the trailing '\' on its own, as Internal [76] asks for weak csv parsers.
 HRESULT FileInfo::WriteParentName(ITableOutput& output)
 {
-    WCHAR drive[_MAX_DRIVE];
-    WCHAR dir[_MAX_DIR];
-    errno_t err;
-
-    if ((err = _wsplitpath_s(m_szFullName, drive, _MAX_DRIVE, dir, _MAX_DIR, NULL, 0L, NULL, 0L)) != 0)
-        return HRESULT_FROM_WIN32(err);
-
-    // Internal [76]: avoid path ending with '\\' for weak csv parsers
-    const auto dirLength = wcslen(dir);
-    if (dirLength && dir[dirLength - 1] == L'\\')
+    // Guarded because a std::wstring_view built on a null pointer is undefined behavior, not an empty view
+    if (m_szFullName == nullptr)
     {
-        dir[dirLength - 1] = L'\0';
+        auto ec = std::make_error_code(std::errc::invalid_argument);
+        Log::Debug(L"Failed to write parent name: no full name [{}]", ec);
+        return E_POINTER;
     }
 
-    return output.WriteFormated(L"{}{}", drive, dir);
+    return output.WriteString(ParentPath(m_szFullName));
 }
 
 HRESULT FileInfo::WriteExtension(ITableOutput& output)

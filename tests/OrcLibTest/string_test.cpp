@@ -7,6 +7,8 @@
 //
 #include "stdafx.h"
 
+#include <stdlib.h>  // _MAX_DIR, the cap the regression below is about
+
 #include "Utils/String.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -126,6 +128,38 @@ public:
 
         Assert::IsFalse(EqualsAsciiCaseInsensitive(nameOf(L"X-Content-Type: a"), L"Content-Type"));
         Assert::IsFalse(EqualsAsciiCaseInsensitive(nameOf(L"X-Header: Content-Type:"), L"Content-Type"));
+    }
+
+    // Regression: ParentName was built by _wsplitpath_s into dir[_MAX_DIR], so a parent over 255
+    // characters made it fail with ERANGE - reported as 0x80070022, "The wrong diskette is in the
+    // drive" - and the column came out empty. Windows container BaseLayer trees reach that length.
+    TEST_METHOD(ParentPathKeepsAParentLongerThanMaxDir)
+    {
+        const std::wstring_view path =
+            L"\\ProgramData\\Microsoft\\Windows\\Containers\\BaseImages"
+            L"\\ef7c983c-75d6-40c4-a7ac-111ee076fdbb\\BaseLayer\\Files\\Users\\WDAGUtilityAccount"
+            L"\\AppData\\Local\\Packages\\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\\LocalState"
+            L"\\ConstraintIndex\\Input_{caa7ae9d-6aad-4de5-ac61-61bc0303624e}\\settingsglobals.txt";
+
+        const std::wstring_view parent = ParentPath(path);
+
+        Assert::IsTrue(parent.size() > size_t(_MAX_DIR));  // the length _wsplitpath_s could not hold
+        Assert::IsTrue(parent == path.substr(0, path.size() - wcslen(L"\\settingsglobals.txt")));
+    }
+
+    // The shapes _wsplitpath_s returned as drive + dir, with the trailing separator dropped so a weak
+    // csv parser never sees a path ending on one (Internal [76]).
+    TEST_METHOD(ParentPathDropsTheLastComponentAndItsSeparator)
+    {
+        Assert::IsTrue(ParentPath(L"C:\\Windows\\notepad.exe") == L"C:\\Windows");
+        Assert::IsTrue(ParentPath(L"\\Windows\\notepad.exe") == L"\\Windows");
+        Assert::IsTrue(ParentPath(L"C:\\notepad.exe") == L"C:");
+        Assert::IsTrue(ParentPath(L"C:\\Windows\\") == L"C:\\Windows");  // a directory, named with a '\'
+        Assert::IsTrue(ParentPath(L"C:/Windows/notepad.exe") == L"C:/Windows");  // '/' separates too
+        Assert::IsTrue(ParentPath(L"\\Windows\\notepad.exe:ads") == L"\\Windows");  // ':' does not
+        Assert::IsTrue(ParentPath(L"\\notepad.exe").empty());  // the root is not a parent to name
+        Assert::IsTrue(ParentPath(L"notepad.exe").empty());  // no separator, nothing to name
+        Assert::IsTrue(ParentPath(L"").empty());
     }
 };
 
