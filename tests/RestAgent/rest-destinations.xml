@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Two upload destinations, each with its own fallback chain, against two local sinks. Destinations are
+  independent and run one after another, never in parallel: 'hq' is served first and overlaps with the
+  collection, 'nas' is served once the collection is over, by replaying the same recorded files.
+
+  Each sink writes to its own directory, because two destinations writing to one cannot be told apart
+  and "both received it" is the whole assertion. Run one sink on port 8089 writing to .\received and
+  another on port 8090 writing to .\received2; doc/destinations.md spells out both command lines
+  (they cannot be written here: an XML comment may not contain a double hyphen).
+
+  'hq' is required: its total failure ends the run with a Critical naming it. 'nas' is optional and
+  takes no run artifacts (no outline/outcome/log/console), so its directory holds the archives alone -
+  which is what distinguishes routing from plain redundancy.
+
+  Both use operation="copy": with more than one destination, operation="move" is refused at config
+  time, because move deletes the local file and leaves the other destination nothing to send. Use
+  <uploads delete_when_done="yes"> instead when the collected data must not stay on the host.
+-->
+<dfir-orc>
+    <uploads>
+        <destination name="hq">
+            <!-- #1 primary: unreachable, fails to initialise (connection refused on the dead port). -->
+            <upload method="REST" server="http://127.0.0.1:9" operation="copy" insecure="true">
+                <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"/>
+            </upload>
+            <!-- #2 fallback: the live sink, where this destination's copy actually lands. -->
+            <upload method="REST" server="http://127.0.0.1:8089" operation="copy" insecure="true">
+                <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"/>
+            </upload>
+        </destination>
+        <destination name="nas" required="no" artifacts="no">
+            <upload method="REST" server="http://127.0.0.1:8090" operation="copy" insecure="true">
+                <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"/>
+            </upload>
+        </destination>
+    </uploads>
+</dfir-orc>

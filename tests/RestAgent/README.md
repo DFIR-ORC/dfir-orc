@@ -33,6 +33,7 @@ server does not mean reading all of them.
 | File | What it covers |
 |------|----------------|
 | [doc/fallback.md](doc/fallback.md)     | the `<upload>` list, `retry`/`retry_delay`, which files replay, and what the tags prove |
+| [doc/destinations.md](doc/destinations.md) | the `<uploads>` block: several destinations, their order, `required`/`artifacts`, filter inheritance, `delete_when_done` |
 | [doc/proxy.md](doc/proxy.md)           | the `proxy` attribute, proxy credentials under SYSTEM, starting the proxy, its fixtures |
 | [doc/nextcloud.md](doc/nextcloud.md)   | the Nextcloud rig: the form alternative, chunking into a public share, resume, chunk ordering |
 | [doc/form-login.md](doc/form-login.md) | login against a server-rendered form, and the mock that serves one on the VM rig |

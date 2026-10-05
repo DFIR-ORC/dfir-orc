@@ -13,7 +13,7 @@ and the second is the live sink. Run it against the normal sink
 - Each file's request to the primary fails with a WinHTTP connection error (`0x80072efd`), so attempt #1 ends
   with `Failed to upload some file(s)` / `Upload #1 failed after 1 attempt(s), trying next upload...`.
 - DFIR-ORC then retries the whole set against the fallback: the sink logs one `PUT` per file returning 200, and
-  `Upload completed successfully (upload #2, attempt 1/1)` — the reassembled files appear under `received\up\`.
+  `Upload #2 completed successfully (attempt 1/1)` — the reassembled files appear under `received\up\`.
 - The body lands **only** via the fallback; the dead-port primary never reaches a listener. The run still
   reports the primary's per-file errors (non-zero error count) even though the fallback rescued the data.
 
@@ -130,3 +130,9 @@ knowing about.
 `MakeReplayRequest` and `CompleteUpload` live in `OrcCommand`, which has no unit-test project, so they
 are covered by these tags alone. The parsing and the `Validate()` rules are unit-tested in
 `tests/OrcLibTest/upload_validate_test.cpp` (`UploadRetryPolicyTest`).
+
+## Several destinations
+
+A list of `<upload>` entries is one destination with spares: the first that works ends the list, and
+the collection reaches exactly one place. To send the same collection to several independent
+destinations, each with its own chain and its own filters, see [destinations.md](destinations.md).

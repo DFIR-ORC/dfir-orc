@@ -74,15 +74,30 @@ void Print(Tree& node, const OutputSpec& output)
 
     Print(node, outputPath);
 
-    if (!output.UploadDestinations.empty())
+    // Grouped by destination and named, so a three-destination configuration can be read back from a
+    // collection's log. A legacy top-level <upload> list has no name and keeps its historical label.
+    for (const auto& destination : output.UploadDestinations)
     {
-        const std::vector<std::shared_ptr<OutputSpec::Upload>>& chain = output.UploadDestinations.front().Chain;
-        for (size_t i = 0; i < chain.size(); ++i)
+        for (size_t i = 0; i < destination.Chain.size(); ++i)
         {
-            const std::wstring uploadLabel = chain.size() > 1 ? fmt::format(L"Upload configuration #{}:", i + 1)
-                                                              : std::wstring(L"Upload configuration:");
-            auto uploadNode = node.AddNode(4, uploadLabel);
-            Print(uploadNode, *(chain[i]));
+            std::wstring label;
+            if (destination.Name.empty())
+            {
+                label = destination.Chain.size() > 1 ? fmt::format(L"Upload configuration #{}:", i + 1)
+                                                     : std::wstring(L"Upload configuration:");
+            }
+            else
+            {
+                label = fmt::format(
+                    L"Upload destination '{}'{} #{}/{}:",
+                    destination.Name,
+                    destination.Required ? L"" : L" (optional)",
+                    i + 1,
+                    destination.Chain.size());
+            }
+
+            auto uploadNode = node.AddNode(4, label);
+            Print(uploadNode, *(destination.Chain[i]));
         }
     }
 }
