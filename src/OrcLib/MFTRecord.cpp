@@ -87,6 +87,11 @@ bool IsUsableIndexRoot(const ATTRIBUTE_RECORD_HEADER* pAttribute)
     return pAttribute->Form.Resident.ValueLength >= sizeof(INDEX_ROOT);
 }
 
+// What a record with no attribute list has: one is allocated only when there is an attribute to register, so a
+// record holding none - an incomplete or forged one - never gets a list at all, and every reader of it would
+// otherwise dereference a null pointer.
+const std::vector<AttributeListEntry> kNoAttributes;
+
 }  // namespace
 
 HRESULT MFTRecord::ParseRecord(
@@ -198,6 +203,18 @@ HRESULT MFTRecord::ParseRecord(
                 if (m_pAttributeList == nullptr)
                     m_pAttributeList = make_shared<AttributeList>();
                 m_pAttributeList->m_AttList.push_back(ale);
+
+                // A base record normally brings its list from its own $ATTRIBUTE_LIST, which is what makes it the
+                // base of anything. One that parsed no attribute at all has none, and the registration below
+                // would dereference it. Give it an empty list rather than lose the child record: an incomplete
+                // base list is a case this already handles a few lines down.
+                if (m_pBaseFileRecord->m_pAttributeList == nullptr)
+                {
+                    Log::Debug(
+                        L"Base record carries no attribute list (frn: {:#x})",
+                        NtfsFullSegmentNumber(&(m_pBaseFileRecord->m_FileReferenceNumber)));
+                    m_pBaseFileRecord->m_pAttributeList = make_shared<AttributeList>();
+                }
 
                 bool bFound = false;
                 for (auto& item : m_pBaseFileRecord->m_pAttributeList->m_AttList)
@@ -735,34 +752,39 @@ const std::shared_ptr<DataAttribute> MFTRecord::GetDataAttribute(LPCWSTR szAttrN
     return *attr_it;
 }
 
+// The list a record holds, or an empty one when it has none. Every caller treats this as "the attributes of this
+// record", and a record that parsed none has no list to show them.
+const std::vector<AttributeListEntry>& MFTRecord::GetAttributeList() const
+{
+    return m_pAttributeList != nullptr ? m_pAttributeList->m_AttList : kNoAttributes;
+}
+
 const std::shared_ptr<IndexAllocationAttribute> MFTRecord::GetIndexAllocationAttribute(LPCWSTR szAttrName) const
 {
+    const std::vector<AttributeListEntry>& attributes = GetAttributeList();
     std::shared_ptr<IndexAllocationAttribute> retval;
     auto cbName = wcslen(szAttrName);
-    auto attr_it = std::find_if(
-        begin(m_pAttributeList->m_AttList),
-        end(m_pAttributeList->m_AttList),
-        [cbName, szAttrName](const AttributeListEntry& entry) -> bool {
+    auto attr_it =
+        std::find_if(begin(attributes), end(attributes), [cbName, szAttrName](const AttributeListEntry& entry) -> bool {
             return entry.TypeCode() == $INDEX_ALLOCATION && entry.AttributeNameLength() == cbName
                 && !_wcsnicmp(entry.AttributeName(), szAttrName, entry.AttributeNameLength());
         });
-    if (attr_it == end(m_pAttributeList->m_AttList))
+    if (attr_it == end(attributes))
         return nullptr;
 
     return std::dynamic_pointer_cast<IndexAllocationAttribute>(attr_it->Attribute());
 }
 const std::shared_ptr<IndexRootAttribute> MFTRecord::GetIndexRootAttribute(LPCWSTR szAttrName) const
 {
+    const std::vector<AttributeListEntry>& attributes = GetAttributeList();
     std::shared_ptr<IndexRootAttribute> retval;
     auto cbName = wcslen(szAttrName);
-    auto attr_it = std::find_if(
-        begin(m_pAttributeList->m_AttList),
-        end(m_pAttributeList->m_AttList),
-        [cbName, szAttrName](const AttributeListEntry& entry) -> bool {
+    auto attr_it =
+        std::find_if(begin(attributes), end(attributes), [cbName, szAttrName](const AttributeListEntry& entry) -> bool {
             return entry.TypeCode() == $INDEX_ROOT && entry.AttributeNameLength() == cbName
                 && !_wcsnicmp(entry.AttributeName(), szAttrName, entry.AttributeNameLength());
         });
-    if (attr_it == end(m_pAttributeList->m_AttList))
+    if (attr_it == end(attributes))
         return nullptr;
 
     return std::dynamic_pointer_cast<IndexRootAttribute>(attr_it->Attribute());
@@ -770,16 +792,15 @@ const std::shared_ptr<IndexRootAttribute> MFTRecord::GetIndexRootAttribute(LPCWS
 
 const std::shared_ptr<BitmapAttribute> MFTRecord::GetBitmapAttribute(LPCWSTR szAttrName) const
 {
+    const std::vector<AttributeListEntry>& attributes = GetAttributeList();
     std::shared_ptr<BitmapAttribute> retval;
     auto cbName = wcslen(szAttrName);
-    auto attr_it = std::find_if(
-        begin(m_pAttributeList->m_AttList),
-        end(m_pAttributeList->m_AttList),
-        [cbName, szAttrName](const AttributeListEntry& entry) -> bool {
+    auto attr_it =
+        std::find_if(begin(attributes), end(attributes), [cbName, szAttrName](const AttributeListEntry& entry) -> bool {
             return entry.TypeCode() == $BITMAP && entry.AttributeNameLength() == cbName
                 && !_wcsnicmp(entry.AttributeName(), szAttrName, entry.AttributeNameLength());
         });
-    if (attr_it == end(m_pAttributeList->m_AttList))
+    if (attr_it == end(attributes))
         return nullptr;
 
     return std::dynamic_pointer_cast<BitmapAttribute>(attr_it->Attribute());
@@ -798,9 +819,11 @@ HRESULT MFTRecord::GetIndexAttributes(
     pIndexAllocationAttr = nullptr;
     pBitmapAttr = nullptr;
 
+    const std::vector<AttributeListEntry>& attributes = GetAttributeList();
+
     std::for_each(
-        begin(m_pAttributeList->m_AttList),
-        end(m_pAttributeList->m_AttList),
+        begin(attributes),
+        end(attributes),
         [szAttrName, &pIndexRootAttr, &pIndexAllocationAttr, &pBitmapAttr](const AttributeListEntry& entry) {
             if (_wcsnicmp(entry.AttributeName(), szAttrName, entry.AttributeNameLength()))
                 return;
@@ -835,7 +858,7 @@ HRESULT MFTRecord::GetIndexAttributes(
 
 USHORT MFTRecord::GetAttributeIndex(const std::shared_ptr<MftRecordAttribute>& one_attr) const
 {
-    const auto& attrs = m_pAttributeList->m_AttList;
+    const auto& attrs = GetAttributeList();
 
     if (one_attr == nullptr)
         return (USHORT)-1;
@@ -865,7 +888,7 @@ USHORT MFTRecord::GetAttributeIndex(const std::shared_ptr<MftRecordAttribute>& o
 
 USHORT MFTRecord::GetFileNameIndex(const PFILE_NAME pFileName) const
 {
-    const auto& attrs = m_pAttributeList->m_AttList;
+    const auto& attrs = GetAttributeList();
 
     USHORT usInstanceIdx = 0L;
     for (const auto& attr : attrs)

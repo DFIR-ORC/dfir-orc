@@ -340,6 +340,54 @@ public:
         Assert::IsTrue(mftRecord.IsJunction());
         Assert::IsFalse(mftRecord.IsSymbolicLink());
     }
+
+    // A record can parse to no attributes at all: an $END marker where the first attribute should be, which is
+    // what an incomplete or forged record looks like. It then never allocates an attribute list, and every reader
+    // of GetAttributeList() dereferenced that null - NTFSInfo's columns, FileFind, the record dump, nineteen call
+    // sites. The list reads as empty instead, and the attribute lookups answer "not found" rather than crashing.
+    TEST_METHOD(RecordWithNoAttributeHasAnEmptyAttributeList)
+    {
+        std::vector<BYTE> record = MakeRecord({}, false);
+        *reinterpret_cast<ATTRIBUTE_TYPE_CODE*>(record.data() + kFirstAttributeOffset) = $END;
+        MFTRecord mftRecord;
+
+        Assert::IsTrue(SUCCEEDED(Parse(mftRecord, record)));
+        Assert::IsTrue(mftRecord.IsParsed());
+        Assert::IsTrue(mftRecord.GetAttributeList().empty(), L"a record with no attribute has no attributes");
+        Assert::IsNull(mftRecord.GetBitmapAttribute(L"$I30").get());
+        Assert::IsNull(mftRecord.GetIndexRootAttribute(L"$I30").get());
+        Assert::IsNull(mftRecord.GetIndexAllocationAttribute(L"$I30").get());
+
+        // GetIndexAttributes is the one a directory-flagged record of this shape reaches, through
+        // ParseI30AndCallback: it must report the index as unusable, not fault on the way there.
+        std::shared_ptr<IndexRootAttribute> indexRoot;
+        std::shared_ptr<IndexAllocationAttribute> indexAllocation;
+        std::shared_ptr<BitmapAttribute> bitmap;
+        const std::shared_ptr<VolumeReader> reader = std::make_shared<GeometryReader>();
+        Assert::IsTrue(
+            FAILED(mftRecord.GetIndexAttributes(reader, L"$I30", indexRoot, indexAllocation, bitmap)),
+            L"an index with no attribute behind it is invalid data");
+    }
+
+    // The base record of a child does not have to carry a list either. ParseRecord registers a child's attributes
+    // into its base's list, so a base record that parsed none was a null dereference there: the child is kept and
+    // the base is given an empty list, which the registration a few lines down already allowed for.
+    TEST_METHOD(ChildRecordOfABaseWithoutAnAttributeListIsRegistered)
+    {
+        std::vector<BYTE> baseSegment = MakeRecord({}, false);
+        *reinterpret_cast<ATTRIBUTE_TYPE_CODE*>(baseSegment.data() + kFirstAttributeOffset) = $END;
+        std::vector<BYTE> childSegment = MakeRecord({MakeReparsePoint(IO_REPARSE_TAG_SYMLINK, 48, 16)}, false);
+        MFTRecord baseRecord;
+        MFTRecord childRecord;
+
+        Assert::IsTrue(SUCCEEDED(Parse(baseRecord, baseSegment)));
+        Assert::IsTrue(baseRecord.GetAttributeList().empty(), L"the base record has no list of its own");
+
+        Assert::IsTrue(SUCCEEDED(Parse(childRecord, childSegment, &baseRecord)));
+        Assert::AreEqual(
+            size_t(1), baseRecord.GetAttributeList().size(), L"the child's attribute was not registered");
+        Assert::IsTrue(baseRecord.IsSymbolicLink(), L"and the flags still reach it");
+    }
 };
 
 }  // namespace Orc::Test

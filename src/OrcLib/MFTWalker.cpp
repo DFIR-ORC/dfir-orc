@@ -491,7 +491,7 @@ bool MFTWalker::AreAttributesComplete(const MFTRecord* pBaseRecord, std::vector<
 {
     bool retval = true;
 
-    if (pBaseRecord->m_pAttributeList->IsPresent())
+    if (pBaseRecord->m_pAttributeList && pBaseRecord->m_pAttributeList->IsPresent())
     {
         for (const auto& attr : pBaseRecord->m_pAttributeList->m_AttList)
         {

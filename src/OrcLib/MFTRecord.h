@@ -97,7 +97,7 @@ public:
     }
 
     const std::vector<PFILE_NAME>& GetFileNames() const { return m_FileNames; };
-    const std::vector<AttributeListEntry>& GetAttributeList() const { return m_pAttributeList->m_AttList; };
+    const std::vector<AttributeListEntry>& GetAttributeList() const;
 
     USHORT GetAttributeIndex(const std::shared_ptr<MftRecordAttribute>& attr) const;
     USHORT GetFileNameIndex(const PFILE_NAME pFileName) const;
