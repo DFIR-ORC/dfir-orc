@@ -342,6 +342,50 @@ PFILE_NAME MFTRecord::GetMain_PFILE_NAME() const
     }
 }
 
+// Sets on one record what a $REPARSE_POINT says the file is. Flags are only ever turned on, never off, so a
+// record cannot be un-marked by a second call or by being marked from both itself and a child.
+void MFTRecord::SetReparsePointFlags(bool isJunction, bool isSymLink, bool isOverlayFile)
+{
+    m_bHasReparsePoint = true;
+
+    if (isJunction)
+    {
+        m_bIsJunction = true;
+    }
+
+    if (isSymLink)
+    {
+        m_bIsSymLink = true;
+    }
+
+    if (isOverlayFile)
+    {
+        m_bIsOverlayFile = true;
+    }
+}
+
+// Records what a $REPARSE_POINT says this file is, on this record and on its base record.
+//
+// The base record is marked because every consumer asks it what kind of file this is, while a file big enough to
+// spill over several records can keep its $REPARSE_POINT in a child. ParseRecord() registers a child's attributes
+// with its base, so the attribute itself is always reachable from the base and only these flags were missing: a
+// base record then reported no reparse point while its own attribute list held one, and for a wof file the sparse
+// unnamed $DATA was read as the zeros it holds on disk instead of being decompressed, collecting a sample of the
+// right size full of zeros with no error at all.
+//
+// Only the base record, deliberately, and never a walk up the chain: the pointer comes from a
+// BaseFileRecordSegment read off the volume, which a corrupt or forged MFT can make loop back on itself, so
+// following it would hang or overflow the stack on a crafted volume.
+void MFTRecord::MarkReparsePoint(bool isJunction, bool isSymLink, bool isOverlayFile)
+{
+    SetReparsePointFlags(isJunction, isSymLink, isOverlayFile);
+
+    if (m_pBaseFileRecord != nullptr)
+    {
+        m_pBaseFileRecord->SetReparsePointFlags(isJunction, isSymLink, isOverlayFile);
+    }
+}
+
 HRESULT MFTRecord::ParseAttribute(
     const std::shared_ptr<VolumeReader>& VolReader,
     PATTRIBUTE_RECORD_HEADER pAttribute,
@@ -609,23 +653,22 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $REPARSE_POINT: {
-            m_bHasReparsePoint = true;
+            const REPARSE_POINT_TYPE_AND_FLAGS flags = ReparsePointAttribute::GetReparsePointType(pAttribute);
+            const bool isJunction = ReparsePointAttribute::IsJunction(flags);
+            const bool isSymLink = ReparsePointAttribute::IsSymbolicLink(flags);
+            const bool isOverlayFile = ReparsePointAttribute::IsWindowsOverlayFile(flags);
 
-            auto flags = ReparsePointAttribute::GetReparsePointType(pAttribute);
-
-            if (ReparsePointAttribute::IsJunction(flags))
+            if (isJunction)
             {
                 Log::Trace(L"Add $REPARSE_POINT (junction)");
-                m_bIsJunction = true;
                 pNewAttr = make_shared<JunctionReparseAttribute>(pAttribute, this);
             }
-            else if (ReparsePointAttribute::IsSymbolicLink(flags))
+            else if (isSymLink)
             {
                 Log::Trace(L"Add $REPARSE_POINT (symlink)");
-                m_bIsSymLink = true;
                 pNewAttr = make_shared<SymlinkReparseAttribute>(pAttribute, this);
             }
-            else if (ReparsePointAttribute::IsWindowsOverlayFile(flags))
+            else if (isOverlayFile)
             {
                 Log::Trace(L"Add $REPARSE_POINT (overlay)");
 
@@ -636,23 +679,14 @@ HRESULT MFTRecord::ParseAttribute(
                     Log::Debug("Failed to parse wof reparse point [{}]", ec);
                     return E_FAIL;
                 }
-
-                m_bIsOverlayFile = true;
-
-                // A file big enough to spill over several records can hold its $REPARSE_POINT in a child
-                // record, while every consumer asks the base record whether the file is WOF compressed. Left
-                // unmarked, the base record's sparse $DATA was read as the zeros it holds on disk instead of
-                // being decompressed, and the collected sample was silently empty.
-                if (m_pBaseFileRecord != nullptr)
-                {
-                    m_pBaseFileRecord->m_bIsOverlayFile = true;
-                }
             }
             else
             {
                 Log::Trace(L"Add $REPARSE_POINT (generic)");
                 pNewAttr = make_shared<ReparsePointAttribute>(pAttribute, this);
             }
+
+            MarkReparsePoint(isJunction, isSymLink, isOverlayFile);
         }
         break;
         case $EA_INFORMATION: {

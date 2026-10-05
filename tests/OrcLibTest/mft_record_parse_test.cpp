@@ -8,9 +8,11 @@
 #include "stdafx.h"
 
 #include "MFTRecord.h"
+#include "AttributeList.h"
 #include "NtfsDataStructures.h"
 #include "VolumeReaderTest.h"
 
+#include <algorithm>
 #include <vector>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -106,6 +108,21 @@ TEST_CLASS(MFTRecordParseTest)
         return bytes;
     }
 
+
+    // A resident $REPARSE_POINT whose value opens on the reparse tag, which is all GetReparsePointType() reads of
+    // it. The DataLength is the bytes that follow the fixed fields, as it is on disk.
+    static std::vector<BYTE> MakeReparsePoint(DWORD tag, DWORD recordLength, DWORD valueLength)
+    {
+        Assert::IsTrue(valueLength >= sizeof(REPARSE_POINT_ATTRIBUTE), L"forged reparse point value is too short");
+
+        std::vector<BYTE> bytes = MakeResident($REPARSE_POINT, L"", recordLength, valueLength);
+        REPARSE_POINT_ATTRIBUTE* reparse =
+            reinterpret_cast<REPARSE_POINT_ATTRIBUTE*>(bytes.data() + kResidentNameOffset);
+        reparse->TypeAndFlags = tag;
+        reparse->DataLength = static_cast<USHORT>(valueLength - FIELD_OFFSET(REPARSE_POINT_ATTRIBUTE, Data));
+
+        return bytes;
+    }
     // Each sector's last two bytes hold the update sequence number on disk and are restored from the array by
     // MultiSectorFixup(). Must be re-stamped after any write that lands on a sector tail, or the fixup refuses the
     // record. The array entries stay zero: that is what those tail bytes really hold here.
@@ -160,11 +177,20 @@ TEST_CLASS(MFTRecordParseTest)
         StampUpdateSequence(record);
     }
 
-    static HRESULT Parse(MFTRecord& mftRecord, std::vector<BYTE>& record)
+    static HRESULT Parse(MFTRecord& mftRecord, std::vector<BYTE>& record, MFTRecord* baseRecord = nullptr)
     {
         const std::shared_ptr<VolumeReader> reader = std::make_shared<GeometryReader>();
         return mftRecord.ParseRecord(
-            reader, reinterpret_cast<PFILE_RECORD_SEGMENT_HEADER>(record.data()), kBytesPerFRS, nullptr);
+            reader, reinterpret_cast<PFILE_RECORD_SEGMENT_HEADER>(record.data()), kBytesPerFRS, baseRecord);
+    }
+
+    // MFTWalker only ever hands a child record a base that has already parsed its own $ATTRIBUTE_LIST, which is
+    // what allocates the list ParseRecord() registers a child's attributes into. Given directly here: what the
+    // tests below are about is the registration, not the forging of a whole attribute list.
+    static void GiveBaseRecordAnAttributeList(MFTRecord& baseRecord)
+    {
+        Assert::IsTrue(baseRecord.IsParsed(), L"the base record must be parsed before a child refers to it");
+        baseRecord.m_pAttributeList = std::make_shared<AttributeList>();
     }
 
 public:
@@ -237,6 +263,82 @@ public:
             Assert::AreEqual(size_t(1), mftRecord.GetDataAttributes().size());
             Assert::IsNull(mftRecord.GetBitmapAttribute(L"").get(), std::to_wstring(formCode).c_str());
         }
+    }
+
+    // A $REPARSE_POINT does not have to sit in the base record. A file with enough names, or a long enough
+    // attribute list, keeps it in a child record, while every consumer asks the base record what kind of file this
+    // is: ParseRecord() registers a child's attributes with its base, so the attribute is reachable from there and
+    // only the flags were missing. The wof flag was fixed when a collected sample came back full of zeros; these
+    // answer the record dump, which then named no reparse point while holding its attribute, and had no fixture
+    // until ParseRecord() could be driven over a forged base and child pair.
+    //
+    // 'wof' is not among the tags: WOFReparseAttribute parses the reparse data at construction, so that one is
+    // pinned by the xpress16k fixture with its reparse point in a child record, against the filesystem's hashes.
+    TEST_METHOD(ReparsePointOfAChildRecordMarksTheBaseRecord)
+    {
+        const std::vector<std::pair<DWORD, bool>> tags {
+            {IO_REPARSE_TAG_SYMLINK, true}, {IO_REPARSE_TAG_MOUNT_POINT, false}};
+
+        for (const auto& [tag, isSymLink] : tags)
+        {
+            std::vector<BYTE> baseSegment = MakeRecord({MakeResident($DATA, L"", 952, 900)}, false);
+            std::vector<BYTE> childSegment = MakeRecord({MakeReparsePoint(tag, 48, 16)}, false);
+            MFTRecord baseRecord;
+            MFTRecord childRecord;
+
+            Assert::IsTrue(SUCCEEDED(Parse(baseRecord, baseSegment)), L"the base record itself");
+            GiveBaseRecordAnAttributeList(baseRecord);
+
+            Assert::IsTrue(SUCCEEDED(Parse(childRecord, childSegment, &baseRecord)), L"the child record");
+            Assert::IsTrue(childRecord.HasReparsePoint(), L"the child record holding the attribute was not marked");
+            Assert::IsTrue(
+                baseRecord.HasReparsePoint(), L"the base record of a reparse point held in a child was not marked");
+            Assert::AreEqual(isSymLink, baseRecord.IsSymbolicLink(), L"base record symlink flag");
+            Assert::AreEqual(!isSymLink, baseRecord.IsJunction(), L"base record junction flag");
+            Assert::IsFalse(baseRecord.IsOverlayFile(), L"neither tag is a wof overlay");
+
+            // The other half of the blind spot: the attribute always did reach the base record, so the dump read
+            // the flags as "no reparse point" over an attribute list that held one.
+            const std::vector<AttributeListEntry>& entries = baseRecord.GetAttributeList();
+            Assert::IsTrue(
+                std::any_of(
+                    entries.cbegin(),
+                    entries.cend(),
+                    [](const AttributeListEntry& entry) { return entry.TypeCode() == $REPARSE_POINT; }),
+                L"the child's attribute was not registered with the base record");
+        }
+    }
+
+    // A tag this code knows nothing about is still a reparse point, and the kind flags stay off: the dump prints
+    // [reparse point] alone for it, on the base record as on the child.
+    TEST_METHOD(UnknownReparseTagMarksNothingButTheReparsePoint)
+    {
+        std::vector<BYTE> baseSegment = MakeRecord({MakeResident($DATA, L"", 952, 900)}, false);
+        std::vector<BYTE> childSegment = MakeRecord({MakeReparsePoint(IO_REPARSE_TAG_DEDUP, 48, 16)}, false);
+        MFTRecord baseRecord;
+        MFTRecord childRecord;
+
+        Assert::IsTrue(SUCCEEDED(Parse(baseRecord, baseSegment)));
+        GiveBaseRecordAnAttributeList(baseRecord);
+
+        Assert::IsTrue(SUCCEEDED(Parse(childRecord, childSegment, &baseRecord)));
+        Assert::IsTrue(baseRecord.HasReparsePoint());
+        Assert::IsFalse(baseRecord.IsSymbolicLink());
+        Assert::IsFalse(baseRecord.IsJunction());
+        Assert::IsFalse(baseRecord.IsOverlayFile());
+    }
+
+    // The record holding its own reparse point keeps answering for itself, which is every file small enough to fit
+    // in one record.
+    TEST_METHOD(ReparsePointOfABaseRecordMarksThatRecord)
+    {
+        std::vector<BYTE> record = MakeRecord({MakeReparsePoint(IO_REPARSE_TAG_MOUNT_POINT, 48, 16)}, false);
+        MFTRecord mftRecord;
+
+        Assert::IsTrue(SUCCEEDED(Parse(mftRecord, record)));
+        Assert::IsTrue(mftRecord.HasReparsePoint());
+        Assert::IsTrue(mftRecord.IsJunction());
+        Assert::IsFalse(mftRecord.IsSymbolicLink());
     }
 };
 

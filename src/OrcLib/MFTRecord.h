@@ -194,6 +194,9 @@ private:
 
     PFILE_NAME GetMain_PFILE_NAME() const;
 
+    void SetReparsePointFlags(bool isJunction, bool isSymLink, bool isOverlayFile);
+    void MarkReparsePoint(bool isJunction, bool isSymLink, bool isOverlayFile);
+
     HRESULT ParseAttribute(
         const std::shared_ptr<VolumeReader>& VolReader,
         PATTRIBUTE_RECORD_HEADER pAttribute,
