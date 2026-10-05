@@ -84,6 +84,7 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     auto fullname = m_Name;
     if (fullname.empty())
     {
+        Log::Debug("CDiskExtent: cannot open an unnamed extent [{}]", Win32Error(ERROR_BAD_PATHNAME));
         return HRESULT_FROM_WIN32(ERROR_BAD_PATHNAME);
     }
     if (fullname[fullname.length() - 1] != L'\\')

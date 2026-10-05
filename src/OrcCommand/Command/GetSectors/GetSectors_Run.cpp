@@ -879,6 +879,26 @@ bool partitionSortByStartAddress(std::map<std::string, ULONGLONG>& item1, std::m
     return item1["start"] < item2["start"];
 }
 
+namespace {
+
+// Size of the slack region starting at 'farthestEnd' and stopping at the next used location, clamped to the
+// end of the disk and to the requested dump size. Zero when there is nothing to collect: a partition table
+// read from an unpartitioned volume describes locations lying past the end of the disk.
+DWORD SlackSpaceSize(ULONGLONG farthestEnd, ULONGLONG nextStart, ULONGLONG diskSize, ULONGLONG maxDumpSize)
+{
+    if (farthestEnd >= diskSize || nextStart <= farthestEnd)
+    {
+        return 0;
+    }
+
+    const ULONGLONG slackEnd = std::min(nextStart, diskSize);
+
+    // The clamping is done on 64 bits: truncating the gap first turns a 4 GB one into a 0 byte chunk
+    return static_cast<DWORD>(std::min({slackEnd - farthestEnd, maxDumpSize, static_cast<ULONGLONG>(MAXDWORD)}));
+}
+
+}  // namespace
+
 HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& diskInterfaceToRead)
 {
     HRESULT hr = E_FAIL;
@@ -887,8 +907,6 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
 
     std::vector<std::map<std::string, ULONGLONG>> usedLocations;
     std::map<std::string, ULONGLONG> loc;
-    ULONGLONG ulSlackSpaceOffset = 0;
-    DWORD slackSpaceSize = 0;
 
     hr = pt.LoadPartitionTable(diskName.c_str());
     if (FAILED(hr))
@@ -931,6 +949,12 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
 
     diskReader.Close();
     diskSize = diskReader.GetLength();
+    if (diskSize == 0)
+    {
+        // Without the disk size every slack region would be unbounded
+        Log::Debug(L"Failed to determine the size of '{}'", diskInterfaceToRead);
+        return E_FAIL;
+    }
 
     // Add a dummy end of disk location
     loc["start"] = diskSize, loc["end"] = diskSize;
@@ -944,17 +968,11 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
 
     for (auto& curLoc : usedLocations)
     {
-        if (farthestEnd < curLoc["start"])
+        const DWORD slackSpaceSize = SlackSpaceSize(farthestEnd, curLoc["start"], diskSize, config.slackSpaceDumpSize);
+        if (slackSpaceSize != 0)
         {
-            ulSlackSpaceOffset = farthestEnd;
-            slackSpaceSize = (DWORD)(curLoc["start"] - farthestEnd);
-            if (slackSpaceSize > config.slackSpaceDumpSize)
-            {
-                slackSpaceSize = (DWORD)config.slackSpaceDumpSize;
-            }
-
             auto diskChunk = std::make_shared<DiskChunkStream>(
-                diskName, ulSlackSpaceOffset, slackSpaceSize, L"Disk slack space", diskInterfaceToRead);
+                diskName, farthestEnd, slackSpaceSize, L"Disk slack space", diskInterfaceToRead);
             diskChunk->setSectorBySectorMode(true);
             dumpedChunks.push_back(diskChunk);
         }

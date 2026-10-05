@@ -240,8 +240,7 @@ HRESULT __stdcall DiskChunkStream::SetFilePointer(
     if (diskOffset.QuadPart < 0 || (ULONGLONG)diskOffset.QuadPart >= diskSize)
     {
         Log::Error(
-            L"[DiskChunkStream::SetFilePointer] Offset is beyond disk boundaries. (offset = %lld, disk size = "
-            L"%llu)",
+            L"[DiskChunkStream::SetFilePointer] Offset is beyond disk boundaries (offset = {}, disk size = {})",
             diskOffset.QuadPart,
             diskSize);
         return E_FAIL;
