@@ -215,28 +215,32 @@ int64_t Main::getBootDiskSignature()
 
 std::wstring Main::identifyLowDiskInterfaceByMbrSignature(const std::wstring& diskName)
 {
+    const int64_t diskSig = getDiskSignature(diskName);
+    if (diskSig == -1)
+    {
+        return {};
+    }
+
     std::vector<EnumDisk::PhysicalDisk> disksList;
     EnumDisk diskEnum;
-    int64_t diskSig = 0;
-    std::wstring diskInterface;
-
-    diskSig = getDiskSignature(diskName);
-    if (diskSig != -1)
+    const HRESULT hr = diskEnum.EnumerateDisks(disksList);
+    if (FAILED(hr))
     {
-        // Try to get a low device interface on the disk
-        diskEnum.EnumerateDisks(disksList);
-        for (const auto& disk : disksList)
+        Log::Debug(L"Failed to enumerate the disk interfaces [{}]", SystemError(hr));
+        return {};
+    }
+
+    // Try to get a low device interface on the disk
+    for (const auto& disk : disksList)
+    {
+        if (getDiskSignature(disk.InterfacePath) == diskSig)
         {
-            if (getDiskSignature(disk.InterfacePath) == diskSig)
-            {
-                diskInterface = disk.InterfacePath;
-                Log::Debug(L"Read operations on '{}' can use the low interface '{}'", diskName, disk.InterfacePath);
-                break;
-            }
+            Log::Debug(L"Read operations on '{}' can use the low interface '{}'", diskName, disk.InterfacePath);
+            return disk.InterfacePath;
         }
     }
 
-    return diskInterface;
+    return {};
 }
 
 HRESULT Main::DiskChunk::read()
