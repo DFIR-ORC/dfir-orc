@@ -253,9 +253,18 @@ Result<BlockView> Parse(BufferView block)
     }
 
     auto header = reinterpret_cast<const VS_VERSION_HEADER*>(block.data());
-    if (!IsValidOffset(block, 0, header->wLength) || header->wLength == 0)
+    if (header->wLength == 0)
     {
-        Log::Debug("Invalid version block header: invalid length");
+        Log::Debug("Invalid version block header: null length");
+        return std::errc::bad_message;
+    }
+
+    if (!IsValidOffset(block, 0, header->wLength))
+    {
+        Log::Debug(
+            "Invalid version block header: length exceeds block (length: {}, block: {})",
+            header->wLength,
+            block.size());
         return std::errc::bad_message;
     }
 

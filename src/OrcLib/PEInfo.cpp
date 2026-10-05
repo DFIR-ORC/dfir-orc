@@ -261,7 +261,10 @@ HRESULT PEInfo::OpenVersionInformation()
     PeVersionInfo versionInfo(*stream, *m_FileInfo.GetDetails()->GetVersionInfoChunk(), ec);
     if (ec)
     {
-        return ToHRESULT(ec);
+        // The file does hold a version resource but it cannot be parsed: report it here, once, instead of letting
+        // each version backed column fail with a generic error. Those columns are then left empty.
+        Log::Error(L"Failed to parse version information for '{}' [{}]", m_FileInfo.GetFullName(), ec);
+        return S_OK;
     }
 
     m_FileInfo.GetDetails()->SetVersionInfo(std::move(versionInfo));
