@@ -51,6 +51,13 @@ HRESULT Main::Run()
     {
         // Try to get a low interface on the disk by using the setupAPI functions
         diskInterfaceToRead = identifyLowDiskInterfaceByMbrSignature(config.diskName);
+        if (diskInterfaceToRead.empty())
+        {
+            // No low interface matched: read through the disk name itself. DumpSlackSpace and DumpRawGPT open
+            // 'diskInterfaceToRead' directly and would otherwise open an empty path.
+            Log::Debug(L"No low disk interface found for '{}', reading with the disk name", config.diskName);
+            diskInterfaceToRead = config.diskName;
+        }
     }
     else
     {
