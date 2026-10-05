@@ -186,6 +186,11 @@ scripts to the bench before running these tags:
 scp tests/RestAgent/vm/start_sinks.sh tests/RestAgent/vm/clear_received.sh "$SINK":/root/
 ```
 
+The fixtures pin the throwaway localhost certificate `rest_test_server.py` embeds, like every other
+committed `vm-*.xml`, so a bench serving its own certificate needs
+`make-local-fixtures.ps1` run again to rewrite the pin into your `ConfigDir` copies. Both destinations
+are served by the same `server.crt`, so one pin covers them.
+
 | Tag | Fixture | Verdict |
 |-----|---------|---------|
 | `destinations` | `vm-destinations.xml` | two live destinations: both sinks byte-exact. One succeeding must not stop the other being served, which a fallback list would do |

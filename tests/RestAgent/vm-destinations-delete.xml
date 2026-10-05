@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VM live test: delete_when_done with every required destination confirming. Both are live and
+     required, so once both have the archive the local copy is no longer needed and must be gone.
+     Scored on the pair "the sink has it" and "the host no longer does" (DeletesLocal): the local
+     archive is deleted, so there is nothing left to hash against. -->
+<dfir-orc>
+    <uploads delete_when_done="yes">
+        <destination name="a">
+            <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+                    https_security="tls1.3, tls1.2" operation="copy"
+                    server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+                <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"/>
+            </upload>
+        </destination>
+        <destination name="b">
+            <upload method="REST" server="%ORC_UPLOAD_SERVER2%"
+                    https_security="tls1.3, tls1.2" operation="copy"
+                    server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+                <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"/>
+            </upload>
+        </destination>
+    </uploads>
+</dfir-orc>
+
