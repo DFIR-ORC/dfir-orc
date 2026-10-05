@@ -97,6 +97,12 @@ HRESULT Main::CheckConfiguration()
     {
         // If no disk is specified, set it to the windows boot disk
         config.diskName = getBootDiskName();
+        if (config.diskName.empty())
+        {
+            // Running with no disk name would open an empty path on every dump
+            Log::Error(L"[!] Failed to identify the boot disk. Use /Disk to name the disk to read.");
+            return E_FAIL;
+        }
     }
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
