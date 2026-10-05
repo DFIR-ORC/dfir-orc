@@ -13,8 +13,10 @@
 
 #include <setupapi.h>  // for SetupDiXxx functions.
 #include <cfgmgr32.h>  // for SetupDiXxx functions.
-#include <ntddscsi.h>
 #include <devguid.h>
+#include <ntddscsi.h>
+
+#include <algorithm>
 
 #include <boost\scope_exit.hpp>
 #include "Utils/WinApi.h"
@@ -23,92 +25,277 @@
 
 using namespace Orc;
 
+namespace {
+
+bool IsPrintableAscii(uint8_t byte)
+{
+    // SCSI and ATA both define these fields as printable ASCII
+    return byte >= 0x20 && byte <= 0x7E;
+}
+
+// The leading printable ASCII of 'bytes', without the padding spaces on its right. A device chooses these bytes, so
+// anything outside printable ASCII ends the string rather than reaching an output column.
+std::wstring ToTrimmedWide(const uint8_t* bytes, size_t count)
+{
+    size_t end = 0;
+    while (end < count && IsPrintableAscii(bytes[end]))
+    {
+        ++end;
+    }
+
+    while (end > 0 && bytes[end - 1] == ' ')
+    {
+        --end;
+    }
+
+    std::wstring value;
+    value.reserve(end);
+    for (size_t i = 0; i < end; ++i)
+    {
+        value.push_back(static_cast<wchar_t>(bytes[i]));
+    }
+
+    return value;
+}
+
+// IOCTL_SCSI_PASS_THROUGH takes its buffers behind the structure, in the same allocation
 struct SCSI_PASS_THROUGH_WITH_BUFFERS
 {
     SCSI_PASS_THROUGH Spt;
-    ULONG Filler;  // realign buffers to double word boundary
+    ULONG Filler;  // realign the buffers on a double word boundary
     UCHAR SenseBuf[32];
     UCHAR DataBuf[512];
 };
 
-using PSCSI_PASS_THROUGH_WITH_BUFFERS = SCSI_PASS_THROUGH_WITH_BUFFERS*;
+const UCHAR kScsiOpAtaPassThrough12 = 0xA1;
+const UCHAR kAtaCommandIdentifyDevice = 0xEC;
+const size_t kAtaIdentifySerialFirstWord = 10;
+const size_t kAtaIdentifySerialWordCount = 10;
+const size_t kAtaIdentifyModelFirstWord = 27;
+const size_t kAtaIdentifyModelWordCount = 20;
 
-//
-// Command Descriptor Block constants.
-//
+// What StorageDeviceProperty reports about the device behind 'device'. False when it did not answer, leaving every
+// identity field of 'disk' as it was. IOCTL_STORAGE_QUERY_PROPERTY is FILE_ANY_ACCESS, so the read handle the
+// enumeration already holds carries it and no elevation is involved.
+bool QueryStorageIdentity(HANDLE device, EnumDisk::PhysicalDisk& disk)
+{
+    STORAGE_PROPERTY_QUERY query;
+    ZeroMemory(&query, sizeof(query));
+    query.PropertyId = StorageDeviceProperty;
+    query.QueryType = PropertyStandardQuery;
 
-static const auto CDB6GENERIC_LENGTH = 6;
-static const auto CDB10GENERIC_LENGTH = 10;
+    //
+    // The header first: only the device knows how long its descriptor is
+    //
 
-//
-// SCSI CDB operation codes
-//
+    STORAGE_DESCRIPTOR_HEADER header;
+    ZeroMemory(&header, sizeof(header));
 
-static const auto SCSIOP_TEST_UNIT_READY = 0x00;
-static const auto SCSIOP_REZERO_UNIT = 0x01;
-static const auto SCSIOP_REWIND = 0x01;
-static const auto SCSIOP_REQUEST_BLOCK_ADDR = 0x02;
-static const auto SCSIOP_REQUEST_SENSE = 0x03;
-static const auto SCSIOP_FORMAT_UNIT = 0x04;
-static const auto SCSIOP_READ_BLOCK_LIMITS = 0x05;
-static const auto SCSIOP_REASSIGN_BLOCKS = 0x07;
-static const auto SCSIOP_READ6 = 0x08;
-static const auto SCSIOP_RECEIVE = 0x08;
-static const auto SCSIOP_WRITE6 = 0x0A;
-static const auto SCSIOP_PRINT = 0x0A;
-static const auto SCSIOP_SEND = 0x0A;
-static const auto SCSIOP_SEEK6 = 0x0B;
-static const auto SCSIOP_TRACK_SELECT = 0x0B;
-static const auto SCSIOP_SLEW_PRINT = 0x0B;
-static const auto SCSIOP_SEEK_BLOCK = 0x0C;
-static const auto SCSIOP_PARTITION = 0x0D;
-static const auto SCSIOP_READ_REVERSE = 0x0F;
-static const auto SCSIOP_WRITE_FILEMARKS = 0x10;
-static const auto SCSIOP_FLUSH_BUFFER = 0x10;
-static const auto SCSIOP_SPACE = 0x11;
-static const auto SCSIOP_INQUIRY = 0x12;
-static const auto SCSIOP_VERIFY6 = 0x13;
-static const auto SCSIOP_RECOVER_BUF_DATA = 0x14;
-static const auto SCSIOP_MODE_SELECT = 0x15;
-static const auto SCSIOP_RESERVE_UNIT = 0x16;
-static const auto SCSIOP_RELEASE_UNIT = 0x17;
-static const auto SCSIOP_COPY = 0x18;
-static const auto SCSIOP_ERASE = 0x19;
-static const auto SCSIOP_MODE_SENSE = 0x1A;
-static const auto SCSIOP_START_STOP_UNIT = 0x1B;
-static const auto SCSIOP_STOP_PRINT = 0x1B;
-static const auto SCSIOP_LOAD_UNLOAD = 0x1B;
-static const auto SCSIOP_RECEIVE_DIAGNOSTIC = 0x1C;
-static const auto SCSIOP_SEND_DIAGNOSTIC = 0x1D;
-static const auto SCSIOP_MEDIUM_REMOVAL = 0x1E;
-static const auto SCSIOP_READ_CAPACITY = 0x25;
-static const auto SCSIOP_READ = 0x28;
-static const auto SCSIOP_WRITE = 0x2A;
-static const auto SCSIOP_SEEK = 0x2B;
-static const auto SCSIOP_LOCATE = 0x2B;
-static const auto SCSIOP_WRITE_VERIFY = 0x2E;
-static const auto SCSIOP_VERIFY = 0x2F;
-static const auto SCSIOP_SEARCH_DATA_HIGH = 0x30;
-static const auto SCSIOP_SEARCH_DATA_EQUAL = 0x31;
-static const auto SCSIOP_SEARCH_DATA_LOW = 0x32;
-static const auto SCSIOP_SET_LIMITS = 0x33;
-static const auto SCSIOP_READ_POSITION = 0x34;
-static const auto SCSIOP_SYNCHRONIZE_CACHE = 0x35;
-static const auto SCSIOP_COMPARE = 0x39;
-static const auto SCSIOP_COPY_COMPARE = 0x3A;
-static const auto SCSIOP_WRITE_DATA_BUFF = 0x3B;
-static const auto SCSIOP_READ_DATA_BUFF = 0x3C;
-static const auto SCSIOP_CHANGE_DEFINITION = 0x40;
-static const auto SCSIOP_READ_SUB_CHANNEL = 0x42;
-static const auto SCSIOP_READ_TOC = 0x43;
-static const auto SCSIOP_READ_HEADER = 0x44;
-static const auto SCSIOP_PLAY_AUDIO = 0x45;
-static const auto SCSIOP_PLAY_AUDIO_MSF = 0x47;
-static const auto SCSIOP_PLAY_TRACK_INDEX = 0x48;
-static const auto SCSIOP_PLAY_TRACK_RELATIVE = 0x49;
-static const auto SCSIOP_PAUSE_RESUME = 0x4B;
-static const auto SCSIOP_LOG_SELECT = 0x4C;
-static const auto SCSIOP_LOG_SENSE = 0x4D;
+    DWORD returned = 0L;
+    if (!DeviceIoControl(
+            device, IOCTL_STORAGE_QUERY_PROPERTY, &query, sizeof(query), &header, sizeof(header), &returned, NULL))
+    {
+        Log::Debug(
+            "Failed IOCTL_STORAGE_QUERY_PROPERTY for the descriptor length [{}]",
+            SystemError(HRESULT_FROM_WIN32(GetLastError())));
+        return false;
+    }
+
+    if (returned < sizeof(header) || header.Size < sizeof(STORAGE_DEVICE_DESCRIPTOR))
+    {
+        Log::Debug("StorageDeviceProperty announced a descriptor of {} bytes", header.Size);
+        return false;
+    }
+
+    CBinaryBuffer buffer;
+    if (!buffer.SetCount(header.Size))
+    {
+        Log::Debug("Failed to allocate {} bytes for a storage device descriptor", header.Size);
+        return false;
+    }
+    buffer.ZeroMe();
+
+    returned = 0L;
+    if (!DeviceIoControl(
+            device,
+            IOCTL_STORAGE_QUERY_PROPERTY,
+            &query,
+            sizeof(query),
+            buffer.GetData(),
+            static_cast<DWORD>(buffer.GetCount()),
+            &returned,
+            NULL))
+    {
+        Log::Debug(
+            "Failed IOCTL_STORAGE_QUERY_PROPERTY for the descriptor [{}]",
+            SystemError(HRESULT_FROM_WIN32(GetLastError())));
+        return false;
+    }
+
+    if (returned < sizeof(STORAGE_DEVICE_DESCRIPTOR))
+    {
+        Log::Debug("StorageDeviceProperty returned {} bytes, short of a descriptor", returned);
+        return false;
+    }
+
+    const auto* descriptor = reinterpret_cast<const STORAGE_DEVICE_DESCRIPTOR*>(buffer.GetData());
+
+    // The device chose both the offsets and the strings they point to: they are read inside what it actually
+    // returned and not one byte further, whatever its descriptor claims
+    const auto answer = BasicBufferSpan<const uint8_t>(
+        buffer.GetData(), std::min<size_t>(returned, static_cast<size_t>(descriptor->Size)));
+
+    disk.VendorId = EnumDisk::ParseDescriptorString(answer, descriptor->VendorIdOffset);
+    disk.ProductId = EnumDisk::ParseDescriptorString(answer, descriptor->ProductIdOffset);
+    disk.ProductRevision = EnumDisk::ParseDescriptorString(answer, descriptor->ProductRevisionOffset);
+    disk.SerialNumber = EnumDisk::ParseDescriptorString(answer, descriptor->SerialNumberOffset);
+    disk.BusType = descriptor->BusType;
+    disk.RemovableMedia = descriptor->RemovableMedia != FALSE;
+
+    Log::Debug(
+        L"Identity of '{}': vendor '{}', product '{}', revision '{}', serial '{}', bus type {:#x}, removable {}",
+        disk.InterfacePath,
+        disk.VendorId,
+        disk.ProductId,
+        disk.ProductRevision,
+        disk.SerialNumber,
+        static_cast<uint32_t>(disk.BusType),
+        disk.RemovableMedia);
+
+    return true;
+}
+
+// Model and serial of the drive inside an enclosure, asked to the drive itself with an ATA IDENTIFY DEVICE carried
+// by SAT. Leaves 'disk' untouched when the bridge does not implement SAT, which many do not.
+void QueryEnclosedIdentity(const wchar_t* devicePath, EnumDisk::PhysicalDisk& disk)
+{
+    //
+    // IOCTL_SCSI_PASS_THROUGH is declared FILE_READ_ACCESS | FILE_WRITE_ACCESS, so the read only handle the
+    // enumeration opened cannot carry it: this takes one of its own and gives it back here
+    //
+
+    auto device = CreateFileApi(
+        devicePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+
+    if (!device)
+    {
+        Log::Debug(L"Failed CreateFile for read and write on '{}', no SAT identity [{}]", devicePath, device.error());
+        return;
+    }
+
+    SCSI_PASS_THROUGH_WITH_BUFFERS sptwb;
+    ZeroMemory(&sptwb, sizeof(sptwb));
+
+    sptwb.Spt.Length = sizeof(SCSI_PASS_THROUGH);
+    sptwb.Spt.CdbLength = 12;
+    sptwb.Spt.SenseInfoLength = sizeof(sptwb.SenseBuf);
+    sptwb.Spt.DataIn = SCSI_IOCTL_DATA_IN;
+    sptwb.Spt.DataTransferLength = sizeof(sptwb.DataBuf);
+    sptwb.Spt.TimeOutValue = 5;
+    sptwb.Spt.DataBufferOffset = offsetof(SCSI_PASS_THROUGH_WITH_BUFFERS, DataBuf);
+    sptwb.Spt.SenseInfoOffset = offsetof(SCSI_PASS_THROUGH_WITH_BUFFERS, SenseBuf);
+
+    // ATA PASS-THROUGH(12) carrying IDENTIFY DEVICE
+    sptwb.Spt.Cdb[0] = kScsiOpAtaPassThrough12;
+    sptwb.Spt.Cdb[1] = 4 << 1;  // PROTOCOL 4, PIO data in
+    sptwb.Spt.Cdb[2] = 0x0E;  // T_DIR from the device, BYT_BLOK in blocks, T_LENGTH in the sector count
+    sptwb.Spt.Cdb[4] = 1;  // one sector
+    sptwb.Spt.Cdb[9] = kAtaCommandIdentifyDevice;
+
+    DWORD returned = 0L;
+    if (!DeviceIoControl(
+            device->value(),
+            IOCTL_SCSI_PASS_THROUGH,
+            &sptwb,
+            sizeof(SCSI_PASS_THROUGH),
+            &sptwb,
+            sizeof(sptwb),
+            &returned,
+            NULL))
+    {
+        Log::Debug(
+            L"Failed IOCTL_SCSI_PASS_THROUGH ATA IDENTIFY on '{}' [{}]",
+            devicePath,
+            SystemError(HRESULT_FROM_WIN32(GetLastError())));
+        return;
+    }
+
+    if (sptwb.Spt.ScsiStatus != 0)
+    {
+        // A bridge with no SAT answers CHECK CONDITION, its sense data saying ILLEGAL REQUEST
+        Log::Debug(
+            L"ATA IDENTIFY refused on '{}', SCSI status {:#x}, sense {:#x}/{:#x}/{:#x}",
+            devicePath,
+            sptwb.Spt.ScsiStatus,
+            sptwb.SenseBuf[2] & 0x0F,
+            sptwb.SenseBuf[12],
+            sptwb.SenseBuf[13]);
+        return;
+    }
+
+    const auto identify = BasicBufferSpan<const uint8_t>(sptwb.DataBuf, sizeof(sptwb.DataBuf));
+
+    disk.EnclosedModel =
+        EnumDisk::ParseAtaIdentifyString(identify, kAtaIdentifyModelFirstWord, kAtaIdentifyModelWordCount);
+    disk.EnclosedSerial =
+        EnumDisk::ParseAtaIdentifyString(identify, kAtaIdentifySerialFirstWord, kAtaIdentifySerialWordCount);
+
+    Log::Debug(L"Enclosed drive of '{}': model '{}', serial '{}'", devicePath, disk.EnclosedModel, disk.EnclosedSerial);
+}
+
+}  // namespace
+
+std::wstring EnumDisk::ParseDescriptorString(BasicBufferSpan<const uint8_t> descriptor, DWORD offset)
+{
+    const size_t size = static_cast<size_t>(descriptor.size());
+
+    // 0 is how a STORAGE_DEVICE_DESCRIPTOR says the device reported no such field
+    if (offset == 0 || offset >= size)
+    {
+        return {};
+    }
+
+    const uint8_t* bytes = descriptor.data();
+
+    size_t end = offset;
+    while (end < size && bytes[end] != 0x00)
+    {
+        ++end;
+    }
+
+    if (end == size)
+    {
+        // The storage stack terminates the strings its descriptor points to: an unterminated one is malformed
+        return {};
+    }
+
+    return ToTrimmedWide(bytes + offset, end - offset);
+}
+
+std::wstring
+EnumDisk::ParseAtaIdentifyString(BasicBufferSpan<const uint8_t> identify, size_t firstWord, size_t wordCount)
+{
+    const size_t words = static_cast<size_t>(identify.size()) / 2;
+
+    // A device that answered short must not be read past, and the range itself must not overflow
+    if (wordCount == 0 || firstWord > words || wordCount > words - firstWord)
+    {
+        return {};
+    }
+
+    const uint8_t* bytes = identify.data() + firstWord * 2;
+    const size_t count = wordCount * 2;
+
+    // ATA holds the earlier character of a pair in the high byte of its word
+    std::vector<uint8_t> swapped(count);
+    for (size_t i = 0; i + 1 < count; i += 2)
+    {
+        swapped[i] = bytes[i + 1];
+        swapped[i + 1] = bytes[i];
+    }
+
+    return ToTrimmedWide(swapped.data(), swapped.size());
+}
 
 HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk, const GUID guidDeviceClass)
 {
@@ -126,8 +313,8 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
         }
         else
         {
-            hr = GetLastError();
-            Log::Error("Failed SetupDiEnumDeviceInterfaces [{}]", SystemError(hr));
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Debug("Failed SetupDiEnumDeviceInterfaces [{}]", SystemError(hr));
             return hr;
         }
         return S_FALSE;
@@ -145,7 +332,7 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed SetupDiGetDeviceInterfaceDetail [{}]", SystemError(hr));
+            Log::Debug(L"Failed SetupDiGetDeviceInterfaceDetail [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -167,15 +354,18 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
             hDevInfo, &interfaceData, interfaceDetailData, interfaceDetailDataSize, &interfaceDetailDataSize, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed SetupDiGetDeviceInterfaceDetail [{}]", SystemError(hr));
+        Log::Debug("Failed SetupDiGetDeviceInterfaceDetail [{}]", SystemError(hr));
         return hr;
     }
-    BOOST_SCOPE_EXIT(&interfaceDetailData) { free(interfaceDetailData); }
+    BOOST_SCOPE_EXIT(&interfaceDetailData)
+    {
+        free(interfaceDetailData);
+    }
     BOOST_SCOPE_EXIT_END;
 
     //
-    // Now we have the device path. Open the device interface
-    // to send Pass Through command
+    // Now we have the device path. Open the device interface to check the caller will be able to read it
+    //
 
     Log::Debug(L"Interface: {}", interfaceDetailData->DevicePath);
 
@@ -191,94 +381,24 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
         NULL  // hTemplateFile
     );
 
-    //
-    // We have the handle to talk to the device.
-    // So we can release the interfaceDetailData buffer
-    //
-
     if (!hDevice)
     {
-        Log::Error("Failed CreateFile for disk interface [{}]", hDevice.error());
+        Log::Debug(L"Failed CreateFile for disk interface '{}' [{}]", interfaceDetailData->DevicePath, hDevice.error());
         return ToHRESULT(hDevice.error());
     }
 
-    STORAGE_PROPERTY_QUERY query;
-    query.PropertyId = StorageAdapterProperty;
-    query.QueryType = PropertyStandardQuery;
+    //
+    // Identity comes on top of the interface path, which is what the enumeration is for: a device that will not
+    // answer for its identity is still a disk to report, so nothing below can fail GetDevice()
+    //
 
-    DWORD returnedLength = 0L;
-    CBinaryBuffer Buf;
-    Buf.SetCount(512);
-    if (!DeviceIoControl(
-            hDevice->value(),
-            IOCTL_STORAGE_QUERY_PROPERTY,
-            &query,
-            sizeof(STORAGE_PROPERTY_QUERY),
-            Buf.GetData(),
-            (DWORD)Buf.GetCount(),
-            &returnedLength,
-            NULL))
+    const bool identified = QueryStorageIdentity(hDevice->value(), aDisk);
+
+    // A bridge answers for itself and not for the drive it carries, so ask that drive directly. An identity that
+    // did not come at all gets the same attempt, on the chance the device only refused the storage property path.
+    if (!identified || aDisk.BusType == BusTypeUsb || aDisk.BusType == BusType1394)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed IOCTL on disk interface [{}]", SystemError(hr));
-    }
-    else
-    {
-
-        query.PropertyId = StorageDeviceProperty;
-        query.QueryType = PropertyStandardQuery;
-
-        CBinaryBuffer outBuf;
-        outBuf.SetCount(512);
-
-        if (!DeviceIoControl(
-                hDevice->value(),
-                IOCTL_STORAGE_QUERY_PROPERTY,
-                &query,
-                sizeof(STORAGE_PROPERTY_QUERY),
-                outBuf.GetData(),
-                512,
-                &returnedLength,
-                NULL))
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed IOCTL_STORAGE_QUERY_PROPERTY [{}]", SystemError(hr));
-            return hr;
-        }
-    }
-
-    SCSI_PASS_THROUGH_WITH_BUFFERS sptwb;
-    ZeroMemory(&sptwb, sizeof(SCSI_PASS_THROUGH_WITH_BUFFERS));
-
-    sptwb.Spt.Length = sizeof(SCSI_PASS_THROUGH);
-    sptwb.Spt.PathId = 0;
-    sptwb.Spt.TargetId = 1;
-    sptwb.Spt.Lun = 0;
-    sptwb.Spt.CdbLength = CDB6GENERIC_LENGTH;
-    sptwb.Spt.SenseInfoLength = 24;
-    sptwb.Spt.DataIn = SCSI_IOCTL_DATA_IN;
-    sptwb.Spt.DataTransferLength = 192;
-    sptwb.Spt.TimeOutValue = 2;
-    sptwb.Spt.DataBufferOffset = offsetof(SCSI_PASS_THROUGH_WITH_BUFFERS, DataBuf);
-    sptwb.Spt.SenseInfoOffset = offsetof(SCSI_PASS_THROUGH_WITH_BUFFERS, SenseBuf);
-    sptwb.Spt.Cdb[0] = SCSIOP_INQUIRY;
-    sptwb.Spt.Cdb[4] = 192;
-
-    DWORD length = offsetof(SCSI_PASS_THROUGH_WITH_BUFFERS, DataBuf) + sptwb.Spt.DataTransferLength;
-    DWORD returned = 0L;
-    if (!DeviceIoControl(
-            hDevice->value(),
-            IOCTL_SCSI_PASS_THROUGH,
-            &sptwb,
-            sizeof(SCSI_PASS_THROUGH),
-            &sptwb,
-            length,
-            &returned,
-            FALSE))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed IOCTL_SCSI_PASS_THROUGH [{}]", SystemError(hr));
-        return hr;
+        QueryEnclosedIdentity(interfaceDetailData->DevicePath, aDisk);
     }
 
     return S_OK;
@@ -316,22 +436,22 @@ HRESULT EnumDisk::EnumerateDisks(std::vector<PhysicalDisk>& disks, const GUID gu
     //
     //  Enumerate all the disk devices
     //
-    DWORD index = 0;
-
-    for (;;)
+    for (DWORD index = 0;; index++)
     {
         PhysicalDisk aDisk;
 
-        if (FAILED(hr = GetDevice(hDevInfo, index, aDisk, guidDeviceClass)))
-        {
-            return hr;
-        }
+        hr = GetDevice(hDevInfo, index, aDisk, guidDeviceClass);
         if (hr == S_FALSE)
             break;  // Enumeration done!
 
-        disks.push_back(std::move(aDisk));
+        if (FAILED(hr))
+        {
+            // One device the caller cannot use must not hide the disks enumerated after it
+            Log::Debug("Skipping disk device interface #{} [{}]", index, SystemError(hr));
+            continue;
+        }
 
-        index++;
+        disks.push_back(std::move(aDisk));
     }
 
     return S_OK;

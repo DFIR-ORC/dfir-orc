@@ -81,6 +81,7 @@ set(SRC_DISK
     "ntfs_security_descriptor_entry_test.cpp"
     "mft_record_attribute_bounds_test.cpp"
     "lzx_decompressor_test.cpp"
+    "enum_disk_identity_test.cpp"
     "wof.cpp"
 )
 
@@ -196,6 +197,7 @@ target_link_libraries(OrcLibTest
         VisualStudio::CppUnitTest
         OrcLib
         crypt32
+        setupapi.lib
 )
 
 target_precompile_headers(OrcLibTest PRIVATE stdafx.h)
