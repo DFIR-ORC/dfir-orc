@@ -172,3 +172,31 @@ python rest_test_server.py --port 8090 --out .\received2
 `hq` is required and falls back from a dead port to the sink on 8089. `nas` is optional, takes no run
 artifacts, and lands on 8090. Expect `received\up\` to hold the archive plus the run's own files, and
 `received2\up\` to hold the archive alone.
+
+## On the VM rig
+
+The `destinations-*` tags of `run-vmtest.ps1` drive two sinks: the usual one on 8443, and a second on
+**8461 writing to `/root/received2`**. The second directory is not tidiness: two destinations writing
+to one directory cannot be told apart, so "both received it" would not be checkable.
+
+Both sinks are started by `vm/start_sinks.sh` and wiped by `vm/clear_received.sh`, so redeploy both
+scripts to the bench before running these tags:
+
+```
+scp tests/RestAgent/vm/start_sinks.sh tests/RestAgent/vm/clear_received.sh "$SINK":/root/
+```
+
+| Tag | Fixture | Verdict |
+|-----|---------|---------|
+| `destinations` | `vm-destinations.xml` | two live destinations: both sinks byte-exact. One succeeding must not stop the other being served, which a fallback list would do |
+| `destinations-fallback` | `vm-destinations-fallback.xml` | chains are per destination: 'a' falls back from a dead port, 'b' is served independently, both byte-exact. `Upload 'a' #1/2 failed after 1 attempt(s)` proves a really fell back rather than delivering on entry #1 |
+| `destinations-routing` | `vm-destinations-routing.xml` | 'b' excludes the archive, so the two sinks must hold DIFFERENT sets. Scored on the second sha differing: identical sinks would mean the filters selected nothing |
+| `destinations-required` | `vm-destinations-required.xml` | no short-circuit: 'a' is required and dead, 'b' still has its copy, and the Critical names 'a' |
+| `destinations-delete` | `vm-destinations-delete.xml` | `delete_when_done` with both required destinations confirming: the sink has the archive and the host no longer does |
+| `destinations-delete-kept` | `vm-destinations-delete-kept.xml` | the safety case: a required destination got nothing, so the archive stays on the host. This is the one that catches deleting a collection that was never delivered |
+
+Two gaps worth knowing about. Nothing here exercises a destination whose filters match **nothing** (the
+`no file matched its filters, nothing sent` warning), because the rig produces a single archive and
+the warning needs a destination that wants neither it nor the run artifacts. And nothing exercises
+`delete_when_done` against a BITS destination, which the bench has no way to run; that path is covered
+by the unit tests in `tests/OrcLibTest/upload_destinations_test.cpp` instead.

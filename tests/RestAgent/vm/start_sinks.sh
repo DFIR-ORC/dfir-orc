@@ -45,6 +45,10 @@
 #         dialog, and a write under /public.php/dav/files/<token>/... needs the resulting session
 #         cookie - no HTTP credential of its own. Stock Nextcloud does not serve this dialog (see
 #         README "Form login"), which is why this is a mock rather than vm/setup_nextcloud.sh.
+#   8461  HTTPS sink writing to /root/received2, the SECOND destination of the destinations-*
+#         scenarios. It needs its own directory rather than sharing /root/received: those scenarios
+#         assert that BOTH destinations received a copy, and two destinations writing to one
+#         directory are indistinguishable. Same server.crt as 8443, so one pin covers both
 #   8888  open forward proxy
 #   8889  Basic-auth forward proxy (orc:secret)
 #
@@ -70,6 +74,7 @@ setsid python3 rest_test_server.py --port 8446 --tls --cert server-other.crt --k
 setsid python3 rest_test_server.py --port 8447 --tls --cert server.crt --key server.key --challenge-once --out /root/received </dev/null >/root/sink_https_challenge.log 2>&1 &
 setsid python3 rest_test_server.py --port 8449 --tls --cert server.crt --key server.key --chunk-sort lexicographic --out /root/received </dev/null >/root/sink_https_lexchunks.log 2>&1 &
 setsid python3 rest_test_server.py --port 8460 --tls --cert server.crt --key server.key --share-login orcvmshare1:orcvmshare1-secret --out /root/received </dev/null >/root/sink_https_sharelogin.log 2>&1 &
+setsid python3 rest_test_server.py --port 8461 --tls --cert server.crt --key server.key --out /root/received2 </dev/null >/root/sink_https_dest2.log 2>&1 &
 setsid python3 rest_test_server.py --proxy 8888 </dev/null >/root/proxy.log 2>&1 &
 setsid python3 rest_test_server.py --proxy 8889 --proxy-auth orc:secret </dev/null >/root/proxy_auth.log 2>&1 &
 sleep 2

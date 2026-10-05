@@ -59,7 +59,7 @@ $settings = @{
     # on the bench. 8455 looked free only because SeaweedFS had not been provisioned yet - its volume
     # server owns it, beside 8454 and 8456 - so installing SeaweedFS later would have collided and
     # failed every seaweedfs scenario, not just the one sink.
-    Ports         = @{ Http = 8080; Https = 8443; TlsCap = 8444; TlsCap11 = 8445; Challenge = 8447; Nextcloud = 8448; LexChunks = 8449; Minio = 8450; RustFs = 8452; SeaweedFs = 8454; ShareLogin = 8460; Proxy = 8888; ProxyAuth = 8889; Squid = 3128 }
+    Ports         = @{ Http = 8080; Https = 8443; TlsCap = 8444; TlsCap11 = 8445; Challenge = 8447; Nextcloud = 8448; LexChunks = 8449; Minio = 8450; RustFs = 8452; SeaweedFs = 8454; ShareLogin = 8460; Dest2 = 8461; Proxy = 8888; ProxyAuth = 8889; Squid = 3128 }
 }
 
 if (-not $SettingsFile) {
@@ -130,6 +130,13 @@ $shareLoginUrl = "https://$($settings.VmHost):$($ports.ShareLogin)"
 # needs its own ClearScript (an inline command; no separate script file to deploy).
 $shareLoginReceived = '/root/received/public.php/dav/files/orcvmshare1'
 $shareLoginClear = "rm -rf $shareLoginReceived && mkdir -p $shareLoginReceived"
+
+# The SECOND destination of the destinations-* scenarios (start_sinks.sh port 8461). It writes to its
+# own directory on purpose: those scenarios assert that BOTH destinations received a copy, and two
+# destinations writing to one directory cannot be told apart. clear_received.sh wipes it alongside the
+# first, so no scenario inherits a previous run's copy.
+$dest2Url = "https://$($settings.VmHost):$($ports.Dest2)"
+$dest2Received = '/root/received2/up'
 
 # MinIO (vm/setup_minio.sh) stores an upload as an S3 object - <bucket>/<key>/xl.meta plus part files,
 # small ones inlined - so there is no file on disk to hash. Its scenario reads the object back through
@@ -266,6 +273,41 @@ $scenarios = [ordered]@{
     # The mirror: the PRIMARY excludes the archive and its destination is dead, the fallback asks for
     # everything. Receiving it proves the record is not gated on what the first entry accepted.
     'fallback-record' = @{ Config = 'vm-fallback-record.xml';      Env = @{ ORC_UPLOAD_SERVER = $httpsUrl } }
+    # --- <uploads>: several destinations, each its own chain. Each uses the second sink (8461) with
+    # its own directory, because two destinations writing to one cannot be told apart and "both
+    # received it" is what these exist to assert.
+    #
+    # Two live destinations: BOTH sinks must hold a byte-exact copy. One succeeding must not stop the
+    # other being served, which a fallback list would do.
+    'destinations' = @{ Config = 'vm-destinations.xml'; ReceivedDir2 = $dest2Received
+                        ExpectLog = 'every configured destination received the collection'
+                        Env = @{ ORC_UPLOAD_SERVER = $httpsUrl; ORC_UPLOAD_SERVER2 = $dest2Url } }
+    # Chains are per destination: 'a' falls back from a dead port while 'b' is served independently.
+    # The ExpectLog names a's fallback - without it an 'a' that never retried would deliver the same
+    # bytes through entry #1 and still pass the hash comparison.
+    'destinations-fallback' = @{ Config = 'vm-destinations-fallback.xml'; ReceivedDir2 = $dest2Received
+                        ExpectLog = "Upload 'a' #1/2 failed after 1 attempt(s)"
+                        Env = @{ ORC_UPLOAD_SERVER = $httpsUrl; ORC_UPLOAD_SERVER2 = $dest2Url } }
+    # Routing: 'b' excludes the archive, so the two sinks must hold DIFFERENT sets. Scored on the
+    # second sha DIFFERING (ReceivedDir2Differs); identical sinks would mean the filters did nothing.
+    'destinations-routing' = @{ Config = 'vm-destinations-routing.xml'; ReceivedDir2 = $dest2Received
+                        ReceivedDir2Differs = $true
+                        Env = @{ ORC_UPLOAD_SERVER = $httpsUrl; ORC_UPLOAD_SERVER2 = $dest2Url } }
+    # No short-circuit: 'a' is required and entirely dead, 'b' is live. ReceivedDir is the SECOND sink
+    # because b's copy is what is under test, and the Critical must name 'a'.
+    'destinations-required' = @{ Config = 'vm-destinations-required.xml'; ReceivedDir = $dest2Received
+                        ExpectLog = 'required destination(s) received nothing (a)'
+                        Env = @{ ORC_UPLOAD_SERVER = $httpsUrl; ORC_UPLOAD_SERVER2 = $dest2Url } }
+    # delete_when_done with every required destination confirming: the sink has it and the host does
+    # not. The local archive is gone, so there is nothing left to hash (see DeletesLocal).
+    'destinations-delete' = @{ Config = 'vm-destinations-delete.xml'; ReceivedDir = $dest2Received
+                        DeletesLocal = $true
+                        Env = @{ ORC_UPLOAD_SERVER = $httpsUrl; ORC_UPLOAD_SERVER2 = $dest2Url } }
+    # The safety case, and the one that matters most: a required destination got nothing, so nothing
+    # may be deleted. KeepsLocal makes the surviving archive the assertion.
+    'destinations-delete-kept' = @{ Config = 'vm-destinations-delete-kept.xml'; ReceivedDir = $dest2Received
+                        KeepsLocal = $true
+                        Env = @{ ORC_UPLOAD_SERVER = $httpsUrl; ORC_UPLOAD_SERVER2 = $dest2Url } }
     # Sink seeded with a file larger than the archive, so the resume offset covers it and nothing is
     # sent. KeepsLocal: with operation="move", the archive surviving IS the assertion.
     'resume-complete' = @{ Config = 'vm-resume-complete.xml'; KeepsLocal = $true
@@ -620,6 +662,22 @@ function Invoke-OneScenario {
         Select-String -Path (Join-Path $outDir 'run.log') -Pattern 'sent no data' |
             Select-Object -First 1 | ForEach-Object { Write-Host ("  " + $_.Line.Trim()) }
     }
+    elseif ($Scn.DeletesLocal) {
+        # delete_when_done removes the local archive once every required destination confirmed it, so
+        # by the time the runner looks there is nothing left to hash: the byte-exact comparison below
+        # cannot run, and the assertion is the pair "the sink got it" and "the host no longer has it".
+        # A run that uploaded fine and deleted nothing is exactly the failure this catches.
+        if ([string]::IsNullOrWhiteSpace($received)) {
+            Write-Host "FAIL  : sink received nothing, so the deletion proves nothing"
+        }
+        elseif ($localArchive) {
+            Write-Host "FAIL  : the local archive is still there after a delete_when_done run"
+        }
+        else {
+            $verdict = 'PASS'
+            Write-Host "PASS  : the sink has the archive and the host no longer does"
+        }
+    }
     elseif ($negative) {
         if ([string]::IsNullOrWhiteSpace($received)) {
             $verdict = 'PASS'
@@ -658,6 +716,35 @@ function Invoke-OneScenario {
             elseif ($localArchive -and ($remoteSha -eq $localSha)) {
                 $verdict = 'PASS'
                 Write-Host "PASS  : byte-exact (sha256 local == remote)"
+
+                # A second destination is proven only by its OWN copy: the first sink passing says
+                # nothing about whether the second was ever served. ReceivedDir2Differs inverts it for
+                # the routing scenario, where the two sinks are meant to hold different sets and
+                # equal shas would mean the filters did nothing.
+                if ($Scn.ReceivedDir2) {
+                    $remoteSha2 = (Invoke-Remote "sha256sum $($Scn.ReceivedDir2)/*.7z 2>/dev/null | awk '{print `$1}'").Trim()
+                    Write-Host ("remote2: {0}" -f $remoteSha2)
+                    if ($Scn.ReceivedDir2Differs) {
+                        # Two assertions, because "differs" alone is satisfied by an EMPTY sink: a
+                        # second destination that was never served at all would pass on the sha check
+                        # and prove nothing. So require that it received SOMETHING (the run's own files)
+                        # and that what it holds is not the archive.
+                        $remote2Any = (Invoke-Remote "ls -1 $($Scn.ReceivedDir2) 2>/dev/null | wc -l").Trim()
+                        Write-Host ("remote2: {0} file(s)" -f $remote2Any)
+                        if ($remote2Any -eq '0') {
+                            $verdict = 'FAIL'
+                            Write-Host "FAIL  : the second destination received nothing at all, so routing proved nothing"
+                        }
+                        elseif ($remoteSha2 -eq $localSha) {
+                            $verdict = 'FAIL'
+                            Write-Host "FAIL  : the second destination received the same set; its filters selected nothing"
+                        }
+                    }
+                    elseif ($remoteSha2 -ne $localSha) {
+                        $verdict = 'FAIL'
+                        Write-Host "FAIL  : the second destination did not receive a byte-exact copy"
+                    }
+                }
             }
             else {
                 Write-Host "FAIL  : sha mismatch (local != remote)"

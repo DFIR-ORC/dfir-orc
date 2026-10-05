@@ -12,3 +12,7 @@
 : > /root/proxy_auth.log 2>/dev/null
 find /root/received/up -type f -delete 2>/dev/null
 mkdir -p /root/received/up
+# The second destination's sink (port 8461). Wiped here too: a destinations-* scenario that found a
+# previous run's copy already there would pass without the run having delivered anything.
+find /root/received2/up -type f -delete 2>/dev/null
+mkdir -p /root/received2/up
