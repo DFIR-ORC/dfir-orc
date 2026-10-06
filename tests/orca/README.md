@@ -207,11 +207,14 @@ tucked away in a subdirectory.
 ### Ingest
 
 ```powershell
-# basic: the dataset lands beside the archive, in E:\dumps\DFIR-ORC_HOST\
+# basic: the dataset lands in the current directory, in .\DFIR-ORC_HOST\
 orca ingest E:\dumps\DFIR-ORC_HOST.7z
 
 # somewhere else
 orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host
+
+# beside the archive, in E:\dumps\DFIR-ORC_HOST\, where any later command finds it
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out-at-input
 
 # encrypted / password-protected sub-archives (otherwise read from the sibling *_cli_config.xml)
 orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --password S3cret
@@ -229,7 +232,8 @@ A directory holding several machines' results is several runs. `orca ingest` rea
 refuses the rest; `orca fleet` reads all of them, one dataset per host:
 
 ```
-orca fleet C:\share\collect --private-key contoso.com.key
+orca fleet C:\share\collect --private-key contoso.com.key                  # into .\<run>\
+orca fleet C:\share\collect --private-key contoso.com.key --out-at-input   # into C:\share\collect\<run>\
 ```
 
 Each dataset is named after its own run, and every table in it carries `OrcComputerName`,
@@ -240,14 +244,14 @@ nothing to rebuild when one host is re-collected:
 ```sql
 -- stacking: the autorun one host has and ninety-nine do not
 SELECT "Image Path", "SHA-256", count(DISTINCT "OrcComputerName") AS hosts
-FROM read_parquet('collect/*/autoruns.parquet', union_by_name = true)
+FROM read_parquet('*/autoruns.parquet', union_by_name = true)
 GROUP BY ALL ORDER BY hosts ASC;
 ```
 
 `union_by_name = true` is required rather than cosmetic: ORC versions and configurations differ
 across an estate, and a positional union would misalign the columns.
 
-Read the denominator with it. `.orca-fleet/hosts.csv` (beside the datasets, or under `--out`)
+Read the denominator with it. `.orca-fleet/hosts.csv` (beside the datasets, wherever they went)
 lists every host and whether it ingested; `.orca-fleet/coverage.csv` lists only the gaps - a
 table a host skipped, or one every other host produced and this one did not. A stacking result
 without them describes the hosts that answered while reading as though it described all of
@@ -536,9 +540,11 @@ A signpost, not an explanation: one line however many hosts are sealed.
 
 `ingest` rather than `extract`, and the distinction is not cosmetic: `extract` expands into a
 subdirectory per archive, which `run_log_files` deliberately does not walk, so a report on an
-extracted tree still shows none of them. `ingest` leaves the decrypted `.7z` *beside* the
-collection, which is all this path needs - the next report reads the logs out of it with no
-key and no second decrypt - and it does not need duckdb to get that far.
+extracted tree still shows none of them. `ingest --out-at-input` leaves the decrypted `.7z`
+*beside* the collection, which is all this path needs - the next report reads the logs out of it
+with no key and no second decrypt - and it does not need duckdb to get that far. Hence the
+`--out-at-input` in the signpost: a default ingest keeps that copy in its current directory,
+where a report of the collection never looks.
 
 Unsealing in `report` itself was measured and rejected. The decrypt is cheap: 0.27 s for a
 98 MB sealed archive, against 1.09 s to pull the logs out of the 65 MB plain one it becomes,
@@ -546,8 +552,7 @@ so it is a fifth of a cost already being paid. It cannot be narrowed to the log 
 either - a 7z keeps its header at the end, so nothing can say where an entry is, or that one
 exists, before the whole plain archive is on disk. That last point is the objection: `report`
 would write a full-size copy of every archive, and without `--work-dir` rewrite it every run.
-`ingest` writes that same copy once, beside the collection, where everything afterwards
-reuses it.
+`ingest` writes that same copy once, and everything afterwards reuses it.
 
 **A protected archive usually arrives with its own password.** ORC archives each
 sub-command's `/config` next to that command's output as `<name>_cli_config.xml`
@@ -599,8 +604,8 @@ DESKTOP-U9N26B0  //host/dumps/ORC_HOST
     ORC_..._144127.log  106
 ```
 
-**Into the work dir, never beside the collection.** `ingest` and `extract` unseal in place on
-purpose, so the next command finds plain files and nothing decrypts twice; a report only reads,
+**Into the work dir, never beside the collection.** `ingest` and `extract` keep what they
+unseal, so the next command finds plain files and nothing decrypts twice; a report only reads,
 and what it reads has to stay as it was found - the collection directory is often read-only
 anyway. `--work-dir` keeps the unsealed sidecars (under `<collection>-<digest>`, since two
 machines' collections routinely share a folder name) and the next report reuses them;
@@ -806,7 +811,8 @@ Keys below the scalars: `failures`, `empty_tables`, `empty_files`, `biggest`, `s
 ### Diff two versions
 
 ```powershell
-# straight from the collected archives: each side is ingested once and cached
+# straight from the collected archives: each side is ingested once and cached in the current
+# directory (see "A reference you compare against again and again" below)
 orca diff E:\dumps\10.3.3\DFIR-ORC_HOST.7z E:\dumps\10.3.1\DFIR-ORC_HOST.7z
 
 # encrypted results, and a result directory (Outcome json + top archives) on either side
@@ -837,6 +843,29 @@ orca diff --run NEW --reference REF --show --key FRN AttrName --patterns 30
 orca diff --run NEW --reference REF --one-line
 orca diff --run NEW --reference REF --json
 ```
+
+**A reference you compare against again and again.** A side given as a dataset is used in
+place. A side given as an archive or a collection is ingested into the current directory and
+reused only when `diff` runs from that same directory again. Run each new build's diff from a
+directory of its own and the reference - unchanged, and usually the bigger side - is decrypted
+and ingested again every time. Three ways to pay for it once:
+
+```powershell
+# 1. ingest the reference once, then hand diff the dataset: never re-ingested, from anywhere
+orca ingest E:\dumps\10.3.1 --private-key contoso.com.key --out E:\refs\host-10.3.1
+orca diff --run E:\dumps\10.3.3 --reference E:\refs\host-10.3.1 --private-key contoso.com.key
+
+# 2. keep each side's dataset beside its input, where any later diff finds it
+orca diff --run E:\dumps\10.3.3 --reference E:\dumps\10.3.1 --private-key contoso.com.key --out-at-input
+
+# 3. one fixed place for every diff's datasets, whatever the current directory
+orca diff --run E:\dumps\10.3.3 --reference E:\dumps\10.3.1 --private-key contoso.com.key --work-dir E:\orca-work
+```
+
+The first is the one to prefer: the reference becomes an explicit, named dataset, and nothing is
+written beside the evidence. `--out-at-input` applies to both sides, so the new build's dataset
+lands beside its archive too. Under `--work-dir` the datasets are named after their input's
+location, so the same reference archive maps to the same dataset on every call.
 
 **Reading `--show`** - a NEW row and the REF row carrying the same identity (FRN, USN, ...) are
 reported as one modification, grouped by *which* columns changed, so a `+1 / -1` on a 46-column
@@ -1045,9 +1074,9 @@ is 0), `warnings` (7-Zip's exit code 1), and `unsealed` (only the decrypted copy
 the Outcome's sha1 - taken over the sealed file - has nothing to compare against). The exit code
 is 1 if anything failed, which is the point of the command in CI.
 
-**Nothing is written to the collection.** `ingest` and `extract` unseal sidecars beside the
+**Nothing is written to the collection.** `ingest --out-at-input` unseals sidecars beside the
 archives on purpose, to be reused; a verification pass must leave the evidence as it found it,
-so `check` unseals what it needs into the work dir instead. `--work-dir` is a keep dir as it is
+so `check` has no such option and unseals what it needs into the work dir. `--work-dir` is a keep dir as it is
 everywhere else: the decrypted archive lands there and the next `check`, `ingest` or `extract`
 of the same collection reuses it rather than paying for the decrypt again.
 
@@ -1058,13 +1087,17 @@ its undamaged containers are still sound; run `extract` when you need to know th
 
 ### Where orca writes
 
-Everything `ingest` and `diff` derive from an archive lands **beside that archive**, in a
-directory named after it, so one place holds everything that came out of one collection.
-(`extract` is the exception: it writes only under `--out`, the current directory by default, and
-leaves the collection untouched - see above.)
+Everything `ingest`, `fleet`, `diff`, `merge` and `getthis` derive from a collection - the
+dataset, the decrypted archives, the unsealed sidecars - lands in the **current directory**. A
+collection is evidence, and by default not one file is written into it. (`extract` writes only
+under its own `--out`, the current directory too, and `check` and `report` only read - see
+above.)
+
+`--out-at-input` puts all of it **beside the input** instead: inside a collection directory, or
+beside an archive, so one place holds everything that came out of one collection.
 
 ```
-E:\dumps\
+E:\dumps\                                        with --out-at-input
   ORC_WS_H2ODEV_20260921_172528.log             sidecar log, unsealed in place
   ORC_WS_H2ODEV_20260921_172528_Outcome.json    sidecar, unsealed in place
   ORC_WS_H2ODEV_20260921_172528_Outline.json
@@ -1075,10 +1108,20 @@ E:\dumps\
     ORC_..._Outcome.json  ORC_..._Outline.json  ORC_..._172528.log  .orca\
 ```
 
+Without it the same files are in the current directory, and `E:\dumps\` is left as it was.
+
+**When `--out-at-input` is worth it.** The products are a cache - a decrypted archive is as
+big as the collection, and decrypting and replaying a multi-GB collection is the expensive part
+of an ingest - and a cache in the current directory is found again only from that directory.
+Run from somewhere else, or by a colleague, and the collection is decrypted and ingested again.
+Beside the input the products are found from anywhere: by any command, from any directory, and
+by everyone reading a collection on a share. It is also what `report` needs to show a sealed
+collection's logs, and what datasets ingested before this default changed were written as. It is
+refused with `--work-dir`, and with `--out` on `ingest` and `fleet`, which already name a place.
+
 A decrypted archive and an unsealed sidecar keep the encrypted file's own name with only the
 extension changed (`X.7z.p7b` -> `X.7z`, `X_Outcome.json.7z.p7b` -> `X_Outcome.json`), and both
-are reused on the next run: decrypting and replaying a multi-GB collection is the expensive
-part of an ingest.
+are reused on the next run.
 
 Point orca at the **directory** instead and you get one run for the whole collection - one ORC
 run writes one Outcome and one archive per command set, and they ingest together - in a
@@ -1094,15 +1137,19 @@ silence. For `extract` that is the whole story, since every archive gets a direc
 from its own directory when provenance matters.
 
 ```powershell
-orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z          # run lands beside the archive
-orca diff NEW.7z REF.7z --work-dir E:\orca-work        # put both runs somewhere with room
-orca diff NEW.7z REF.7z --refresh                      # re-decrypt and re-ingest
+orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z                 # run lands in the current directory
+orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z --out-at-input  # run lands beside the archive
+orca diff NEW.7z REF.7z --work-dir E:\orca-work               # put both runs somewhere with room
+orca diff NEW.7z REF.7z --refresh                             # re-decrypt and re-ingest
 ```
 
 `--work-dir` moves the runs, the decrypted output **and the scratch** somewhere else, all at
-once - a collection larger than the temp volume cannot be decrypted otherwise; there the
-dataset is named with the ingest key, because two collections' archives often share a
-basename. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
+once - a collection larger than the temp volume cannot be decrypted otherwise. Under a shared
+root - the current directory or `--work-dir` - a dataset the cache builds for `diff`, `merge`
+or `getthis` is named after its input plus a digest of where that input is
+(`DFIR-ORC_NEW-0154fef1aff2`): two collections' archives often share a basename, and a
+re-collected archive at the same place rebuilds its own dataset instead of leaving a stale one
+behind. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
 
 A run is reused when its marker still matches the key of its sources - each archive's name,
 size and mtime plus the ingest options, not a content hash, which would mean reading the whole
@@ -1113,8 +1160,8 @@ own files or an expanded tree sharing the directory.
 Everything orca does *not* intend to keep - nested containers, the CSV being converted, the
 CMS/journal intermediates - goes to `%TEMP%\orca\<pid>` and is removed when the process ends.
 `--work-dir` moves that scratch to a volume with room, on every command that takes it. If the
-collection cannot be written to (a read-only share or image), an ingest's products go to
-scratch too and are simply not reused.
+place the products go cannot be written to (a read-only share or image under `--out-at-input`),
+an ingest's products go to scratch too and are simply not reused.
 
 What may be removed is decided by an **index**, never by what a directory is called: each run
 writes one in `%TEMP%\orca\` naming the scratch it created, and a directory no index names is

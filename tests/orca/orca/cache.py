@@ -2,8 +2,9 @@
 
 'orca diff NEW.7z REF.p7b' ingests each side once and reuses those runs on the next call, so
 comparing a new build against the same reference repeatedly pays for the reference once. A run
-is an ordinary directory beside the archive it came from: 'orca report', 'getthis' and 'merge'
-all work on it, and deleting it is the only cleanup there is.
+is an ordinary directory - in the current directory, or beside the archive it came from with
+'--out-at-input': 'orca report', 'getthis' and 'merge' all work on it, and deleting it is the
+only cleanup there is.
 """
 import hashlib
 import json
@@ -64,6 +65,20 @@ def key_for(source: str, options: dict, archives: list | None = None) -> str:
     material = json.dumps({"layout": LAYOUT_VERSION, "members": members, "options": options},
                           sort_keys=True)
     digest = hashlib.sha256(material.encode("utf-8")).hexdigest()[:12]
+    stem = layout.archive_stem(os.path.abspath(source)) or "run"
+    return f"{stem}-{digest}"
+
+
+def location_name(source: str) -> str:
+    """The dataset directory name for 'source' under a shared root: its name plus a digest of
+    where it is.
+
+    The place, not the content: a re-collected archive has a new key but is the same input,
+    and has to rebuild its own dataset rather than leave the stale one behind in the current
+    directory. And the place, not only the name: NEW\\Little.7z and REF\\Little.7z share one.
+    """
+    where = os.path.normcase(os.path.abspath(source))
+    digest = hashlib.sha256(where.encode("utf-8")).hexdigest()[:12]
     stem = layout.archive_stem(os.path.abspath(source)) or "run"
     return f"{stem}-{digest}"
 
@@ -135,7 +150,7 @@ def write_marker(dataset: str, source: str, key: str, options: dict) -> None:
 def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
                refresh: bool = False, strict: bool = False, collection=None,
-               jobs=None) -> str:
+               jobs=None, at_input: bool = False) -> str:
     """Return a dataset for 'source', ingesting it when there is not a current one.
 
     A path that is already a dataset is used in place and never copied. Datasets are ingested
@@ -154,18 +169,18 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     key = key_for(source, options, archives=collection.archives if collection else None)
 
     # One collection of a fleet directory is named after its own run: the directory's name is
-    # shared by every host in it. One with no Outcome has no run name and takes the key -
+    # shared by every host in it. One with no Outcome has no run name and takes its location -
     # never layout.run_name, which would hand it the first host's directory and have
     # clear_dataset empty that host's dataset before writing over it.
     if collection and collection.outcome_path:
         name = layout.run_name_for(collection.outcome_path)
-    elif collection or work_dir:
-        # Beside the archive the directory name is the archive's; under one --work-dir two
-        # collections' archives often share a basename, so the key names the directory there.
-        name = key
+    elif collection or layout.output_root(work_dir, at_input):
+        # Beside the archive the directory name is the archive's; under a shared root - the
+        # current directory, or --work-dir - two collections' archives often share a basename.
+        name = location_name(source)
     else:
         name = None
-    keep_dir, dataset = layout.resolve(source, work_dir, name=name)
+    keep_dir, dataset = layout.resolve(source, work_dir, name=name, at_input=at_input)
 
     if not refresh and is_current(dataset, key):
         return dataset

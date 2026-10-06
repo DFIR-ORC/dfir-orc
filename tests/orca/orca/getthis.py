@@ -57,7 +57,8 @@ def render_summary(total: int, by_archive: list[tuple[str, int]]) -> str:
 
 def run_getthis(source: str, out: str | None = None, engine_name: str = "duckdb",
                 as_json: bool = False, password=None, private_key=None, cms_backend=None,
-                work_dir=None, refresh: bool = False, strict: bool = False) -> str | None:
+                work_dir=None, refresh: bool = False, strict: bool = False,
+                at_input: bool = False) -> str | None:
     """Summarise what GetThis collected, ingesting 'source' first when it is not a dataset yet.
 
     Same reasoning as merge: this reads the GetThis tables of a dataset, and only 'ingest'
@@ -67,7 +68,7 @@ def run_getthis(source: str, out: str | None = None, engine_name: str = "duckdb"
         dataset = cache.ensure_dataset(source, work_dir, password=password,
                                        private_key=private_key, cms_backend=cms_backend,
                                        engine_name=engine_name, refresh=refresh,
-                                       strict=strict)
+                                       strict=strict, at_input=at_input)
     except RuntimeError as error:
         # The reason arrives as a page of duckdb SQL, so the last line says what to do about
         # it - but only when '--strict' is what refused: an ingest can also fail because the

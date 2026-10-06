@@ -1,12 +1,19 @@
 """Where orca's derived files go: the rules that turn an input path into an output path.
 
-Everything an ingest derives from an archive lands beside it, in a directory named after the
-archive with its archive extensions dropped, so one place holds everything that came out of one
-archive. A decrypted archive and an unsealed sidecar (outcome, outline, log) keep the encrypted
-file's name with only the extension changed, and sit next to the encrypted original.
+Everything an ingest derives - the dataset, the decrypted archives, the unsealed sidecars
+(outcome, outline, log) - lands under one root: '--work-dir' when given, else the current
+directory. A collection is evidence, so by default nothing is written into it. The dataset is a
+directory named after the run (a collection directory) or after the archive with its archive
+extensions dropped; a decrypted archive and an unsealed sidecar keep the encrypted file's name
+with only the extension changed.
 
-An extract is the exception and does not come through here: it writes under its own '--out',
-the current directory by default, and leaves the collection untouched.
+'--out-at-input' puts that root back beside the input: the dataset inside the collection
+directory, or beside the archive. Worth it when a collection is shared: its datasets and the
+decrypted archives, as big as the collection, are then found again from any working directory,
+by any command or analyst, instead of being rebuilt per working directory.
+
+An extract does not come through here: it writes under its own '--out', the current directory
+by default, and leaves the collection untouched.
 
 Pure path arithmetic, apart from resolve(), which has to ask whether the collection can be
 written to at all.
@@ -47,6 +54,16 @@ def archive_stem(path: str) -> str:
                 name = name[:-len(extension)]
                 stripping = True
     return name
+
+
+def output_root(work_dir: str | None = None, at_input: bool = False) -> str | None:
+    """The directory orca's products go under: '--work-dir', else the current directory - or
+    None for '--out-at-input', which every function here reads as "beside the input"."""
+    if work_dir:
+        return work_dir
+    if at_input:
+        return None
+    return os.getcwd()
 
 
 def _beside(path: str, work_dir: str | None) -> str:
@@ -128,18 +145,19 @@ def is_writable(directory: str) -> bool:
         return False
 
 
-def resolve(source: str, work_dir: str | None = None,
-            name: str | None = None) -> tuple[str, str]:
+def resolve(source: str, work_dir: str | None = None, name: str | None = None,
+            at_input: bool = False) -> tuple[str, str]:
     """(keep_dir, dataset) for 'source': where the decrypted archives and unsealed sidecars are
-    kept, and where the dataset goes.
+    kept, and where the dataset goes - under output_root().
 
-    Both fall back to scratch when the collection cannot be written to - a share mounted
-    read-only, a mounted image, read-only media. What orca keeps beside a collection is a
-    convenience for the next run, so losing it beats refusing to run.
+    Both fall back to scratch when that root cannot be written to - a share mounted read-only,
+    a mounted image, read-only media. What orca keeps there is a convenience for the next run,
+    so losing it beats refusing to run.
     """
-    keep = work_dir or (source if os.path.isdir(source) else
-                        os.path.dirname(os.path.abspath(source)))
-    run = derived_dir(source, work_dir, name)
+    root = output_root(work_dir, at_input)
+    keep = root or (source if os.path.isdir(source) else
+                    os.path.dirname(os.path.abspath(source)))
+    run = derived_dir(source, root, name)
     if is_writable(keep):
         return keep, run
 

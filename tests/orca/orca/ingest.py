@@ -293,8 +293,8 @@ def unseal_sidecars(source: str, seven_zip: str, keep_dir: str, private_key=None
                     cms_backend=None, refresh: bool = False) -> list[str]:
     """Unseal every Outcome, Outline, log and console output sealed beside the collection.
 
-    Each lands next to the file it came from, under the sealed file's own name with only the
-    extension dropped ('ORC_Outcome.json.7z.p7b' -> 'ORC_Outcome.json'). Doing this first means
+    Each lands in 'keep_dir' - the current directory, or next to the file it came from with
+    '--out-at-input' - under the sealed file's own name with only the extension dropped ('ORC_Outcome.json.7z.p7b' -> 'ORC_Outcome.json'). Doing this first means
     everything downstream reads plain files and never has to care whether the collection was
     encrypted; an already-unsealed file is reused rather than decrypted again.
     """
@@ -578,12 +578,12 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
                make_trunc=True, exclude_cols=None, password=None, private_key=None,
                cms_backend=None, engine_name="duckdb", work_dir=None, keep_dir=None,
                refresh=False, strict=False, collection=None,
-               collection_name=None) -> list[TimingRecord]:
+               collection_name=None, at_input=False) -> list[TimingRecord]:
     """Ingest a collection into a run directory.
 
-    'out_dir' and 'keep_dir' default to the collection's own directory (see layout.resolve):
-    the run lands beside the archive it came from, and so do the decrypted archives and
-    unsealed sidecars. '--work-dir' moves those, and the scratch with them.
+    'out_dir' and 'keep_dir' default to the current directory (see layout.resolve): the run,
+    the decrypted archives and the unsealed sidecars land there. 'at_input' puts them beside
+    the collection instead; '--work-dir' moves them, and the scratch with them.
 
     'collection' is the one Collection to ingest when the caller (fleet, cache) already knows
     it; 'collection_name' is '--collection', resolved here rather than by the caller because
@@ -607,7 +607,7 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
     # keep_dir first and on its own: unsealing needs it, and which collection this is - and
     # so what the dataset is called - is only known once the sidecars are plain.
     if keep_dir is None or out_dir is None:
-        resolved_keep, resolved_out = layout.resolve(archive, work_dir)
+        resolved_keep, resolved_out = layout.resolve(archive, work_dir, at_input=at_input)
         keep_dir = keep_dir or resolved_keep
     else:
         resolved_out = out_dir

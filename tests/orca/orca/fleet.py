@@ -25,7 +25,7 @@ class FleetResult(NamedTuple):
 
 def run_fleet(directory: str, out: str | None = None, *, password=None, private_key=None,
               cms_backend=None, engine_name="duckdb", jobs=None, refresh: bool = False,
-              strict: bool = False) -> int:
+              strict: bool = False, at_input: bool = False) -> int:
     """Ingest every collection in 'directory'. Returns a process exit code.
 
     A host that cannot be ingested costs that host and nothing else: on a hundred machines the
@@ -39,9 +39,10 @@ def run_fleet(directory: str, out: str | None = None, *, password=None, private_
     # Unseal before grouping, never after: an encrypted fleet's Outcomes are
     # '<run>_Outcome.json.7z.p7b' and collections_in reads plain JSON, so grouping first finds
     # no Outcome, one unnamed collection, and ingests every host into one dataset. keep_dir is
-    # where the plain sidecars land - beside the archives, under --out, or scratch when the
-    # directory is read-only - and is where collections_in has to look as well.
-    keep_dir, _ = layout.resolve(directory, out)
+    # where the plain sidecars land - the current directory, --out, beside the archives with
+    # --out-at-input, or scratch when that is read-only - and is where collections_in has to
+    # look as well.
+    keep_dir, _ = layout.resolve(directory, out, at_input=at_input)
     ingest.unseal_sidecars(directory, seven, keep_dir, private_key, cms_backend, refresh)
     collections = ingest.collections_in(directory, ingest.sidecar_dirs(directory, keep_dir))
     if not collections:
@@ -55,14 +56,14 @@ def run_fleet(directory: str, out: str | None = None, *, password=None, private_
             dataset = cache.ensure_dataset(
                 directory, out, collection=collection, jobs=jobs, password=password,
                 private_key=private_key, cms_backend=cms_backend, engine_name=engine_name,
-                refresh=refresh, strict=strict)
+                refresh=refresh, strict=strict, at_input=at_input)
             result.ingested.append((collection, dataset))
         except (RuntimeError, OSError) as error:
             print(f"'{who}' failed: {error}")
             result.failed.append((collection, str(error)))
 
-    # Under keep_dir, the same place the decrypted archives went: the collection directory,
-    # --out, or the scratch fallback - so a directory orca could not write to does not fail
+    # Under keep_dir, the same place the decrypted archives went: the current directory,
+    # --out, the collection directory, or the scratch fallback - so a directory orca could not write to does not fail
     # here, after every host was ingested.
     write_coverage(os.path.join(keep_dir, FLEET_DIR), collections, result)
 

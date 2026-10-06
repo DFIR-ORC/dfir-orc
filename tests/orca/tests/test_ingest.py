@@ -12,6 +12,16 @@ from orca import ingest, journal, layout, sevenzip
 from orca.sevenzip import ArchiveEntry
 
 
+def setUpModule():
+    # orca writes its products under the current directory by default: run this module from
+    # an empty one, never from the source tree.
+    here = os.getcwd()
+    work = tempfile.TemporaryDirectory()
+    os.chdir(work.name)
+    unittest.addModuleCleanup(work.cleanup)
+    unittest.addModuleCleanup(os.chdir, here)
+
+
 def _e(path):
     return ArchiveEntry(path=path, size=1, crc="x", attributes="A")
 
@@ -1134,9 +1144,9 @@ class TestIngestOneCollectionOfSeveral(unittest.TestCase):
                     redirect_stdout(io.StringIO()):
                 ingest.run_ingest(d, collection_name="b.lab")
 
-            dataset = os.path.join(d, "ORC_B_20260102_000000")
+            dataset = os.path.join(os.getcwd(), "ORC_B_20260102_000000")
             self.assertTrue(os.path.isdir(dataset))
-            self.assertFalse(os.path.isdir(os.path.join(d, "ORC_A_20260101_000000")))
+            self.assertFalse(os.path.isdir(os.path.join(os.getcwd(), "ORC_A_20260101_000000")))
             copied = sorted(n for n in os.listdir(dataset) if n != layout.ORCA_DIR)
             self.assertEqual(copied, ["ORC_B_20260102_000000.log",
                                       "ORC_B_20260102_000000_Outcome.json",

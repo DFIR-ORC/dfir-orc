@@ -10,6 +10,16 @@ from unittest import mock
 from orca import cache, fleet, ingest, layout
 
 
+def setUpModule():
+    # orca writes its products under the current directory by default: run this module from
+    # an empty one, never from the source tree.
+    here = os.getcwd()
+    work = tempfile.TemporaryDirectory()
+    os.chdir(work.name)
+    unittest.addModuleCleanup(work.cleanup)
+    unittest.addModuleCleanup(os.chdir, here)
+
+
 def write_collection(d, stem, computer, archive):
     doc = {"dfir-orc": {"outcome": {"id": "{%s}" % computer, "computer_name": computer,
                                     "timestamp": "20260101_000000",

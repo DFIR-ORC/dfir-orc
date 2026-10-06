@@ -18,6 +18,11 @@ class CacheCase(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.dir.cleanup)
+        # The default root: a directory of its own, apart from the one the archive sits in.
+        self.cwd = tempfile.TemporaryDirectory()
+        self.addCleanup(self.cwd.cleanup)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.cwd.name)
         self.work_dir = os.path.join(self.dir.name, "work")
         self.archive = os.path.join(self.dir.name, "Little.7z")
         with open(self.archive, "wb") as f:
@@ -49,6 +54,19 @@ class TestIsRunDir(CacheCase):
 
     def test_false_for_a_file(self):
         self.assertFalse(cache.is_dataset(self.archive))
+
+
+class TestLocationName(CacheCase):
+    def test_a_re_collected_archive_keeps_its_name(self):
+        before = cache.location_name(self.archive)
+        with open(self.archive, "ab") as f:
+            f.write(b"more")
+        self.assertEqual(cache.location_name(self.archive), before)
+
+    def test_two_archives_of_one_name_in_two_places_are_kept_apart(self):
+        other = os.path.join(self.dir.name, "ref", "Little.7z")
+        self.assertNotEqual(cache.location_name(self.archive), cache.location_name(other))
+        self.assertTrue(cache.location_name(other).startswith("Little-"))
 
 
 class TestKey(CacheCase):
@@ -97,12 +115,22 @@ class TestEnsureRun(CacheCase):
             cache.ensure_dataset(os.path.join(self.dir.name, "absent.7z"))
         self.assertIn("does not exist", str(caught.exception))
 
-    def test_the_run_lands_beside_the_archive_under_its_name(self):
+    def test_by_default_the_run_lands_in_the_current_directory(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
             run = cache.ensure_dataset(self.archive)
 
+        self.assertEqual(os.path.dirname(run), os.getcwd())
+        self.assertEqual(os.path.basename(run), cache.location_name(self.archive))
+        self.assertEqual(os.listdir(self.dir.name), ["Little.7z"])  # the evidence is untouched
+
+    def test_at_input_the_run_lands_beside_the_archive_under_its_name(self):
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            run = cache.ensure_dataset(self.archive, at_input=True)
+
         self.assertEqual(run, os.path.join(self.dir.name, "Little"))
+        self.assertEqual(os.listdir(self.cwd.name), [])
 
     def test_work_dir_moves_the_run_and_keeps_two_archives_apart(self):
         # Under one --work-dir, NEW\Little.7z and REF\Little.7z would collide on their name.
@@ -206,9 +234,10 @@ class TestEnsureRun(CacheCase):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
             cache.ensure_dataset(self.archive)
+            cache.ensure_dataset(self.archive, at_input=True)
 
-        _, _, kwargs = calls[0]
-        self.assertEqual(kwargs["keep_dir"], self.dir.name)
+        self.assertEqual(calls[0][2]["keep_dir"], os.getcwd())
+        self.assertEqual(calls[1][2]["keep_dir"], self.dir.name)
 
     def test_strict_reaches_the_ingest_and_the_key(self):
         # A dataset that skipped a table is not the dataset a strict ingest would have
@@ -299,9 +328,7 @@ class TestPerCollectionKey(CacheCase):
             dataset = cache.ensure_dataset(self.dir.name, collection=stray)
 
         self.assertNotEqual(os.path.basename(dataset), "ORC_A")
-        self.assertEqual(os.path.basename(dataset),
-                         cache.key_for(self.dir.name, cache.ingest_options(),
-                                       archives=stray.archives))
+        self.assertEqual(os.path.basename(dataset), cache.location_name(self.dir.name))
 
 
 if __name__ == "__main__":

@@ -20,6 +20,16 @@ CI_DIR = os.path.abspath(os.path.join(HERE, "..", "..", "..", "tools", "ci"))
 PUBLIC_KEY = os.path.join(CI_DIR, "contoso.com.pem")
 PRIVATE_KEY = os.path.join(CI_DIR, "contoso.com.key")
 
+
+def setUpModule():
+    # orca writes its products under the current directory by default: run this module from
+    # an empty one, never from the source tree.
+    here = os.getcwd()
+    work = tempfile.TemporaryDirectory()
+    os.chdir(work.name)
+    unittest.addModuleCleanup(work.cleanup)
+    unittest.addModuleCleanup(os.chdir, here)
+
 SEVEN_ZIP = sevenzip.find_7z()
 DUCKDB = engine.find_duckdb()
 OPENSSL = cms.find_openssl()
@@ -336,13 +346,30 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
         self.assertNotIn("ingesting", self.diff(new, reference))
         self.assertIn("ingesting", self.diff(new, reference, "--refresh"))
 
-    def test_by_default_everything_lands_beside_the_archive(self):
+    def test_by_default_everything_lands_in_the_current_directory(self):
+        """The collection is evidence: by default not one file is written into it."""
+        new = self.build_archive("NEW", "200", "aaaa")
+        reference = self.encrypt(self.build_archive("REF", "999", "bbbb"))
+        before = sorted(os.listdir(self.dumps))
+
+        with redirect_stdout(io.StringIO()):
+            cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY])
+
+        self.assertEqual(sorted(os.listdir(self.dumps)), before)
+        here = os.listdir(os.getcwd())
+        self.assertIn("DFIR-ORC_REF.7z", here)
+        for name in ("DFIR-ORC_NEW-", "DFIR-ORC_REF-"):
+            runs = [n for n in here if n.startswith(name)]
+            self.assertEqual(len(runs), 1, here)
+            self.assertTrue(os.path.exists(os.path.join(runs[0], "NTFSInfo.parquet")))
+
+    def test_out_at_input_puts_everything_beside_the_archive(self):
         new = self.build_archive("NEW", "200", "aaaa")
         reference = self.encrypt(self.build_archive("REF", "999", "bbbb"))
 
         out = io.StringIO()
         with redirect_stdout(out):
-            cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY])
+            cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY, "--out-at-input"])
 
         # One run directory per archive, named after it, in the directory it came from, with
         # its tables flat inside it and orca's own bookkeeping tucked into '.orca'.
@@ -363,7 +390,7 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
         again = io.StringIO()
         with redirect_stdout(again):
             cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY,
-                      "--exclude-cols", "MD5"])
+                      "--exclude-cols", "MD5", "--out-at-input"])
 
         text = again.getvalue()
         self.assertIn("ingesting", text)
@@ -385,13 +412,13 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             cli.main(["ingest", self.dumps, "--no-csv"])
 
-        run = os.path.join(self.dumps, "ORC_H_172528")
+        run = os.path.join(os.getcwd(), "ORC_H_172528")
         # Both command sets' tables in the one run: 3 CSVs each, names deduped across them.
         self.assertEqual(len(layout.table_paths(run)), 6)
         # The Outcome is in the run under the name ORC gave it, not renamed to 'outcome.json'.
         self.assertTrue(os.path.exists(os.path.join(run, "ORC_H_172528_Outcome.json")))
 
-    def test_sealed_sidecars_are_unsealed_beside_the_collection(self):
+    def test_sealed_sidecars_are_unsealed_beside_the_collection_at_input(self):
         new = self.build_archive("NEW", "200", "aaaa")
         reference = self.encrypt(self.build_archive("REF", "999", "bbbb"))
         outcome = self.seal("ORC_H_172528_Outcome.json",
@@ -401,7 +428,7 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
 
         out = io.StringIO()
         with redirect_stdout(out):
-            cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY])
+            cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY, "--out-at-input"])
 
         # Each sidecar is now a plain file beside the sealed one it came from, named after it.
         for name in ("ORC_H_172528_Outcome.json", "ORC_H_172528_Outline.json",

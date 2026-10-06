@@ -426,7 +426,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
              exclude_cols=None, rows=False, out_dir="orca-diff", one_line=False,
              as_json=False, show=None, key=None, patterns=10, engine_name="duckdb",
              work_dir=None, refresh=False, password=None, private_key=None,
-             cms_backend=None, exclude_files=None, strict=False) -> None:
+             cms_backend=None, exclude_files=None, strict=False, at_input=False) -> None:
     from . import cache
     from .engine import get_engine, single_process_memory_limit
     rows_out = out_dir if rows else None
@@ -441,7 +441,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
         resolve = dict(work_dir=work_dir, refresh=refresh, password=password,
                        private_key=private_key, cms_backend=cms_backend,
                        exclude_cols=exclude_cols, engine_name=engine_name,
-                       strict=strict)
+                       strict=strict, at_input=at_input)
         run_a = cache.ensure_dataset(run_a, **resolve)
         run_b = cache.ensure_dataset(run_b, **resolve)
 

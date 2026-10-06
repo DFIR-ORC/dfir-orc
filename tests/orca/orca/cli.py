@@ -158,14 +158,20 @@ def _build_parser() -> argparse.ArgumentParser:
                     "in, and the '.orca' bookkeeping a rebuild, a report and a diff go by. "
                     "The collected tree is never expanded - each table is read out of its "
                     "container and converted - so a 2 GB collection costs tables, not a tree. "
-                    "A sealed '.p7b' is decrypted first and the plaintext kept beside it for "
-                    "the next command. Every column is text: ORC's forensic CSVs carry cells "
+                    "A sealed '.p7b' is decrypted first and the plaintext kept for the next "
+                    "command. Every column is text: ORC's forensic CSVs carry cells "
                     "that would otherwise abort type detection, and text keeps schemas stable "
                     "across versions for diffing.")
     ing.add_argument("source", help="an ORC archive, or a directory holding a collection")
-    ing.add_argument("--out", default=None, help="output run dir (default: beside the archive)")
+    ing.add_argument("--out", default=None,
+                     help="output run dir (default: named after the run, in the current "
+                          "directory)")
     ing.add_argument("--work-dir", default=None,
-                     help="put runs and decrypted output here instead of beside the archive")
+                     help="put runs and decrypted output here instead of the current directory")
+    ing.add_argument("--out-at-input", action="store_true",
+                     help="put the run and decrypted output beside the input - inside a "
+                          "collection directory, beside an archive - instead of the current "
+                          "directory, so they are found again from anywhere")
     ing.add_argument("--collection", default=None,
                      help="when the directory holds several runs, the one to ingest "
                           "(its computer name, its run name, or its Outcome filename)")
@@ -195,7 +201,10 @@ def _build_parser() -> argparse.ArgumentParser:
     fl.add_argument("directory", help="a directory holding one or more collections")
     fl.add_argument("--out", default=None,
                     help="put the datasets, the decrypted archives and the fleet's own "
-                         "bookkeeping here instead of in the collection directory")
+                         "bookkeeping here instead of the current directory")
+    fl.add_argument("--out-at-input", action="store_true",
+                    help="put them inside the collection directory instead, so they are "
+                         "found again from anywhere")
     fl.add_argument("--password", default=None, help="archive password")
     fl.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
     fl.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
@@ -284,8 +293,11 @@ def _build_parser() -> argparse.ArgumentParser:
     mg.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                     help="pin the .p7b decryption backend")
     mg.add_argument("--work-dir", default=None,
-                    help="put the dataset and decrypted output here instead of beside the "
-                         "archive")
+                    help="put the dataset and decrypted output here instead of the current "
+                         "directory")
+    mg.add_argument("--out-at-input", action="store_true",
+                    help="put them beside the input instead, so they are found again from "
+                         "anywhere")
     mg.add_argument("--refresh", action="store_true",
                     help="re-ingest even if a dataset is already there")
     mg.add_argument("--strict", action="store_true",
@@ -358,8 +370,11 @@ def _build_parser() -> argparse.ArgumentParser:
     gt.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                     help="pin the .p7b decryption backend")
     gt.add_argument("--work-dir", default=None,
-                    help="put the dataset and decrypted output here instead of beside the "
-                         "archive")
+                    help="put the dataset and decrypted output here instead of the current "
+                         "directory")
+    gt.add_argument("--out-at-input", action="store_true",
+                    help="put them beside the input instead, so they are found again from "
+                         "anywhere")
     gt.add_argument("--refresh", action="store_true",
                     help="re-ingest even if a dataset is already there")
     gt.add_argument("--strict", action="store_true",
@@ -386,7 +401,10 @@ def _build_parser() -> argparse.ArgumentParser:
     df.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                     help="pin the .p7b decryption backend")
     df.add_argument("--work-dir", default=None,
-                    help="put runs and decrypted output here instead of beside each archive")
+                    help="put runs and decrypted output here instead of the current directory")
+    df.add_argument("--out-at-input", action="store_true",
+                    help="put them beside each input instead, so they are found again from "
+                         "anywhere")
     df.add_argument("--refresh", action="store_true",
                     help="re-decrypt and re-ingest even if products are already there")
     df.add_argument("--strict", action="store_true",
@@ -410,6 +428,19 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def refuse_conflicting_outputs(parser, args) -> None:
+    """'--out-at-input' names where the products go, and so do '--work-dir' and - for ingest
+    and fleet, where it is the dataset's place rather than a result file's - '--out'. Two
+    answers to one question is refused rather than one silently winning."""
+    if not getattr(args, "out_at_input", False):
+        return
+
+    if getattr(args, "work_dir", None):
+        parser.error("--out-at-input and --work-dir both say where the products go; give one")
+    if args.command in ("ingest", "fleet") and args.out:
+        parser.error("--out-at-input and --out both say where the products go; give one")
+
+
 def main(argv=None) -> int:
     items = list(sys.argv[1:] if argv is None else argv)
     mode = report_table_mode(items)
@@ -422,7 +453,9 @@ def main(argv=None) -> int:
                recurse=args.recurse)
         return 0
 
-    args = _build_parser().parse_args(items)
+    parser = _build_parser()
+    args = parser.parse_args(items)
+    refuse_conflicting_outputs(parser, args)
     if args.command == "ingest":
         ingest.run_ingest(
             args.source, args.out, collection_name=args.collection,
@@ -430,13 +463,14 @@ def main(argv=None) -> int:
             exclude_cols=args.exclude_cols, password=args.password,
             private_key=args.private_key, cms_backend=args.cms_backend,
             engine_name=args.engine, work_dir=args.work_dir, refresh=args.refresh,
-            strict=args.strict,
+            strict=args.strict, at_input=args.out_at_input,
         )
     elif args.command == "fleet":
         return fleet.run_fleet(args.directory, args.out, password=args.password,
                                private_key=args.private_key, cms_backend=args.cms_backend,
                                engine_name=args.engine, jobs=args.jobs,
-                               refresh=args.refresh, strict=args.strict)
+                               refresh=args.refresh, strict=args.strict,
+                               at_input=args.out_at_input)
     elif args.command == "extract":
         extract.run_extract(args.collection, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
@@ -458,13 +492,13 @@ def main(argv=None) -> int:
                         ts_overrides=overrides or None, engine_name=args.engine,
                         password=args.password, private_key=args.private_key,
                         cms_backend=args.cms_backend, work_dir=args.work_dir,
-                        refresh=args.refresh, strict=args.strict)
+                        refresh=args.refresh, strict=args.strict, at_input=args.out_at_input)
     elif args.command == "getthis":
         getthis.run_getthis(args.dataset, out=args.out, engine_name=args.engine,
                             as_json=args.json, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
                             work_dir=args.work_dir, refresh=args.refresh,
-                            strict=args.strict)
+                            strict=args.strict, at_input=args.out_at_input)
     elif args.command == "report":
         report.run_report(args.paths, views=args.view,
                           one_line=args.one_line, as_json=args.json,
@@ -484,7 +518,7 @@ def main(argv=None) -> int:
                       work_dir=args.work_dir, refresh=args.refresh,
                       password=args.password, private_key=args.private_key,
                       cms_backend=args.cms_backend, exclude_files=args.exclude_files,
-                      strict=args.strict)
+                      strict=args.strict, at_input=args.out_at_input)
     elif args.command == "collect":
         return collect.run_collect(
             orc=args.orc, out=args.out, offline=args.offline, vm=args.vm,

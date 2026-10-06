@@ -620,7 +620,8 @@ def not_ingested(hr: dict, label: str) -> str:
     'report' never ingests: it is fast, and fetching what is missing is not - a fleet sweep
     would turn into a fleet ingest. So it names the command instead of running it.
     """
-    return f"  {label}: (not ingested; orca ingest {hr['directory']})"
+    # --out-at-input: a report of the collection only finds a dataset written inside it.
+    return f"  {label}: (not ingested; orca ingest {hr['directory']} --out-at-input)"
 
 
 def stats_lines(hr: dict, explicit: bool) -> list:
@@ -997,8 +998,8 @@ def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=N
 
     A collection arrives with its Outcome, Outlines and log each sealed into a '.7z.p7b', and
     without them a report can say almost nothing: not the machine's name, not which command
-    failed. They are unsealed into the work dir and never beside the collection - 'ingest' and
-    'extract' do that on purpose, to be reused, but a report only reads and must leave what it
+    failed. They are unsealed into the work dir and never beside the collection - 'ingest' keeps
+    what it unseals on purpose, to be reused, but a report only reads and must leave what it
     reads as it was. They are a few KB, so paying for the decryption again next time is nothing.
 
     Collections with nothing sealed are absent from the map, so the common case creates no
@@ -1104,7 +1105,8 @@ def sealed_archive_line(sealed: list, directories: list) -> str:
     shown = ", ".join(names[:3]) + (", ..." if len(names) > 3 else "")
     plural = "archive" if len(names) == 1 else "archives"
     where = directories[0] if len(set(directories)) == 1 else os.path.dirname(directories[0])
-    return f"more in {len(names)} sealed {plural}: {shown} (orca ingest {where})"
+    # --out-at-input: the next report reads the decrypted archives only from beside the sealed.
+    return f"more in {len(names)} sealed {plural}: {shown} (orca ingest {where} --out-at-input)"
 
 
 def with_archived_logs(runs: list, work: str, seven_zip: str, refresh: bool = False,

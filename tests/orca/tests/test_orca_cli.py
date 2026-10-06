@@ -1,3 +1,5 @@
+import contextlib
+import io
 import unittest
 from orca import cli, logs, report
 
@@ -225,10 +227,33 @@ class TestCli(unittest.TestCase):
             self.assertEqual(args.cms_backend, "libcrypto", mode)
             self.assertTrue(args.refresh, mode)
 
-    def test_ingest_without_out_defaults_beside_the_archive(self):
+    def test_ingest_without_out_leaves_the_place_to_the_layout(self):
         args = cli._build_parser().parse_args(["ingest", "arch.7z"])
         self.assertIsNone(args.out)
         self.assertIsNone(args.work_dir)
+        self.assertFalse(args.out_at_input)
+
+    def test_every_command_that_ingests_takes_out_at_input(self):
+        parser = cli._build_parser()
+        for argv in (["ingest", "arch.7z"], ["fleet", "dumps"], ["diff", "NEW.7z", "REF.7z"],
+                     ["merge", "arch.7z"], ["getthis", "arch.7z"]):
+            self.assertTrue(parser.parse_args(argv + ["--out-at-input"]).out_at_input, argv)
+
+    def test_out_at_input_with_another_place_is_refused(self):
+        for argv in (["ingest", "arch.7z", "--out-at-input", "--out", "run"],
+                     ["ingest", "arch.7z", "--out-at-input", "--work-dir", "E:/work"],
+                     ["fleet", "dumps", "--out-at-input", "--out", "E:/runs"],
+                     ["diff", "NEW.7z", "REF.7z", "--out-at-input", "--work-dir", "E:/work"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                cli.main(argv)
+
+    def test_merge_out_names_its_parquet_and_does_not_conflict(self):
+        # merge's --out is the result file, not where the dataset goes.
+        parser = cli._build_parser()
+        args = parser.parse_args(["merge", "arch.7z", "--out-at-input", "--out", "x.parquet"])
+        cli.refuse_conflicting_outputs(parser, args)
+        self.assertTrue(args.out_at_input)
 
     def test_work_dir_is_the_one_override_for_runs_and_decrypted_output(self):
         parser = cli._build_parser()

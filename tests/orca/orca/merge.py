@@ -135,7 +135,7 @@ def _discover_tables(engine, dataset: str, ts_overrides: dict | None) -> list[di
 def run_merge(source: str, out: str | None = None, lossless: bool = False,
               ts_overrides: dict | None = None, engine_name: str = "duckdb",
               password=None, private_key=None, cms_backend=None, work_dir=None,
-              refresh: bool = False, strict: bool = False) -> str:
+              refresh: bool = False, strict: bool = False, at_input: bool = False) -> str:
     """Build the wide parquet for 'source', ingesting it first when it is not a dataset yet.
 
     There is nothing to ask: this reads per-table parquet and only 'ingest' writes it, so an
@@ -146,7 +146,7 @@ def run_merge(source: str, out: str | None = None, lossless: bool = False,
         dataset = cache.ensure_dataset(source, work_dir, password=password,
                                        private_key=private_key, cms_backend=cms_backend,
                                        engine_name=engine_name, refresh=refresh,
-                                       strict=strict)
+                                       strict=strict, at_input=at_input)
     except RuntimeError as error:
         # The reason arrives as a page of duckdb SQL, so the last line says what to do about
         # it - but only when '--strict' is what refused: an ingest can also fail because the
