@@ -36,15 +36,18 @@ def is_dataset(path: str) -> bool:
     return os.path.isdir(path) and os.path.isdir(layout.orca_dir(path))
 
 
-def source_files(source: str) -> list[str]:
-    """The archives whose identity a run depends on: the file itself, or every top archive an
-    Outcome directory points at."""
+def source_files(source: str, archives: list | None = None) -> list[str]:
+    """The archives whose identity a run depends on: the file itself, every top archive an
+    Outcome directory points at, or - for one collection of a directory holding several - just
+    that collection's own archives, so each host keys separately."""
+    if archives is not None:
+        return sorted(archives)
     if os.path.isdir(source):
         return sorted(ingest.resolve_archives(source))
     return [source]
 
 
-def key_for(source: str, options: dict) -> str:
+def key_for(source: str, options: dict, archives: list | None = None) -> str:
     """Identity of an ingested run: each source archive's name, size and mtime, plus the ingest
     options that change what is produced.
 
@@ -53,7 +56,7 @@ def key_for(source: str, options: dict) -> str:
     is the escape hatch when it guesses wrong.
     """
     members = []
-    for path in source_files(source):
+    for path in source_files(source, archives):
         stat = os.stat(path)
         members.append({"name": os.path.basename(path), "size": stat.st_size,
                         "mtime_ns": stat.st_mtime_ns})
@@ -131,12 +134,15 @@ def write_marker(dataset: str, source: str, key: str, options: dict) -> None:
 
 def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
-               refresh: bool = False, strict: bool = False) -> str:
+               refresh: bool = False, strict: bool = False, collection=None,
+               jobs=None) -> str:
     """Return a dataset for 'source', ingesting it when there is not a current one.
 
     A path that is already a dataset is used in place and never copied. Datasets are ingested
     parquet-only: every consumer of one reads parquet, and skipping the CSV products makes the
-    ingest substantially cheaper.
+    ingest substantially cheaper. 'collection' narrows a directory holding several runs to one
+    of them (fleet); 'jobs' is the worker count, and not part of the key - it changes how fast
+    a dataset is built, not what it contains.
     """
     if is_dataset(source):
         return source
@@ -145,10 +151,21 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
         raise RuntimeError(f"cache: '{source}' does not exist")
 
     options = ingest_options(exclude_cols, password, engine_name, strict)
-    key = key_for(source, options)
-    # Beside the archive the directory name is the archive's; under one --work-dir two
-    # collections' archives often share a basename, so the key names the directory there.
-    keep_dir, dataset = layout.resolve(source, work_dir, name=key if work_dir else None)
+    key = key_for(source, options, archives=collection.archives if collection else None)
+
+    # One collection of a fleet directory is named after its own run: the directory's name is
+    # shared by every host in it. One with no Outcome has no run name and takes the key -
+    # never layout.run_name, which would hand it the first host's directory and have
+    # clear_dataset empty that host's dataset before writing over it.
+    if collection and collection.outcome_path:
+        name = layout.run_name_for(collection.outcome_path)
+    elif collection or work_dir:
+        # Beside the archive the directory name is the archive's; under one --work-dir two
+        # collections' archives often share a basename, so the key names the directory there.
+        name = key
+    else:
+        name = None
+    keep_dir, dataset = layout.resolve(source, work_dir, name=name)
 
     if not refresh and is_current(dataset, key):
         return dataset
@@ -160,6 +177,7 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     # go, and run_ingest also puts its scratch there - a diff of two large collections has the
     # same no-room-on-the-temp-volume problem as anything else.
     ingest.run_ingest(source, dataset, make_csv=False, make_trunc=False,
+                      collection=collection, jobs=jobs,
                       exclude_cols=exclude_cols, password=password, private_key=private_key,
                       cms_backend=cms_backend, engine_name=engine_name, keep_dir=keep_dir,
                       work_dir=work_dir, refresh=refresh, strict=strict)

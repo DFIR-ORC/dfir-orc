@@ -255,5 +255,54 @@ class TestLayoutBump(CacheCase):
         self.assertEqual(len(calls), 2)
 
 
+class TestPerCollectionKey(CacheCase):
+    def _collection(self, name, archive, outcome=True):
+        path = os.path.join(self.dir.name, archive)
+        with open(path, "wb") as f:
+            f.write(b"7z\xbc\xaf\x27\x1c")
+        if not outcome:
+            return cache.ingest.Collection(None, [path], "", "", "")
+        return cache.ingest.Collection(
+            os.path.join(self.dir.name, f"ORC_{name}_Outcome.json"), [path],
+            f"{name}.lab", "{%s}" % name, "20260101_000000")
+
+    def test_two_collections_of_one_directory_get_different_keys(self):
+        """Without this every host of a fleet shares one key and one dataset."""
+        a = self._collection("A", "ORC_A_General.7z")
+        b = self._collection("B", "ORC_B_General.7z")
+        options = cache.ingest_options()
+
+        key_a = cache.key_for(self.dir.name, options, archives=a.archives)
+        key_b = cache.key_for(self.dir.name, options, archives=b.archives)
+
+        self.assertNotEqual(key_a, key_b)
+
+    def test_the_dataset_is_named_after_the_run(self):
+        a = self._collection("A", "ORC_A_General.7z")
+        with mock.patch.object(cache.ingest, "run_ingest") as run, \
+                mock.patch.object(cache, "write_marker"):
+            dataset = cache.ensure_dataset(self.dir.name, collection=a, jobs=3)
+
+        self.assertEqual(os.path.basename(dataset), "ORC_A")
+        self.assertEqual(run.call_args.kwargs["collection"], a)
+        self.assertEqual(run.call_args.kwargs["jobs"], 3)
+
+    def test_an_unnamed_collection_is_not_named_after_the_directorys_run(self):
+        """Review Focus 7: beside a named run, the leftovers would otherwise take that run's
+        directory - and clear_dataset would empty it first."""
+        with open(os.path.join(self.dir.name, "ORC_A_Outcome.json"), "w", encoding="utf-8") as f:
+            f.write('{"dfir-orc": {"outcome": {"id": "{A}", "command_set": []}}}')
+        stray = self._collection("", "ORC_Stray_General.7z", outcome=False)
+
+        with mock.patch.object(cache.ingest, "run_ingest"), \
+                mock.patch.object(cache, "write_marker"):
+            dataset = cache.ensure_dataset(self.dir.name, collection=stray)
+
+        self.assertNotEqual(os.path.basename(dataset), "ORC_A")
+        self.assertEqual(os.path.basename(dataset),
+                         cache.key_for(self.dir.name, cache.ingest_options(),
+                                       archives=stray.archives))
+
+
 if __name__ == "__main__":
     unittest.main()
