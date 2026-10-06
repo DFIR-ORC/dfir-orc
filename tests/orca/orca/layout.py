@@ -75,6 +75,22 @@ def run_name(directory: str) -> str:
     return os.path.basename(os.path.abspath(directory))
 
 
+def run_name_for(outcome_path: str) -> str:
+    """The name ORC gave the run this Outcome belongs to.
+
+    'ORC_WS_H2ODEV_20260921_172528_Outcome.json' -> 'ORC_WS_H2ODEV_20260921_172528', sealed or
+    not. run_name() answers the same question for a directory and reads whichever sidecar sorts
+    first, which is the wrong answer when the directory holds several runs: each one has to be
+    named after itself or two hosts share a dataset directory.
+    """
+    stem = archive_stem(os.path.basename(outcome_path))
+    for suffix in RUN_NAME_SUFFIXES:
+        if len(stem) > len(suffix) and stem.lower().endswith(suffix.lower()):
+            return stem[:-len(suffix)]
+
+    return os.path.splitext(stem)[0]
+
+
 def derived_dir(source: str, work_dir: str | None = None, name: str | None = None) -> str:
     """The directory holding everything orca derives from 'source'.
 

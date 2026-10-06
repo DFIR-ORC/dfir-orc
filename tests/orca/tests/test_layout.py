@@ -121,5 +121,27 @@ class TestDerivedPaths(unittest.TestCase):
                          os.path.join("E:", "work", "ORC_172528.log"))
 
 
+class TestRunNameFor(unittest.TestCase):
+    def test_strips_the_outcome_suffix(self):
+        got = layout.run_name_for(
+            r"D:\out\ORC_DomainController_APPS2012R2-RODC.apps2012r2.lab_20261006_120559"
+            r"_Outcome.json")
+        self.assertEqual(
+            got, "ORC_DomainController_APPS2012R2-RODC.apps2012r2.lab_20261006_120559")
+
+    def test_strips_a_sealed_outcome_suffix(self):
+        got = layout.run_name_for(r"D:\out\ORC_H_20260101_000000_Outcome.json.7z.p7b")
+        self.assertEqual(got, "ORC_H_20260101_000000")
+
+    def test_the_same_host_twice_gets_two_names(self):
+        """Review Focus 1: two runs of one host must not land in one dataset directory."""
+        first = layout.run_name_for(r"D:\out\ORC_H_20260101_000000_Outcome.json")
+        second = layout.run_name_for(r"D:\out\ORC_H_20260102_111111_Outcome.json")
+        self.assertNotEqual(first, second)
+
+    def test_a_sidecar_that_is_not_an_outcome_keeps_its_stem(self):
+        self.assertEqual(layout.run_name_for(r"D:\out\something.json"), "something")
+
+
 if __name__ == "__main__":
     unittest.main()
