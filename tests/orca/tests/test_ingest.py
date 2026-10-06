@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
-from orca import ingest, journal, sevenzip
+from orca import ingest, journal, layout, sevenzip
 from orca.sevenzip import ArchiveEntry
 
 
@@ -980,6 +980,190 @@ class TestCollectionsIn(unittest.TestCase):
                 found = ingest.collections_in(d, [work])
 
             self.assertEqual([c.run_id for c in found], ["{A}"])
+
+
+def write_collection(d, stem, computer, archive, run_id=None, ts="20260101_000000"):
+    doc = {"dfir-orc": {"outcome": {"id": run_id or "{%s}" % computer,
+                                    "computer_name": computer, "timestamp": ts,
+                                    "command_set": [{"name": "General",
+                                                     "archive": {"name": archive}}]}}}
+    with open(os.path.join(d, stem + "_Outcome.json"), "w", encoding="utf-8") as f:
+        json.dump(doc, f)
+    with open(os.path.join(d, archive), "wb") as f:
+        f.write(b"x")
+
+
+def no_tools():
+    """run_ingest looks duckdb and 7z up before it reads anything; neither is installed here."""
+    return (mock.patch.object(ingest, "get_engine", return_value=mock.Mock()),
+            mock.patch.object(ingest.sevenzip, "find_7z", return_value="7z"))
+
+
+class TestIngestRefusesAFleet(unittest.TestCase):
+    def test_two_collections_are_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z")
+            write_collection(d, "ORC_B", "b.lab", "ORC_B_General.7z")
+            engine, seven = no_tools()
+
+            with engine, seven, self.assertRaises(RuntimeError) as caught, \
+                    redirect_stdout(io.StringIO()):
+                ingest.run_ingest(d)
+
+            message = str(caught.exception)
+            self.assertIn("2 collections", message)
+            self.assertIn("a.lab", message)
+            self.assertIn("b.lab", message)
+            self.assertIn("orca fleet", message)
+
+    def test_a_sealed_fleet_is_refused_once_its_outcomes_are_unsealed(self):
+        """Review Focus 6: the Outcomes of an encrypted fleet only become readable inside
+        run_ingest, so the refusal has to come after unsealing, not before."""
+        with tempfile.TemporaryDirectory() as d:
+            for stem, computer in (("ORC_A", "a.lab"), ("ORC_B", "b.lab")):
+                with open(os.path.join(d, stem + "_Outcome.json.7z.p7b"), "wb") as f:
+                    f.write(b"sealed")
+                with open(os.path.join(d, stem + "_General.7z.p7b"), "wb") as f:
+                    f.write(b"x")
+
+            def unseal(sealed, target, seven, private_key=None, cms_backend=None):
+                stem = os.path.basename(sealed).split("_Outcome")[0]
+                computer = "a.lab" if stem == "ORC_A" else "b.lab"
+                write_collection(d, stem, computer, stem + "_General.7z.p7b")
+                return target
+
+            engine, seven = no_tools()
+            with engine, seven, mock.patch.object(ingest, "unseal_one", unseal), \
+                    self.assertRaises(RuntimeError) as caught, redirect_stdout(io.StringIO()):
+                ingest.run_ingest(d)
+
+            self.assertIn("2 collections", str(caught.exception))
+
+    def test_one_outcome_plus_a_stray_archive_is_one_collection(self):
+        """Regression guard on test_an_archive_no_outcome_names_is_returned_too: the stray
+        archive is folded into the named collection, with a word about why."""
+        with tempfile.TemporaryDirectory() as d:
+            write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z")
+            with open(os.path.join(d, "ORC_Stray_General.7z"), "wb") as f:
+                f.write(b"x")
+
+            printed = io.StringIO()
+            with redirect_stdout(printed):
+                got = ingest.collection_of(d, [d])
+
+            self.assertEqual(got.computer_name, "a.lab")
+            self.assertEqual([os.path.basename(p) for p in got.archives],
+                             ["ORC_A_General.7z", "ORC_Stray_General.7z"])
+            self.assertIn("ORC_Stray_General.7z", printed.getvalue())
+
+    def test_a_file_source_is_its_own_collection_with_the_outcome_beside_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z")
+            archive = os.path.join(d, "ORC_A_General.7z")
+
+            got = ingest.collection_of(archive, [d])
+
+            self.assertEqual(got.archives, [archive])
+            self.assertEqual(got.computer_name, "a.lab")
+            self.assertEqual(os.path.basename(got.outcome_path), "ORC_A_Outcome.json")
+
+    def test_an_empty_directory_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(RuntimeError):
+                ingest.collection_of(d, [d])
+
+
+class TestSelectCollection(unittest.TestCase):
+    def _found(self):
+        return [
+            ingest.Collection("/d/ORC_A_20260101_000000_Outcome.json", ["/d/a.7z"],
+                              "a.lab", "{A}", "T1"),
+            ingest.Collection("/d/ORC_B_20260101_000000_Outcome.json", ["/d/b.7z"],
+                              "b.lab", "{B}", "T2"),
+        ]
+
+    def test_matches_computer_name_case_insensitively(self):
+        got = ingest.select_collection(self._found(), "A.LAB")
+        self.assertEqual(got.run_id, "{A}")
+
+    def test_matches_the_run_name_the_dataset_directory_carries(self):
+        got = ingest.select_collection(self._found(), "ORC_B_20260101_000000")
+        self.assertEqual(got.run_id, "{B}")
+
+    def test_falls_back_to_a_prefix_of_the_outcome_filename(self):
+        got = ingest.select_collection(self._found(), "ORC_B")
+        self.assertEqual(got.run_id, "{B}")
+
+    def test_no_match_names_the_candidates(self):
+        """Review Focus 4: a typo must not ingest nothing quietly."""
+        with self.assertRaises(RuntimeError) as caught:
+            ingest.select_collection(self._found(), "c.lab")
+        self.assertIn("a.lab", str(caught.exception))
+        self.assertIn("b.lab", str(caught.exception))
+
+    def test_an_ambiguous_match_is_refused(self):
+        """Review Focus 4: the same host collected twice cannot be picked by name alone."""
+        twice = [
+            ingest.Collection("/d/ORC_1_Outcome.json", ["/d/1.7z"], "a.lab", "{1}", "T1"),
+            ingest.Collection("/d/ORC_2_Outcome.json", ["/d/2.7z"], "a.lab", "{2}", "T2"),
+        ]
+        with self.assertRaises(RuntimeError) as caught:
+            ingest.select_collection(twice, "a.lab")
+        self.assertIn("ORC_1_Outcome.json", str(caught.exception))
+        self.assertIn("ORC_2_Outcome.json", str(caught.exception))
+
+
+class TestIngestOneCollectionOfSeveral(unittest.TestCase):
+    """With --collection, everything the dataset gets besides its tables is that run's."""
+
+    def _fleet(self, d):
+        write_collection(d, "ORC_A_20260101_000000", "a.lab", "ORC_A_General.7z")
+        write_collection(d, "ORC_B_20260102_000000", "b.lab", "ORC_B_General.7z")
+        for name in ("ORC_A_20260101_000000_Outline.json", "ORC_B_20260102_000000_Outline.json",
+                     "ORC_A_20260101_000000.log", "ORC_B_20260102_000000.log"):
+            with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                f.write("{}")
+
+    def test_the_dataset_the_outcome_the_outlines_and_the_logs_are_the_chosen_runs(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._fleet(d)
+            engine, seven = no_tools()
+            with engine, seven, \
+                    mock.patch.object(ingest, "discover_jobs", return_value=([], [])), \
+                    mock.patch.object(ingest, "capture_logs", return_value=[]), \
+                    redirect_stdout(io.StringIO()):
+                ingest.run_ingest(d, collection_name="b.lab")
+
+            dataset = os.path.join(d, "ORC_B_20260102_000000")
+            self.assertTrue(os.path.isdir(dataset))
+            self.assertFalse(os.path.isdir(os.path.join(d, "ORC_A_20260101_000000")))
+            copied = sorted(n for n in os.listdir(dataset) if n != layout.ORCA_DIR)
+            self.assertEqual(copied, ["ORC_B_20260102_000000.log",
+                                      "ORC_B_20260102_000000_Outcome.json",
+                                      "ORC_B_20260102_000000_Outline.json"])
+
+
+class TestSidecarsOfOneRun(unittest.TestCase):
+    def test_outlines_and_logs_are_filtered_by_run_name(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as out:
+            for name in ("ORC_A_Outline.json", "ORC_B_Outline.json", "ORC_A.log", "ORC_B.log"):
+                with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                    f.write("{}")
+
+            outlines = ingest.capture_outlines([d], out, "ORC_A")
+            logs = ingest.capture_sidecar_logs([d], out, "ORC_A")
+
+            self.assertEqual(outlines, ["ORC_A_Outline.json"])
+            self.assertEqual(logs, ["ORC_A.log"])
+            self.assertEqual(sorted(os.listdir(out)), ["ORC_A.log", "ORC_A_Outline.json"])
+
+    def test_no_run_name_keeps_everything_as_today(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as out:
+            for name in ("ORC_A_Outline.json", "ORC_B_Outline.json"):
+                with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                    f.write("{}")
+
+            self.assertEqual(len(ingest.capture_outlines([d], out)), 2)
 
 
 class TestOutcomeIdentity(unittest.TestCase):

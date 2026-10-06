@@ -7,8 +7,10 @@ class TestCli(unittest.TestCase):
         parser = cli._build_parser()
         args = parser.parse_args(["ingest", "arch.7z", "--out", "run"])
         self.assertEqual(args.command, "ingest")
-        self.assertEqual(args.collection, "arch.7z")
+        self.assertEqual(args.source, "arch.7z")
         self.assertEqual(args.out, "run")
+        # The option, not the positional: a directory of several runs needs a way to pick one.
+        self.assertIsNone(args.collection)
 
     def test_check_takes_the_archive_options_extract_takes(self):
         args = cli._build_parser().parse_args(

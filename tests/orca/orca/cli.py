@@ -162,10 +162,13 @@ def _build_parser() -> argparse.ArgumentParser:
                     "the next command. Every column is text: ORC's forensic CSVs carry cells "
                     "that would otherwise abort type detection, and text keeps schemas stable "
                     "across versions for diffing.")
-    ing.add_argument("collection", help="an ORC archive, or a directory holding a collection")
+    ing.add_argument("source", help="an ORC archive, or a directory holding a collection")
     ing.add_argument("--out", default=None, help="output run dir (default: beside the archive)")
     ing.add_argument("--work-dir", default=None,
                      help="put runs and decrypted output here instead of beside the archive")
+    ing.add_argument("--collection", default=None,
+                     help="when the directory holds several runs, the one to ingest "
+                          "(its computer name, its run name, or its Outcome filename)")
     ing.add_argument("--refresh", action="store_true",
                      help="re-decrypt and re-ingest even if products are already there")
     ing.add_argument("--jobs", type=int, default=None, help="parallel workers (default: CPUs)")
@@ -397,7 +400,7 @@ def main(argv=None) -> int:
     args = _build_parser().parse_args(items)
     if args.command == "ingest":
         ingest.run_ingest(
-            args.collection, args.out,
+            args.source, args.out, collection_name=args.collection,
             jobs=args.jobs, make_csv=not args.no_csv, make_trunc=not args.no_trunc,
             exclude_cols=args.exclude_cols, password=args.password,
             private_key=args.private_key, cms_backend=args.cms_backend,
