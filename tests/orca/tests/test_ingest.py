@@ -1166,6 +1166,45 @@ class TestSidecarsOfOneRun(unittest.TestCase):
             self.assertEqual(len(ingest.capture_outlines([d], out)), 2)
 
 
+class TestIdentityColumns(unittest.TestCase):
+    def test_values_come_from_the_outcome(self):
+        collection = ingest.Collection("/d/ORC_A_Outcome.json", ["/d/a.7z"],
+                                       "a.lab", "{A}", "20260101_000000")
+        self.assertEqual(ingest.identity_columns(collection),
+                         {"OrcComputerName": "a.lab", "OrcRunId": "{A}",
+                          "OrcTimestamp": "20260101_000000"})
+
+    def test_a_collection_with_no_outcome_stamps_empty_values(self):
+        collection = ingest.Collection(None, ["/d/a.7z"], "", "", "")
+        self.assertEqual(ingest.identity_columns(collection),
+                         {"OrcComputerName": "", "OrcRunId": "", "OrcTimestamp": ""})
+
+
+class TestPlainIngestStampsIdentity(unittest.TestCase):
+    def test_every_job_of_a_plain_ingest_gets_the_outcomes_identity(self):
+        """Not only under fleet: a dataset ingested by hand must answer the same glob."""
+        with tempfile.TemporaryDirectory() as d:
+            write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z", run_id="{A}")
+            job = ingest.CsvJob("autoruns.csv", os.path.join(d, "ORC_A_General.7z"), "autoruns")
+            seen = []
+
+            def ingest_one(job, engine, out_dir, drop, make_csv, make_trunc, seven, password,
+                           extra_columns=None):
+                seen.append(extra_columns)
+                return []
+
+            engine, seven = no_tools()
+            with engine, seven, \
+                    mock.patch.object(ingest, "discover_jobs", return_value=([job], [])), \
+                    mock.patch.object(ingest, "capture_logs", return_value=[]), \
+                    mock.patch.object(ingest, "ingest_one", ingest_one), \
+                    redirect_stdout(io.StringIO()):
+                ingest.run_ingest(d)
+
+            self.assertEqual(seen, [{"OrcComputerName": "a.lab", "OrcRunId": "{A}",
+                                     "OrcTimestamp": "20260101_000000"}])
+
+
 class TestOutcomeIdentity(unittest.TestCase):
     def test_reads_the_three_fields(self):
         with tempfile.TemporaryDirectory() as d:

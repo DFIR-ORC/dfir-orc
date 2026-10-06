@@ -239,5 +239,21 @@ class TestEnsureRun(CacheCase):
         self.assertEqual(kwargs["work_dir"], os.path.join(self.dir.name, "work"))
 
 
+class TestLayoutBump(CacheCase):
+    def test_a_dataset_from_an_older_layout_is_rebuilt(self):
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            dataset = cache.ensure_dataset(self.archive)
+            with open(cache.marker_path(dataset), encoding="utf-8") as f:
+                marker = json.load(f)
+            marker["layout"] = cache.LAYOUT_VERSION - 1
+            with open(cache.marker_path(dataset), "w", encoding="utf-8") as f:
+                json.dump(marker, f)
+
+            cache.ensure_dataset(self.archive)
+
+        self.assertEqual(len(calls), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

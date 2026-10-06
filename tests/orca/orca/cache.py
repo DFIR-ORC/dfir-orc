@@ -20,7 +20,9 @@ from . import ingest, layout
 #    name moved into the marker.
 # 4: the run is flat - tables, outcome, outline and logs sit in it directly, and orca's own
 #    bookkeeping moved into '<run>/.orca/'.
-LAYOUT_VERSION = 4
+# 5: every table carries OrcComputerName/OrcRunId/OrcTimestamp. Without the bump a dataset
+#    ingested before this looks current and answers a fleet query with a missing column.
+LAYOUT_VERSION = 5
 
 MARKER = "cache-source.json"
 

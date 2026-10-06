@@ -157,7 +157,8 @@ class Engine:
     def count(self, path: str) -> int:
         raise NotImplementedError
 
-    def csv_to_parquet(self, csv_path: str, parquet_path: str, drop_columns=None) -> None:
+    def csv_to_parquet(self, csv_path: str, parquet_path: str, drop_columns=None,
+                       extra_columns=None) -> None:
         raise NotImplementedError
 
     def parquet_to_csv(self, parquet_path: str, csv_path: str, drop_columns=None) -> None:
@@ -229,15 +230,38 @@ class DuckDbEngine(Engine):
         kept = _columns.kept_columns(self.columns(path), drop_columns)
         return _columns.quote_columns(kept)
 
-    def csv_to_parquet(self, csv_path: str, parquet_path: str, drop_columns=None) -> None:
+    def csv_to_parquet(self, csv_path: str, parquet_path: str, drop_columns=None,
+                       extra_columns=None) -> None:
         sel = self._select_list(csv_path, drop_columns)
+        extra = self._extra_terms(csv_path, extra_columns)
         # all_varchar: read every column as text. ORC's forensic CSVs contain malformed cells
         # (e.g. a truncated timestamp from a forged $I30 record) that abort type auto-detection
         # deep into a multi-million-row file. Text is also what merge/diff compare on, and it
         # keeps the parquet schema stable across runs (auto-detected types otherwise flip between
         # TIMESTAMP and VARCHAR depending on the sample, producing spurious schema diffs).
-        self._run(f"COPY (SELECT {sel} FROM read_csv_auto('{_fwd(csv_path)}', all_varchar=true)) "
-                  f"TO '{_fwd(parquet_path)}' (FORMAT parquet);")
+        self._run(f"COPY (SELECT {sel}{extra} FROM read_csv_auto('{_fwd(csv_path)}', "
+                  f"all_varchar=true)) TO '{_fwd(parquet_path)}' (FORMAT parquet);")
+
+    def _extra_terms(self, csv_path: str, extra_columns) -> str:
+        """Constant columns appended to a select, as ', <value> AS <name>' terms.
+
+        A column the file already carries is skipped rather than added: duckdb would write a
+        parquet with two columns of that name, which nothing can read back. ORC emits its own
+        unprefixed 'ComputerName' in some configurations, so the collision is not theoretical.
+        The look-up is one more duckdb DESCRIBE per table; accepted, the spec rules performance
+        out of scope for this change.
+        """
+        if not extra_columns:
+            return ""
+
+        have = {c.lower() for c in self.columns(csv_path)}
+        terms = []
+        for name, value in extra_columns.items():
+            if name.lower() in have:
+                continue
+            quoted = str(value).replace("'", "''")
+            terms.append(f", '{quoted}' AS \"{name}\"")
+        return "".join(terms)
 
     def parquet_to_csv(self, parquet_path: str, csv_path: str, drop_columns=None) -> None:
         sel = self._select_list(parquet_path, drop_columns)

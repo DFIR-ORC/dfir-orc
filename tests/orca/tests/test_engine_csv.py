@@ -3,6 +3,37 @@ import tempfile
 import unittest
 from unittest import mock
 from orca import engine
+from orca.engine import DuckDbEngine
+
+
+class TestExtraColumns(unittest.TestCase):
+    def test_constants_are_appended_to_the_select(self):
+        engine = DuckDbEngine("duckdb.exe")
+        with mock.patch.object(engine, "_run") as run:
+            engine.csv_to_parquet("in.csv", "out.parquet",
+                                  extra_columns={"OrcComputerName": "a.lab"})
+        sql = run.call_args[0][0]
+        self.assertIn("'a.lab' AS \"OrcComputerName\"", sql)
+        self.assertIn("read_csv_auto", sql)
+
+    def test_a_quote_in_a_value_is_escaped(self):
+        engine = DuckDbEngine("duckdb.exe")
+        with mock.patch.object(engine, "_run") as run:
+            engine.csv_to_parquet("in.csv", "out.parquet",
+                                  extra_columns={"OrcComputerName": "o'brien.lab"})
+        self.assertIn("'o''brien.lab'", run.call_args[0][0])
+
+    def test_a_column_the_csv_already_has_is_not_stamped_twice(self):
+        """Review Focus 5: a duplicate column name would make the parquet unreadable."""
+        engine = DuckDbEngine("duckdb.exe")
+        with mock.patch.object(engine, "columns", return_value=["OrcComputerName", "Path"]), \
+                mock.patch.object(engine, "_run") as run:
+            engine.csv_to_parquet("in.csv", "out.parquet",
+                                  extra_columns={"OrcComputerName": "a.lab"})
+        sql = run.call_args[0][0]
+        # The select is '*' here, so the only way the name could appear is as a stamp.
+        self.assertNotIn('AS "OrcComputerName"', sql)
+        self.assertIn("SELECT * FROM read_csv_auto", sql)
 
 DUCKDB = engine.find_duckdb()
 

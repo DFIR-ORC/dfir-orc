@@ -429,7 +429,8 @@ def decrypt_archive(path: str, dest_dir: str, private_key: str | None = None,
 
 
 def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
-               make_trunc: bool, seven_zip: str, password) -> list[TimingRecord]:
+               make_trunc: bool, seven_zip: str, password,
+               extra_columns=None) -> list[TimingRecord]:
     records: list[TimingRecord] = []
     work = scratch.directory("csv_")
     try:
@@ -439,7 +440,7 @@ def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
         parquet = os.path.join(out_dir, job.output_name + ".parquet")
 
         t0 = time.perf_counter()
-        engine.csv_to_parquet(src, parquet, None)
+        engine.csv_to_parquet(src, parquet, None, extra_columns)
         rows = engine.count(parquet)
         records.append(TimingRecord(job.output_name, "parquet", rows,
                                     os.path.getsize(parquet), time.perf_counter() - t0))
@@ -592,9 +593,10 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
         _write_name_map(work_jobs, out_dir)
         _write_manifest(manifest_rows, out_dir, engine)
 
+        identity = identity_columns(collection)
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [pool.submit(ingest_one, j, engine, out_dir, drop, make_csv,
-                                   make_trunc, seven, j.password) for j in work_jobs]
+                                   make_trunc, seven, j.password, identity) for j in work_jobs]
             records, skipped = collect_results(futures, work_jobs, strict)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
@@ -780,6 +782,25 @@ def collections_in(directory: str, extra_dirs=()) -> list[Collection]:
         found.append(Collection(None, leftover, "", "", ""))
 
     return found
+
+
+# What orca stamps into every table so a row knows which host and which run it came from.
+# Prefixed because ORC emits its own optional 'ComputerName' in the file-info families, and
+# present on every table - unlike ORC's, which is config-dependent and absent from the CSVs
+# other tools produce (autoruns, processes, PersistenceSniper).
+IDENTITY_COLUMNS = ("OrcComputerName", "OrcRunId", "OrcTimestamp")
+
+
+def identity_columns(collection: Collection) -> dict[str, str]:
+    """The identity to stamp into every table of 'collection'.
+
+    A collection with no Outcome has no identity to claim, and gets the columns with empty
+    values rather than not at all: a fleet query reading a glob must find the column on every
+    file or the union fails.
+    """
+    return {"OrcComputerName": collection.computer_name,
+            "OrcRunId": collection.run_id,
+            "OrcTimestamp": collection.timestamp}
 
 
 def select_collection(found: list[Collection], wanted: str) -> Collection:
