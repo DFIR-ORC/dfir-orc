@@ -150,7 +150,13 @@ std::wstring BytesToHex(const std::vector<uint8_t>& buffer)
 std::error_code ComputeSha256(const std::filesystem::path& path, std::vector<uint8_t>& sha256)
 {
     ScopedFileHandle hFile(CreateFileW(
-        path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_DELETE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr));
     if (hFile.get() == INVALID_HANDLE_VALUE)
     {
         auto ec = LastWin32Error();

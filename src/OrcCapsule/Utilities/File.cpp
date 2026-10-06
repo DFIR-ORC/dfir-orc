@@ -47,7 +47,13 @@ std::error_code ReadFileContents(const fs::path& path, std::vector<uint8_t>& out
     std::error_code ec;
 
     ScopedFileHandle hFile(CreateFileW(
-        path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_DELETE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr));
 
     if (!hFile || hFile.get() == INVALID_HANDLE_VALUE)
     {

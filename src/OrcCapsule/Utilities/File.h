@@ -50,5 +50,7 @@ inline [[nodiscard]] std::error_code RemoveFile(const std::filesystem::path& pat
 /// image loader can map and run the file while the delete is pending. It deliberately holds no write access:
 /// CreateProcessW's loader opens the image without FILE_SHARE_WRITE and would reject a retained writable
 /// handle with ERROR_SHARING_VIOLATION. Write the file first (e.g. with WriteFileContents), then keep this
-/// handle open for as long as the file must exist and close it to trigger removal.
+/// handle open for as long as the file must exist and close it to trigger removal. Symmetrically, the DELETE
+/// access retained here makes every later opener share delete as well: an open that omits FILE_SHARE_DELETE
+/// fails with ERROR_SHARING_VIOLATION, even a read-only one.
 [[nodiscard]] std::error_code OpenDeleteOnCloseFile(const std::filesystem::path& path, ScopedFileHandle& handle);
