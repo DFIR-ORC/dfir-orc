@@ -835,5 +835,165 @@ class TestSkippedTablesAreVisible(unittest.TestCase):
                                    self.jobs("autoruns"), strict=True)
 
 
+class TestDiscoverJobsStaging(unittest.TestCase):
+    """Two archives holding a same-named container must not overwrite each other's copy."""
+
+    def _fakes(self, tops, nested_name):
+        def list_entries(seven, archive, password=None):
+            if os.path.basename(archive) in tops:
+                return [ArchiveEntry(path="Inner.7z", size=1, crc="", attributes="")]
+            return [ArchiveEntry(path=nested_name, size=1, crc="", attributes="")]
+
+        def extract_entry(seven, archive, entry_path, dest_dir, password=None):
+            out = os.path.join(dest_dir, entry_path)
+            os.makedirs(os.path.dirname(out) or dest_dir, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                f.write(os.path.basename(archive))
+            return out
+
+        return list_entries, extract_entry
+
+    def test_each_container_keeps_its_own_copy(self):
+        tops = {"ORC_A_General.7z", "ORC_B_General.7z"}
+        list_entries, extract_entry = self._fakes(tops, "NTFSInfo.csv")
+
+        with tempfile.TemporaryDirectory() as staging, \
+                mock.patch.object(sevenzip, "list_entries", list_entries), \
+                mock.patch.object(sevenzip, "extract_entry", extract_entry):
+            jobs, manifest = ingest.discover_jobs(
+                [os.path.join("D:\\out", t) for t in sorted(tops)], staging, "7z", None)
+
+            sources = set()
+            for job in jobs:
+                with open(job.source_archive, encoding="utf-8") as f:
+                    sources.add(f.read())
+
+            # Two jobs, each reading the container that came out of its own top archive.
+            self.assertEqual(len(jobs), 2)
+            self.assertEqual(sources, tops)
+
+            # Review Focus 8: the manifest is unchanged by the fix. Both archives hold the
+            # same leaf at the same relative path and that is what the manifest records;
+            # which archive it came from is not part of a relpath, because diff joins two
+            # runs' manifests on it and the archive stem carries the run's timestamp.
+            self.assertEqual({m["relpath"] for m in manifest}, {"Inner/NTFSInfo.csv"})
+
+
+class TestCollectionsIn(unittest.TestCase):
+    """A directory can hold one collection per host; each Outcome names its own archives."""
+
+    def _write(self, d, stem, computer, archives, run_id="{ID}", ts="20260101_000000",
+               outcome_dir=None):
+        cmd_sets = [{"name": "General", "archive": {"name": a}} for a in archives]
+        doc = {"dfir-orc": {"outcome": {"id": run_id, "computer_name": computer,
+                                        "timestamp": ts, "command_set": cmd_sets}}}
+        with open(os.path.join(outcome_dir or d, stem + "_Outcome.json"), "w",
+                  encoding="utf-8") as f:
+            json.dump(doc, f)
+        for name in archives:
+            with open(os.path.join(d, name), "wb") as f:
+                f.write(b"x")
+
+    def test_one_collection_per_outcome(self):
+        with tempfile.TemporaryDirectory() as d:
+            self._write(d, "ORC_A", "a.lab", ["ORC_A_General.7z"], run_id="{A}")
+            self._write(d, "ORC_B", "b.lab", ["ORC_B_General.7z"], run_id="{B}")
+
+            with redirect_stdout(io.StringIO()):
+                found = ingest.collections_in(d)
+
+            self.assertEqual([c.computer_name for c in found], ["a.lab", "b.lab"])
+            self.assertEqual([c.run_id for c in found], ["{A}", "{B}"])
+            self.assertEqual([c.timestamp for c in found],
+                             ["20260101_000000", "20260101_000000"])
+            self.assertEqual([os.path.basename(p) for p in found[0].archives],
+                             ["ORC_A_General.7z"])
+            self.assertEqual([os.path.basename(p) for p in found[1].archives],
+                             ["ORC_B_General.7z"])
+
+    def test_an_archive_no_outcome_names_becomes_an_unnamed_collection(self):
+        """A stray archive is still collected data; it ingests as a collection of its own."""
+        with tempfile.TemporaryDirectory() as d:
+            self._write(d, "ORC_A", "a.lab", ["ORC_A_General.7z"])
+            with open(os.path.join(d, "ORC_Stray_General.7z"), "wb") as f:
+                f.write(b"x")
+
+            with redirect_stdout(io.StringIO()):
+                found = ingest.collections_in(d)
+
+            self.assertEqual(len(found), 2)
+            self.assertIsNone(found[1].outcome_path)
+            self.assertEqual(found[1].computer_name, "")
+            self.assertEqual([os.path.basename(p) for p in found[1].archives],
+                             ["ORC_Stray_General.7z"])
+
+    def test_loose_archives_with_no_outcome_are_one_collection(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name in ("A.7z", "B.7z"):
+                with open(os.path.join(d, name), "wb") as f:
+                    f.write(b"x")
+
+            with redirect_stdout(io.StringIO()):
+                found = ingest.collections_in(d)
+
+            self.assertEqual(len(found), 1)
+            self.assertIsNone(found[0].outcome_path)
+            self.assertEqual(len(found[0].archives), 2)
+
+    def test_an_unreadable_outcome_does_not_lose_the_others(self):
+        """Review Focus 2: one corrupt sidecar must not cost the rest of the directory."""
+        with tempfile.TemporaryDirectory() as d:
+            self._write(d, "ORC_A", "a.lab", ["ORC_A_General.7z"])
+            with open(os.path.join(d, "ORC_Bad_Outcome.json"), "w", encoding="utf-8") as f:
+                f.write("{ this is not json")
+
+            with redirect_stdout(io.StringIO()):
+                found = ingest.collections_in(d)
+
+            self.assertEqual([c.computer_name for c in found], ["a.lab"])
+
+    def test_an_outcome_unsealed_elsewhere_is_found_and_its_archives_are_here(self):
+        """Review Focus 6: under --work-dir (or on a read-only share) the plain Outcome sits
+        in another directory; the archives it names are still beside the sealed one."""
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as work:
+            self._write(d, "ORC_A", "a.lab", ["ORC_A_General.7z"], outcome_dir=work)
+            with open(os.path.join(d, "ORC_A_Outcome.json.7z.p7b"), "wb") as f:
+                f.write(b"sealed")
+
+            with redirect_stdout(io.StringIO()):
+                alone = ingest.collections_in(d)
+                together = ingest.collections_in(d, [work])
+
+            self.assertIsNone(alone[0].outcome_path)
+            self.assertEqual([c.computer_name for c in together], ["a.lab"])
+            self.assertEqual(together[0].archives, [os.path.join(d, "ORC_A_General.7z")])
+
+    def test_the_same_run_in_two_places_is_one_collection(self):
+        """A plain Outcome beside the archives and the unsealed copy under --work-dir carry the
+        same id, and must not be read as two hosts."""
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as work:
+            self._write(d, "ORC_A", "a.lab", ["ORC_A_General.7z"], run_id="{A}")
+            self._write(d, "ORC_A", "a.lab", ["ORC_A_General.7z"], run_id="{A}",
+                        outcome_dir=work)
+
+            with redirect_stdout(io.StringIO()):
+                found = ingest.collections_in(d, [work])
+
+            self.assertEqual([c.run_id for c in found], ["{A}"])
+
+
+class TestOutcomeIdentity(unittest.TestCase):
+    def test_reads_the_three_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "X_Outcome.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"dfir-orc": {"outcome": {"id": "{A}", "computer_name": "a.lab",
+                                                    "timestamp": "T"}}}, f)
+            self.assertEqual(ingest.outcome_identity(path), ("a.lab", "{A}", "T"))
+
+    def test_no_outcome_is_an_empty_identity(self):
+        self.assertEqual(ingest.outcome_identity(None), ("", "", ""))
+
+
 if __name__ == "__main__":
     unittest.main()

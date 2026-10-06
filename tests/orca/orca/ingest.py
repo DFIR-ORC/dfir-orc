@@ -5,6 +5,7 @@ import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from . import cms, journal, layout, naming, scratch, sevenzip
 from .columns import DEFAULT_VOLATILE_COLUMNS
@@ -58,13 +59,22 @@ def discover_jobs(top_archives: list[str], staging_dir: str, seven_zip: str,
     logical: list[tuple] = []
     manifest: list[dict] = []
     for top in top_archives:
+        # One staging subdirectory per top archive. Two archives of one collection can hold
+        # containers of the same name - an Outcome naming two archives, plus a stray archive
+        # from an earlier run of the same host - and a flat staging directory let the second
+        # overwrite the first, silently, before any job read it. Only the place on disk is
+        # namespaced: the logical paths and manifest relpaths stay as they are, because diff
+        # joins two runs' manifests on relpath and the archive stem carries the run's stamp.
+        top_stage = os.path.join(staging_dir, layout.archive_stem(top))
+        os.makedirs(top_stage, exist_ok=True)
+
         for entry in sevenzip.list_entries(seven_zip, top, password_override):
             low = entry.path.lower()
             if low.endswith(".7z"):
-                # password_override is the TOP archive's password here: it is what listing 'top' above
-                # used, and pulling an entry out of it needs the same one. The nested container's own
-                # password is resolved separately, just below.
-                container = sevenzip.extract_entry(seven_zip, top, entry.path, staging_dir,
+                # password_override is the TOP archive's password here: it is what listing 'top'
+                # above used, and pulling an entry out of it needs the same one. The nested
+                # container's own password is resolved separately, just below.
+                container = sevenzip.extract_entry(seven_zip, top, entry.path, top_stage,
                                                    password_override)
                 if not os.path.exists(container):
                     continue
@@ -73,8 +83,9 @@ def discover_jobs(top_archives: list[str], staging_dir: str, seven_zip: str,
                 if not pw:
                     cfg_rel = stem + "_cli_config.xml"
                     try:
-                        sevenzip.extract_entry(seven_zip, top, cfg_rel, staging_dir, password_override)
-                        pw = sevenzip.password_from_cli_config(os.path.join(staging_dir, cfg_rel))
+                        sevenzip.extract_entry(seven_zip, top, cfg_rel, top_stage,
+                                               password_override)
+                        pw = sevenzip.password_from_cli_config(os.path.join(top_stage, cfg_rel))
                     except Exception:
                         pw = None
                 for nested in sevenzip.list_entries(seven_zip, container, pw):
@@ -638,31 +649,110 @@ def write_skipped(skipped: list, out_dir: str) -> None:
             f.write(f"{name}\t{reason}\n")
 
 
+def _outcome_object(path: str) -> dict | None:
+    """The 'dfir-orc.outcome' object of a JSON file, or None when it is not an Outcome.
+
+    Read here rather than imported from outcome.py: that module imports this one back, and
+    discovery must not depend on the reporting layer.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (ValueError, OSError):
+        return None
+
+    outcome = (data.get("dfir-orc") or {}).get("outcome")
+    return outcome if isinstance(outcome, dict) else None
+
+
 def find_outcome_jsons(directory: str) -> list[str]:
     """Every ORC Outcome JSON in 'directory', by content rather than by name.
 
     A directory can hold several: a fleet is often dumped into one directory, one machine's
     files beside the next, and then each Outcome is a collection of its own.
     """
-    found = []
     try:
         entries = sorted(os.listdir(directory))
     except OSError:
-        return found
+        return []
 
-    for entry in entries:
-        if not entry.lower().endswith(".json"):
-            continue
+    return [os.path.join(directory, entry) for entry in entries
+            if entry.lower().endswith(".json") and _outcome_object(os.path.join(directory, entry))]
 
-        full = os.path.join(directory, entry)
-        try:
-            with open(full, encoding="utf-8") as f:
-                data = json.load(f)
-        except (ValueError, OSError):
-            continue
 
-        if (data.get("dfir-orc") or {}).get("outcome"):
-            found.append(full)
+def outcome_identity(outcome_path: str | None) -> tuple[str, str, str]:
+    """(computer_name, run id, timestamp) of an Outcome; three empty strings for none."""
+    outcome = _outcome_object(outcome_path) if outcome_path else None
+    if not outcome:
+        return "", "", ""
+
+    return (outcome.get("computer_name") or "", outcome.get("id") or "",
+            outcome.get("timestamp") or "")
+
+
+class Collection(NamedTuple):
+    """One ORC run in a directory: its Outcome, its archives, and who it came from.
+
+    A directory often holds several - a fleet uploads one machine's files beside the next -
+    and each is a run of its own. 'outcome_path' is None for archives no Outcome named, which
+    are collected data all the same and ingest as an unnamed collection.
+    """
+    outcome_path: str | None
+    archives: list[str]
+    computer_name: str
+    run_id: str
+    timestamp: str
+
+
+def collections_in(directory: str, extra_dirs=()) -> list[Collection]:
+    """Every ORC run in 'directory', one Collection per Outcome, plus one for the leftovers.
+
+    This is what separates a fleet directory from a single collection, and both 'ingest' (to
+    refuse what it cannot read) and 'fleet' (to loop) go through it, so the two can never
+    disagree about what a directory holds the way 'ingest' and 'report' did.
+
+    'extra_dirs' is where the sidecars were unsealed when that is not 'directory' - under
+    --work-dir, or scratch for a read-only collection (see sidecar_dirs). A sealed collection's
+    Outcome is '<run>_Outcome.json.7z.p7b' and invisible here until unseal_sidecars has run,
+    so callers unseal first: grouping a sealed fleet before that finds no Outcome and reads
+    every host as one unnamed collection. The archives are always resolved against
+    'directory', which is where they are.
+    """
+    found: list[Collection] = []
+    claimed: list[str] = []
+    seen_ids: set[str] = set()
+
+    for place in [directory, *extra_dirs]:
+        for path in find_outcome_jsons(place):
+            outcome = _outcome_object(path)
+            if not outcome:
+                continue
+
+            # The same run can be readable in two places - a plain Outcome beside the archives
+            # and the copy unsealed under --work-dir - and is one collection, not two hosts.
+            run_id = outcome.get("id") or ""
+            if run_id and run_id in seen_ids:
+                continue
+            seen_ids.add(run_id)
+
+            names = []
+            for cmd_set in outcome.get("command_set", []) or []:
+                archive = cmd_set.get("archive")
+                if not archive:
+                    continue
+                for one in (archive if isinstance(archive, list) else [archive]):
+                    if one.get("name"):
+                        names.append(one["name"])
+
+            archives = [archive_as_found(directory, name) for name in names]
+            claimed += archives
+            found.append(Collection(path, archives, *outcome_identity(path)))
+
+    # Whatever no Outcome accounts for is one more collection rather than a warning: an
+    # archive ORC wrote after its Outcome, or one dropped in by hand, is still data.
+    leftover = archives_not_named(directory, claimed)
+    if leftover:
+        found.append(Collection(None, leftover, "", "", ""))
 
     return found
 
