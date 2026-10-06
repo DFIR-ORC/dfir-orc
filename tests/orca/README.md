@@ -223,6 +223,36 @@ orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --no-csv --jobs 12
 orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --exclude-cols SampleCollectionDate CreationDate
 ```
 
+### Fleet (a directory of hosts, one dataset each)
+
+A directory holding several machines' results is several runs. `orca ingest` reads one and
+refuses the rest; `orca fleet` reads all of them, one dataset per host:
+
+```
+orca fleet C:\share\collect --private-key contoso.com.key
+```
+
+Each dataset is named after its own run, and every table in it carries `OrcComputerName`,
+`OrcRunId` and `OrcTimestamp` - as does every table `orca ingest` writes, so a dataset made by
+hand answers the same query. That makes the fleet view a glob: no second copy of the data, and
+nothing to rebuild when one host is re-collected:
+
+```sql
+-- stacking: the autorun one host has and ninety-nine do not
+SELECT "Image Path", "SHA-256", count(DISTINCT "OrcComputerName") AS hosts
+FROM read_parquet('collect/*/autoruns.parquet', union_by_name = true)
+GROUP BY ALL ORDER BY hosts ASC;
+```
+
+`union_by_name = true` is required rather than cosmetic: ORC versions and configurations differ
+across an estate, and a positional union would misalign the columns.
+
+Read the denominator with it. `.orca-fleet/hosts.csv` (beside the datasets, or under `--out`)
+lists every host and whether it ingested; `.orca-fleet/coverage.csv` lists only the gaps - a
+table a host skipped, or one every other host produced and this one did not. A stacking result
+without them describes the hosts that answered while reading as though it described all of
+them.
+
 ### GetThis summary
 
 ```powershell

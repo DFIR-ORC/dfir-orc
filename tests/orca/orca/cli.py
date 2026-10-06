@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from . import (check, cms, collect, extract, getthis, ingest, localconfig, logs, merge,
+from . import (check, cms, collect, extract, fleet, getthis, ingest, localconfig, logs, merge,
                outcome, outline, report, diff)
 
 
@@ -183,6 +183,31 @@ def _build_parser() -> argparse.ArgumentParser:
     ing.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                      help="pin the .p7b decryption backend")
     ing.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    fl = sub.add_parser(
+        "fleet", help="a directory of collections -> one dataset per host",
+        description="Ingest every collection in a directory, each into its own dataset named "
+                    "after its own run. A directory holding several machines' results is "
+                    "several runs, and 'orca ingest' reads one of them; this reads all of "
+                    "them. One host at a time, and a host that cannot be read costs that host "
+                    "alone. Re-running skips the hosts that are already current, so an "
+                    "interrupted fleet resumes where it stopped.")
+    fl.add_argument("directory", help="a directory holding one or more collections")
+    fl.add_argument("--out", default=None,
+                    help="put the datasets, the decrypted archives and the fleet's own "
+                         "bookkeeping here instead of in the collection directory")
+    fl.add_argument("--password", default=None, help="archive password")
+    fl.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
+    fl.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
+                    help="pin the .p7b decryption backend")
+    fl.add_argument("--jobs", type=int, default=None,
+                    help="parallel workers within one host (default: CPUs). Hosts are always "
+                         "ingested one at a time")
+    fl.add_argument("--refresh", action="store_true",
+                    help="re-ingest every host even if its dataset is already current")
+    fl.add_argument("--strict", action="store_true",
+                    help="within a host, stop at the first collected file orca cannot read")
+    fl.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     ex = sub.add_parser(
         "extract", help="collection -> the expanded tree (decrypts, unnests)",
@@ -407,6 +432,11 @@ def main(argv=None) -> int:
             engine_name=args.engine, work_dir=args.work_dir, refresh=args.refresh,
             strict=args.strict,
         )
+    elif args.command == "fleet":
+        return fleet.run_fleet(args.directory, args.out, password=args.password,
+                               private_key=args.private_key, cms_backend=args.cms_backend,
+                               engine_name=args.engine, jobs=args.jobs,
+                               refresh=args.refresh, strict=args.strict)
     elif args.command == "extract":
         extract.run_extract(args.collection, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
