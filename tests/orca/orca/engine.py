@@ -150,15 +150,26 @@ def _reader(path: str) -> str:
     return "read_parquet" if path.lower().endswith(".parquet") else "read_csv_auto"
 
 
+def _csv_source(csv_path: str, null_padding: bool = False) -> str:
+    """read_csv_auto over a collected CSV, every column as text (see csv_to_parquet).
+
+    'null_padding' accepts rows shorter than the header: autorunsc omits the last field of some
+    rows, and the strict sniffer then rejects ',' and reads every line as one column. Opt-in, so
+    ORC's own tables keep failing loudly on a short row instead of being padded silently.
+    """
+    padding = ", null_padding=true" if null_padding else ""
+    return f"read_csv_auto('{_fwd(csv_path)}', all_varchar=true{padding})"
+
+
 class Engine:
-    def columns(self, path: str) -> list[str]:
+    def columns(self, path: str, null_padding: bool = False) -> list[str]:
         raise NotImplementedError
 
     def count(self, path: str) -> int:
         raise NotImplementedError
 
     def csv_to_parquet(self, csv_path: str, parquet_path: str, drop_columns=None,
-                       extra_columns=None) -> None:
+                       extra_columns=None, null_padding: bool = False) -> None:
         raise NotImplementedError
 
     def parquet_to_csv(self, parquet_path: str, csv_path: str, drop_columns=None) -> None:
@@ -216,8 +227,10 @@ class DuckDbEngine(Engine):
         finally:
             os.remove(tmp)
 
-    def columns(self, path: str) -> list[str]:
-        sql = f"SELECT column_name FROM (DESCRIBE SELECT * FROM {_reader(path)}('{_fwd(path)}'))"
+    def columns(self, path: str, null_padding: bool = False) -> list[str]:
+        source = (_csv_source(path, null_padding) if _reader(path) == "read_csv_auto"
+                  else f"read_parquet('{_fwd(path)}')")
+        sql = f"SELECT column_name FROM (DESCRIBE SELECT * FROM {source})"
         return self._scalar_csv(sql, "column_name")
 
     def count(self, path: str) -> int:
@@ -231,18 +244,18 @@ class DuckDbEngine(Engine):
         return _columns.quote_columns(kept)
 
     def csv_to_parquet(self, csv_path: str, parquet_path: str, drop_columns=None,
-                       extra_columns=None) -> None:
+                       extra_columns=None, null_padding: bool = False) -> None:
         sel = self._select_list(csv_path, drop_columns)
-        extra = self._extra_terms(csv_path, extra_columns)
+        extra = self._extra_terms(csv_path, extra_columns, null_padding)
         # all_varchar: read every column as text. ORC's forensic CSVs contain malformed cells
         # (e.g. a truncated timestamp from a forged $I30 record) that abort type auto-detection
         # deep into a multi-million-row file. Text is also what merge/diff compare on, and it
         # keeps the parquet schema stable across runs (auto-detected types otherwise flip between
         # TIMESTAMP and VARCHAR depending on the sample, producing spurious schema diffs).
-        self._run(f"COPY (SELECT {sel}{extra} FROM read_csv_auto('{_fwd(csv_path)}', "
-                  f"all_varchar=true)) TO '{_fwd(parquet_path)}' (FORMAT parquet);")
+        self._run(f"COPY (SELECT {sel}{extra} FROM {_csv_source(csv_path, null_padding)}) "
+                  f"TO '{_fwd(parquet_path)}' (FORMAT parquet);")
 
-    def _extra_terms(self, csv_path: str, extra_columns) -> str:
+    def _extra_terms(self, csv_path: str, extra_columns, null_padding: bool = False) -> str:
         """Constant columns appended to a select, as ', <value> AS <name>' terms.
 
         A column the file already carries is skipped rather than added: duckdb would write a
@@ -254,7 +267,8 @@ class DuckDbEngine(Engine):
         if not extra_columns:
             return ""
 
-        have = {c.lower() for c in self.columns(csv_path)}
+        # Read as the COPY will read it: padded or not, the sniffer finds different columns.
+        have = {c.lower() for c in self.columns(csv_path, null_padding)}
         terms = []
         for name, value in extra_columns.items():
             if name.lower() in have:

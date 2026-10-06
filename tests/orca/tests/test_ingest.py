@@ -1189,7 +1189,7 @@ class TestPlainIngestStampsIdentity(unittest.TestCase):
             seen = []
 
             def ingest_one(job, engine, out_dir, drop, make_csv, make_trunc, seven, password,
-                           extra_columns=None):
+                           extra_columns=None, codepage=None):
                 seen.append(extra_columns)
                 return []
 
@@ -1203,6 +1203,29 @@ class TestPlainIngestStampsIdentity(unittest.TestCase):
 
             self.assertEqual(seen, [{"OrcComputerName": "a.lab", "OrcRunId": "{A}",
                                      "OrcTimestamp": "20260101_000000"}])
+
+
+class TestIngestReadsTheHostCodepage(unittest.TestCase):
+    def test_the_outlines_console_codepage_reaches_every_job(self):
+        """A console tool's CSV is in the host's codepage; only the Outline says which one."""
+        with tempfile.TemporaryDirectory() as d:
+            write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z", run_id="{A}")
+            with open(os.path.join(d, "ORC_A_Outline.json"), "w", encoding="utf-8") as f:
+                json.dump({"dfir-orc": {"outline": {"system": {"codepage": 850}}}}, f)
+            job = ingest.CsvJob("Systeminfo.csv", os.path.join(d, "ORC_A_General.7z"),
+                                "Systeminfo")
+            seen = []
+
+            def ingest_one(job, engine, out_dir, drop, make_csv, make_trunc, seven, password,
+                           extra_columns=None, codepage=None):
+                seen.append(codepage)
+                return []
+
+            engine, seven = no_tools()
+            with engine, seven,                     mock.patch.object(ingest, "discover_jobs", return_value=([job], [])),                     mock.patch.object(ingest, "capture_logs", return_value=[]),                     mock.patch.object(ingest, "ingest_one", ingest_one),                     redirect_stdout(io.StringIO()):
+                ingest.run_ingest(d)
+
+            self.assertEqual(seen, ["cp850"])
 
 
 class TestOutcomeIdentity(unittest.TestCase):

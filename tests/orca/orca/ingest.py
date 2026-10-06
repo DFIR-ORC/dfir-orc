@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from . import cms, journal, layout, naming, scratch, sevenzip
+from . import cms, encoding, journal, layout, naming, scratch, sevenzip
 from .columns import DEFAULT_VOLATILE_COLUMNS
 from .engine import get_engine, worker_memory_limit
 from .timing import TimingRecord, write_timing_csv, summarize
@@ -428,9 +428,76 @@ def decrypt_archive(path: str, dest_dir: str, private_key: str | None = None,
     return plain
 
 
+def csv_to_parquet_any_encoding(engine, src: str, parquet: str, extra_columns,
+                                codepage: str | None) -> None:
+    """Convert one collected CSV whatever it was written in (see encoding.py).
+
+    A UTF-16 file is rewritten before duckdb sees it, and PowerShell's '#TYPE' line dropped
+    (encoding.py says why). The file is then tried as UTF-8, and re-read through the host's
+    console codepage only when duckdb refuses it as not UTF-8. A file whose rows are shorter
+    than its header is read once more with the short rows padded (see collapsed_to_one_column).
+    A file that is not a CSV at all - a tool's error message saved under '.csv' - is reported
+    by what it holds instead of duckdb's dump of the dialects it tried.
+    """
+    bom = encoding.bom_encoding(src)
+    if bom:
+        src = encoding.transcode(src, encoding.derived_path(src, "utf8"), bom)
+
+    if encoding.starts_with_type_line(src):
+        src = encoding.drop_first_line(src, encoding.derived_path(src, "untyped"))
+
+    read = convert_any_encoding(engine, src, parquet, extra_columns, codepage, bool(bom))
+    if collapsed_to_one_column(engine, read, parquet, extra_columns):
+        engine.csv_to_parquet(read, parquet, None, extra_columns, null_padding=True)
+
+
+def convert_any_encoding(engine, src: str, parquet: str, extra_columns, codepage: str | None,
+                         transcoded: bool) -> str:
+    """csv_to_parquet, retried through the host's codepage when duckdb says the file is not
+    UTF-8. Returns the file that was read: 'src', or its UTF-8 rewrite."""
+    try:
+        engine.csv_to_parquet(src, parquet, None, extra_columns)
+        return src
+    except RuntimeError as error:
+        message = str(error)
+        if encoding.NOT_A_CSV in message:
+            raise RuntimeError(f"not a CSV, it starts with: "
+                               f"'{encoding.first_line(src)}'") from error
+
+        # Already transcoded from UTF-16, or refused for another reason: no codepage helps.
+        if transcoded or encoding.INVALID_UNICODE not in message:
+            raise
+
+    codec = codepage
+    if not codec:
+        codec = encoding.FALLBACK_ENCODING
+        print(f"warning: '{os.path.basename(src)}' is not UTF-8 and the Outline gives no "
+              f"usable codepage; reading it as {codec}, characters above 0x7F may be wrong")
+
+    utf8 = encoding.transcode(src, encoding.derived_path(src, "utf8"), codec)
+    engine.csv_to_parquet(utf8, parquet, None, extra_columns)
+    return utf8
+
+
+def collapsed_to_one_column(engine, csv_path: str, parquet: str, extra_columns) -> bool:
+    """True when a comma-separated header came out as a single column.
+
+    No error says so: when some rows are shorter than the header (autorunsc omits the last
+    field of some rows), duckdb's sniffer rejects ',' and settles on a delimiter the file never
+    uses, so every line becomes one value under a column named after the whole header line. A
+    table that is one column by design has no comma in its header, so it is never re-read.
+    """
+    if "," not in encoding.first_line(csv_path):
+        return False
+
+    stamped = {name.lower() for name in (extra_columns or {})}
+    collected = [c for c in engine.columns(parquet) if c.lower() not in stamped]
+    return len(collected) == 1
+
+
 def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
                make_trunc: bool, seven_zip: str, password,
-               extra_columns=None) -> list[TimingRecord]:
+               extra_columns=None, codepage: str | None = None) -> list[TimingRecord]:
     records: list[TimingRecord] = []
     work = scratch.directory("csv_")
     try:
@@ -440,7 +507,7 @@ def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
         parquet = os.path.join(out_dir, job.output_name + ".parquet")
 
         t0 = time.perf_counter()
-        engine.csv_to_parquet(src, parquet, None, extra_columns)
+        csv_to_parquet_any_encoding(engine, src, parquet, extra_columns, codepage)
         rows = engine.count(parquet)
         records.append(TimingRecord(job.output_name, "parquet", rows,
                                     os.path.getsize(parquet), time.perf_counter() - t0))
@@ -578,7 +645,8 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
         products = [layout.ORCA_DIR]
         products += copy_into_run([collection.outcome_path] if collection.outcome_path else [],
                                   out_dir)
-        products += capture_outlines(directories, out_dir, run)
+        outlines = capture_outlines(directories, out_dir, run)
+        products += outlines
         products += capture_sidecar_logs(directories, out_dir, run)
         products += capture_logs(seven, archives, out_dir, password)
 
@@ -594,9 +662,11 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
         _write_manifest(manifest_rows, out_dir, engine)
 
         identity = identity_columns(collection)
+        codepage = encoding.host_codepage([os.path.join(out_dir, name) for name in outlines])
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [pool.submit(ingest_one, j, engine, out_dir, drop, make_csv,
-                                   make_trunc, seven, j.password, identity) for j in work_jobs]
+                                   make_trunc, seven, j.password, identity, codepage)
+                       for j in work_jobs]
             records, skipped = collect_results(futures, work_jobs, strict)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
