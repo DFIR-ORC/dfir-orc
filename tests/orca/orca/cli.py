@@ -181,9 +181,10 @@ def _build_parser() -> argparse.ArgumentParser:
     ing.add_argument("--strict", action="store_true",
         help="stop at the first collected file orca cannot "
              "read, instead of skipping it and saying so")
-    ing.add_argument("--no-csv", action="store_true", help="skip CSV output")
-    ing.add_argument("--no-trunc", action="store_true", help="skip truncated CSV")
-    ing.add_argument("--exclude-cols", nargs="*", default=None, help="volatile columns to drop")
+    add_csv_arguments(ing)
+    # Kept so that existing scripts still run: parquet only is now the default.
+    ing.add_argument("--no-csv", action="store_true", help=argparse.SUPPRESS)
+    ing.add_argument("--no-trunc", action="store_true", help=argparse.SUPPRESS)
     ing.add_argument("--password", default=None, help="archive password")
     ing.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
     ing.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
@@ -224,6 +225,7 @@ def _build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--strict", action="store_true",
                     help="within a host, stop at the first collected file orca cannot read")
     fl.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+    add_csv_arguments(fl)
 
     ex = sub.add_parser(
         "extract", help="collection -> the expanded tree (decrypts, unnests)",
@@ -440,6 +442,28 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def add_csv_arguments(parser) -> None:
+    """--csv / --csv-trunc / --exclude-cols, the same for ingest and fleet (csvout)."""
+    parser.add_argument("--csv", action="store_true",
+                        help="also write each table as CSV in csv\\, over a dataset already "
+                             "there without ingesting again")
+    parser.add_argument("--csv-trunc", action="store_true",
+                        help="also write each table as CSV less its volatile columns in "
+                             "csv-trunc\\, for a text diff of two runs")
+    parser.add_argument("--exclude-cols", nargs="*", default=None,
+                        help="the volatile columns --csv-trunc drops (default: the dates and "
+                             "times that change on every run)")
+
+
+def warn_csv_arguments(args) -> None:
+    """Say what the old flags became rather than refuse them: a script passing them still runs."""
+    if getattr(args, "no_csv", False) or getattr(args, "no_trunc", False):
+        print("note: --no-csv / --no-trunc do nothing now: parquet only is the default "
+              "(--csv / --csv-trunc to write the CSVs)")
+    if getattr(args, "exclude_cols", None) and not getattr(args, "csv_trunc", False):
+        print("note: --exclude-cols only applies to --csv-trunc")
+
+
 def refuse_conflicting_outputs(parser, args) -> None:
     """'--out-at-input' names where the products go, and so do '--work-dir' and - for ingest
     and fleet, where it is the dataset's place rather than a result file's - '--out'. Two
@@ -468,10 +492,12 @@ def main(argv=None) -> int:
     parser = _build_parser()
     args = parser.parse_args(items)
     refuse_conflicting_outputs(parser, args)
+    if args.command in ("ingest", "fleet"):
+        warn_csv_arguments(args)
     if args.command == "ingest":
         ingest.run_ingest(
             args.source, args.out, collection_name=args.collection,
-            jobs=args.jobs, make_csv=not args.no_csv, make_trunc=not args.no_trunc,
+            jobs=args.jobs, make_csv=args.csv, make_trunc=args.csv_trunc,
             exclude_cols=args.exclude_cols, password=args.password,
             private_key=args.private_key, cms_backend=args.cms_backend,
             engine_name=args.engine, work_dir=args.work_dir, refresh=args.refresh,
@@ -482,7 +508,9 @@ def main(argv=None) -> int:
                                private_key=args.private_key, cms_backend=args.cms_backend,
                                engine_name=args.engine, jobs=args.jobs,
                                refresh=args.refresh, strict=args.strict,
-                               at_input=args.out_at_input, schema=args.schema)
+                               at_input=args.out_at_input, schema=args.schema,
+                               csv=args.csv, csv_trunc=args.csv_trunc,
+                               exclude_cols=args.exclude_cols)
     elif args.command == "extract":
         extract.run_extract(args.collection, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,

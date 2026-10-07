@@ -221,6 +221,19 @@ def products(dataset: str) -> list[str]:
         return [ORCA_DIR]
 
 
+def write_products(dataset: str, names: list[str]) -> None:
+    """Record what was put in 'dataset', one name per line."""
+    path = products_path(dataset)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(sorted(set(names))) + "\n")
+
+
+def add_products(dataset: str, names: list[str]) -> None:
+    """Add 'names' to what a rebuild of 'dataset' may remove (see products)."""
+    write_products(dataset, products(dataset) + list(names))
+
+
 def table_names(dataset: str) -> list[str]:
     """The tables an ingest produced, in the order it named them.
 
@@ -229,6 +242,17 @@ def table_names(dataset: str) -> list[str]:
     them. The glob is the fallback for a run directory written by hand.
     """
     return [name for name, _entry in table_entries(dataset)]
+
+
+def missing_tables(dataset: str) -> list[str]:
+    """The tables the ingest named whose parquet is not there, less those it recorded as skipped.
+
+    A table deleted by hand, or lost to an interrupted copy: the dataset still says it has it.
+    A skipped one never had a parquet, and ingesting again would fail on it the same way.
+    """
+    passed = skipped(dataset)
+    return [name for name in table_names(dataset)
+            if name not in passed and not os.path.exists(os.path.join(dataset, name + ".parquet"))]
 
 
 def table_entries(dataset: str) -> list[tuple[str, str]]:

@@ -71,7 +71,8 @@ class TestDispatch(DispatchCase):
         self.assertEqual(kwargs["private_key"], "k.pem")
         self.assertEqual(kwargs["cms_backend"], "openssl")
         self.assertEqual(kwargs["password"], "S3cret")
-        self.assertEqual(kwargs["exclude_cols"], ["MD5"])
+        # The comparison's own: it changes nothing in the datasets, so it must not rebuild them.
+        self.assertNotIn("exclude_cols", kwargs)
         self.assertTrue(kwargs["refresh"])
 
     def test_report_names_the_archives_not_the_cache(self):

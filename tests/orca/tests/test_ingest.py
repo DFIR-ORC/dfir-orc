@@ -1198,8 +1198,8 @@ class TestPlainIngestStampsIdentity(unittest.TestCase):
             job = ingest.CsvJob("autoruns.csv", os.path.join(d, "ORC_A_General.7z"), "autoruns")
             seen = []
 
-            def ingest_one(job, engine, out_dir, drop, make_csv, make_trunc, seven, password,
-                           extra_columns=None, codepage=None):
+            def ingest_one(job, engine, out_dir, seven, password, extra_columns=None,
+                           codepage=None):
                 seen.append(extra_columns)
                 return []
 
@@ -1226,8 +1226,8 @@ class TestIngestReadsTheHostCodepage(unittest.TestCase):
                                 "Systeminfo")
             seen = []
 
-            def ingest_one(job, engine, out_dir, drop, make_csv, make_trunc, seven, password,
-                           extra_columns=None, codepage=None):
+            def ingest_one(job, engine, out_dir, seven, password, extra_columns=None,
+                           codepage=None):
                 seen.append(codepage)
                 return []
 
@@ -1253,3 +1253,70 @@ class TestOutcomeIdentity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestIngestReusesACurrentRun(unittest.TestCase):
+    """orca ingest twice, or with --csv after the fact: the tables are built once."""
+
+    def ingest_twice(self, d, second: dict, between=None) -> tuple[list, mock.Mock]:
+        write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z", run_id="{A}")
+        job = ingest.CsvJob("autoruns.csv", os.path.join(d, "ORC_A_General.7z"), "autoruns")
+        built = []
+
+        def ingest_one(job, engine, out_dir, seven, password, extra_columns=None, codepage=None):
+            built.append(job.output_name)
+            with open(os.path.join(out_dir, job.output_name + ".parquet"), "wb") as f:
+                f.write(b"PAR1")
+            return []
+
+        engine, seven = no_tools()
+        out = os.path.join(d, "out")
+        with engine, seven, \
+                mock.patch.object(ingest, "discover_jobs", return_value=([job], [])), \
+                mock.patch.object(ingest, "capture_logs", return_value=[]), \
+                mock.patch.object(ingest, "ingest_one", ingest_one), \
+                mock.patch.object(ingest, "csv_over") as csv_over, \
+                redirect_stdout(io.StringIO()):
+            ingest.run_ingest(d, out)
+            if between:
+                between()
+            ingest.run_ingest(d, out, **second)
+        return built, csv_over
+
+    def test_a_second_ingest_of_a_current_run_builds_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            built, _ = self.ingest_twice(d, {})
+            self.assertEqual(built, ["autoruns"])
+
+    def test_csv_after_the_fact_converts_without_ingesting(self):
+        with tempfile.TemporaryDirectory() as d:
+            built, csv_over = self.ingest_twice(d, {"make_csv": True, "exclude_cols": ["MD5"]})
+            self.assertEqual(built, ["autoruns"])
+            dataset, _engine, _jobs, csv, trunc, drop = csv_over.call_args.args
+            self.assertEqual((dataset, csv, trunc, drop),
+                             (os.path.join(d, "out"), True, False, ["MD5"]))
+
+    def test_refresh_builds_again(self):
+        with tempfile.TemporaryDirectory() as d:
+            built, _ = self.ingest_twice(d, {"refresh": True})
+            self.assertEqual(built, ["autoruns", "autoruns"])
+
+    def test_a_dataset_given_as_the_source_is_only_converted(self):
+        """The collection is not needed for its CSVs: not even 7-Zip is looked for."""
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(layout.orca_dir(d))
+            with mock.patch.object(ingest, "csv_over") as csv_over, \
+                    mock.patch.object(ingest.sevenzip, "find_7z") as find_7z:
+                self.assertEqual(ingest.run_ingest(d, make_csv=True), [])
+            find_7z.assert_not_called()
+            self.assertEqual(csv_over.call_args.args[0], d)
+
+    def test_csv_on_a_run_missing_a_table_builds_it_first(self):
+        """The CSVs are written over the parquet: a table gone since is built again first."""
+        with tempfile.TemporaryDirectory() as d:
+            gone = os.path.join(d, "out", "autoruns.parquet")
+            built, csv_over = self.ingest_twice(d, {"make_csv": True},
+                                                between=lambda: os.remove(gone))
+            self.assertEqual(built, ["autoruns", "autoruns"])
+            self.assertTrue(os.path.exists(gone))
+            self.assertTrue(csv_over.call_args.args[3])

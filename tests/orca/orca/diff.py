@@ -438,10 +438,10 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
     if run_a and run_b:
         # Keep the paths the user typed for the report: a cache directory name is a hash.
         source_a, source_b = run_a, run_b
+        # Not exclude_cols: it is this comparison's, and changes nothing in a dataset.
         resolve = dict(work_dir=work_dir, refresh=refresh, password=password,
                        private_key=private_key, cms_backend=cms_backend,
-                       exclude_cols=exclude_cols, engine_name=engine_name,
-                       strict=strict, at_input=at_input)
+                       engine_name=engine_name, strict=strict, at_input=at_input)
         run_a = cache.ensure_dataset(run_a, **resolve)
         run_b = cache.ensure_dataset(run_b, **resolve)
 

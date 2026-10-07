@@ -83,18 +83,17 @@ def location_name(source: str) -> str:
     return f"{stem}-{digest}"
 
 
-def ingest_options(exclude_cols=None, password=None, engine_name="duckdb",
-                   strict=False) -> dict:
-    """The part of an ingest that changes its output, as it goes into the key.
+def ingest_options(password=None, engine_name="duckdb", strict=False) -> dict:
+    """The part of an ingest that changes its tables, as it goes into the key.
 
     The private key is left out on purpose: two different keys decrypt the same archive to the
     same bytes. The password is hashed rather than stored, so correcting a wrong one rebuilds.
+    The CSVs and '--exclude-cols' are left out too: they are written over the tables on request
+    (csvout) and never change them, so asking for them must not cost an ingest.
     """
     options = {
-        "exclude_cols": sorted(exclude_cols) if exclude_cols else None,
         "password": hashlib.sha256(password.encode("utf-8")).hexdigest()[:8] if password else None,
         "engine": engine_name,
-        "csv": False,
     }
 
     # A dataset that skipped a table is not the dataset a strict ingest would have produced -
@@ -122,7 +121,16 @@ def is_current(dataset: str, key: str) -> bool:
     except (ValueError, OSError):
         return False
 
-    return marker.get("key") == key and marker.get("layout") == LAYOUT_VERSION
+    if marker.get("key") != key or marker.get("layout") != LAYOUT_VERSION:
+        return False
+
+    # A table it recorded and no longer holds: the CSVs, a report or a diff would quietly go
+    # without it, so it is rebuilt rather than reused.
+    missing = layout.missing_tables(dataset)
+    if missing:
+        print(f"'{dataset}' is missing the parquet of {len(missing)} table(s) "
+              f"({', '.join(missing[:5])}{', ...' if len(missing) > 5 else ''}); ingesting again")
+    return not missing
 
 
 def clear_dataset(dataset: str) -> None:
@@ -150,22 +158,25 @@ def write_marker(dataset: str, source: str, key: str, options: dict) -> None:
 def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
                refresh: bool = False, strict: bool = False, collection=None,
-               jobs=None, at_input: bool = False) -> str:
+               jobs=None, at_input: bool = False, csv: bool = False,
+               csv_trunc: bool = False) -> str:
     """Return a dataset for 'source', ingesting it when there is not a current one.
 
-    A path that is already a dataset is used in place and never copied. Datasets are ingested
-    parquet-only: every consumer of one reads parquet, and skipping the CSV products makes the
-    ingest substantially cheaper. 'collection' narrows a directory holding several runs to one
-    of them (fleet); 'jobs' is the worker count, and not part of the key - it changes how fast
-    a dataset is built, not what it contains.
+    A path that is already a dataset is used in place and never copied. 'collection' narrows a
+    directory holding several runs to one of them (fleet); 'jobs' is the worker count, and not
+    part of the key - it changes how fast a dataset is built, not what it contains.
+
+    'csv' / 'csv_trunc' write the CSVs over the tables, whether just built or already current
+    (csvout); 'exclude_cols' is what csv-trunc drops, and only that.
     """
     if is_dataset(source):
+        ingest.csv_over(source, engine_name, jobs, csv, csv_trunc, exclude_cols)
         return source
 
     if not os.path.exists(source):
         raise RuntimeError(f"cache: '{source}' does not exist")
 
-    options = ingest_options(exclude_cols, password, engine_name, strict)
+    options = ingest_options(password, engine_name, strict)
     key = key_for(source, options, archives=collection.archives if collection else None)
 
     # One collection of a fleet directory is named after its own run: the directory's name is
@@ -183,6 +194,7 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     keep_dir, dataset = layout.resolve(source, work_dir, name=name, at_input=at_input)
 
     if not refresh and is_current(dataset, key):
+        ingest.csv_over(dataset, engine_name, jobs, csv, csv_trunc, exclude_cols)
         return dataset
 
     clear_dataset(dataset)
@@ -191,11 +203,9 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     # 'work_dir' as well as the two directories resolved from it: those say where the products
     # go, and run_ingest also puts its scratch there - a diff of two large collections has the
     # same no-room-on-the-temp-volume problem as anything else.
-    ingest.run_ingest(source, dataset, make_csv=False, make_trunc=False,
+    ingest.run_ingest(source, dataset, make_csv=csv, make_trunc=csv_trunc,
                       collection=collection, jobs=jobs,
                       exclude_cols=exclude_cols, password=password, private_key=private_key,
                       cms_backend=cms_backend, engine_name=engine_name, keep_dir=keep_dir,
-                      work_dir=work_dir, refresh=refresh, strict=strict)
-
-    write_marker(dataset, source, key, options)
+                      work_dir=work_dir, refresh=refresh, strict=strict, cache_key=key)
     return dataset

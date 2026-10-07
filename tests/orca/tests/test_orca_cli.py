@@ -1,6 +1,7 @@
 import contextlib
 import io
 import unittest
+import unittest.mock
 from orca import cli, logs, report
 
 
@@ -381,3 +382,38 @@ class TestHelp(unittest.TestCase):
 
         self.assertGreater(len((parser.description or "").strip()), 120)
         self.assertIn("orca collect", parser.epilog or "")
+
+
+class TestCsvOnRequest(unittest.TestCase):
+    """Parquet only unless asked; the old flags still parse, and say what they became."""
+
+    def main(self, argv) -> tuple[str, dict]:
+        out = io.StringIO()
+        target = "orca.ingest.run_ingest" if argv[0] == "ingest" else "orca.fleet.run_fleet"
+        with unittest.mock.patch(target, return_value=0) as run, contextlib.redirect_stdout(out):
+            cli.main(argv)
+        return out.getvalue(), run.call_args.kwargs
+
+    def test_ingest_writes_parquet_only_by_default(self):
+        _, kwargs = self.main(["ingest", "arch.7z"])
+        self.assertEqual((kwargs["make_csv"], kwargs["make_trunc"]), (False, False))
+
+    def test_ingest_csv_and_csv_trunc_reach_the_ingest(self):
+        _, kwargs = self.main(["ingest", "arch.7z", "--csv", "--csv-trunc",
+                               "--exclude-cols", "MD5"])
+        self.assertEqual((kwargs["make_csv"], kwargs["make_trunc"], kwargs["exclude_cols"]),
+                         (True, True, ["MD5"]))
+
+    def test_fleet_takes_the_same_flags(self):
+        _, kwargs = self.main(["fleet", "dumps", "--csv", "--csv-trunc", "--exclude-cols", "MD5"])
+        self.assertEqual((kwargs["csv"], kwargs["csv_trunc"], kwargs["exclude_cols"]),
+                         (True, True, ["MD5"]))
+
+    def test_the_old_flags_still_run_and_say_they_do_nothing(self):
+        text, kwargs = self.main(["ingest", "arch.7z", "--no-csv", "--no-trunc"])
+        self.assertFalse(kwargs["make_csv"])
+        self.assertIn("--no-csv / --no-trunc do nothing now", text)
+
+    def test_exclude_cols_without_csv_trunc_is_pointed_out(self):
+        text, _ = self.main(["ingest", "arch.7z", "--exclude-cols", "MD5"])
+        self.assertIn("--exclude-cols only applies to --csv-trunc", text)

@@ -1,7 +1,9 @@
+import io
 import json
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from unittest import mock
 from orca import cache, layout
 
@@ -30,7 +32,7 @@ class CacheCase(unittest.TestCase):
 
     def fake_ingest(self, products=("NTFSInfo.parquet",)):
         """Stand-in for run_ingest that records its calls and produces a plausible run dir:
-        its tables flat, and the product list a rebuild goes by."""
+        its tables flat, the product list a rebuild goes by, and the marker under its key."""
         calls = []
 
         def ingest(source, out_dir, **kwargs):
@@ -41,6 +43,7 @@ class CacheCase(unittest.TestCase):
                     f.write(b"table")
             with open(layout.products_path(out_dir), "w", encoding="utf-8") as f:
                 f.write("\n".join([layout.ORCA_DIR, *products]) + "\n")
+            cache.write_marker(out_dir, source, kwargs["cache_key"], {})
 
         return calls, ingest
 
@@ -88,13 +91,8 @@ class TestKey(CacheCase):
 
     def test_changes_with_the_ingest_options(self):
         plain = cache.key_for(self.archive, cache.ingest_options())
-        excluded = cache.key_for(self.archive, cache.ingest_options(exclude_cols=["MD5"]))
-        self.assertNotEqual(plain, excluded)
-
-    def test_column_order_does_not_change_the_key(self):
-        one = cache.key_for(self.archive, cache.ingest_options(exclude_cols=["MD5", "SHA1"]))
-        other = cache.key_for(self.archive, cache.ingest_options(exclude_cols=["SHA1", "MD5"]))
-        self.assertEqual(one, other)
+        other = cache.key_for(self.archive, cache.ingest_options(engine_name="other"))
+        self.assertNotEqual(plain, other)
 
     def test_password_is_hashed_not_stored(self):
         options = cache.ingest_options(password="S3cret")
@@ -178,8 +176,30 @@ class TestEnsureRun(CacheCase):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
             cache.ensure_dataset(self.archive)
-            cache.ensure_dataset(self.archive, exclude_cols=["MD5"])
+            cache.ensure_dataset(self.archive, engine_name="other")
         self.assertEqual(len(calls), 2)
+
+    def test_a_dataset_missing_a_table_it_recorded_is_ingested_again(self):
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake), \
+                redirect_stdout(io.StringIO()):
+            run = cache.ensure_dataset(self.archive)
+            with open(layout.name_map_path(run), "w", encoding="utf-8") as f:
+                f.write("name,source_archive,entry_path,source_mtime\nNTFSInfo,a,b,0\n")
+            os.remove(os.path.join(run, "NTFSInfo.parquet"))
+            cache.ensure_dataset(self.archive, csv=True)
+        self.assertEqual(len(calls), 2)
+
+    def test_csv_options_do_not_re_ingest(self):
+        """The CSVs are written over the tables: asking for them must not cost an ingest."""
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake), \
+                mock.patch.object(cache.ingest, "csv_over") as csv_over:
+            cache.ensure_dataset(self.archive)
+            cache.ensure_dataset(self.archive, csv=True, csv_trunc=True, exclude_cols=["MD5"])
+        self.assertEqual(len(calls), 1)
+        _, _, _, csv, trunc, drop = csv_over.call_args.args
+        self.assertEqual((csv, trunc, drop), (True, True, ["MD5"]))
 
     def test_refresh_re_ingests(self):
         calls, fake = self.fake_ingest()

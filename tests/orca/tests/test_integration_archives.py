@@ -385,13 +385,20 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
         self.assertTrue(os.path.exists(plain))
         self.assertTrue(sevenzip.is_archive(plain))
 
+        # The comparison's own options change nothing in the datasets: no second ingest.
+        compared = io.StringIO()
+        with redirect_stdout(compared):
+            cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY,
+                      "--exclude-cols", "MD5", "--out-at-input"])
+        self.assertNotIn("ingesting", compared.getvalue())
+
         # A later ingest of the same collection - here forced by changing an ingest option -
         # reuses that decrypted archive instead of paying for the decrypt again, and does not
         # ingest it as a second collection alongside the '.p7b' it came from.
         again = io.StringIO()
         with redirect_stdout(again):
             cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY,
-                      "--exclude-cols", "MD5", "--out-at-input"])
+                      "--strict", "--out-at-input"])
 
         text = again.getvalue()
         self.assertIn("ingesting", text)

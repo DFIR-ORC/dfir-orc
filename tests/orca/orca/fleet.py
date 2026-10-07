@@ -27,7 +27,8 @@ class FleetResult(NamedTuple):
 def run_fleet(directory: str, out: str | None = None, *, password=None, private_key=None,
               cms_backend=None, engine_name="duckdb", jobs=None, refresh: bool = False,
               strict: bool = False, at_input: bool = False,
-              schema: str = orcschema.AUTO_OPTION) -> int:
+              schema: str = orcschema.AUTO_OPTION, csv: bool = False,
+              csv_trunc: bool = False, exclude_cols=None) -> int:
     """Ingest every collection in 'directory'. Returns a process exit code.
 
     A host that cannot be ingested costs that host and nothing else: on a hundred machines the
@@ -61,7 +62,8 @@ def run_fleet(directory: str, out: str | None = None, *, password=None, private_
             dataset = cache.ensure_dataset(
                 directory, out, collection=collection, jobs=jobs, password=password,
                 private_key=private_key, cms_backend=cms_backend, engine_name=engine_name,
-                refresh=refresh, strict=strict, at_input=at_input)
+                refresh=refresh, strict=strict, at_input=at_input, csv=csv,
+                csv_trunc=csv_trunc, exclude_cols=exclude_cols)
             result.ingested.append((collection, dataset))
         except (RuntimeError, OSError) as error:
             print(f"'{who}' failed: {error}")

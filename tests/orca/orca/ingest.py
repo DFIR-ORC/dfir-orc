@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from . import cms, encoding, journal, layout, naming, scratch, sevenzip
+from . import cms, csvout, encoding, journal, layout, naming, scratch, sevenzip
 from .columns import DEFAULT_VOLATILE_COLUMNS
 from .engine import get_engine, worker_memory_limit
 from .timing import TimingRecord, write_timing_csv, summarize
@@ -220,12 +220,6 @@ SEALED_OUTPUT_EXTENSIONS = (".json", ".log", ".txt", ".xml")
 # ORC collects the failing commands' output into an 'Errors' sub-archive; it is expanded into a
 # directory of that name, the way 'orca extract' expands any container.
 ERRORS_DIR = "Errors"
-
-# The CSV renderings of the tables keep a directory of their own: a top-level CSV of the
-# collection (VSS_list.csv) carries the same name as the table ingested from it, and flat they
-# would overwrite the collected file.
-CSV_DIR = "csv"
-CSV_TRUNC_DIR = "csv-trunc"
 
 
 def sealed_name(path: str) -> str | None:
@@ -495,8 +489,7 @@ def collapsed_to_one_column(engine, csv_path: str, parquet: str, extra_columns) 
     return len(collected) == 1
 
 
-def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
-               make_trunc: bool, seven_zip: str, password,
+def ingest_one(job: CsvJob, engine, out_dir: str, seven_zip: str, password,
                extra_columns=None, codepage: str | None = None) -> list[TimingRecord]:
     records: list[TimingRecord] = []
     work = scratch.directory("csv_")
@@ -512,24 +505,6 @@ def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
         records.append(TimingRecord(job.output_name, "parquet", rows,
                                     os.path.getsize(parquet), time.perf_counter() - t0))
 
-        if make_csv:
-            csv_dir = os.path.join(out_dir, CSV_DIR)
-            os.makedirs(csv_dir, exist_ok=True)
-
-            full = os.path.join(csv_dir, job.output_name + ".csv")
-            t0 = time.perf_counter()
-            engine.parquet_to_csv(parquet, full, None)
-            records.append(TimingRecord(job.output_name, "csv", rows,
-                                        os.path.getsize(full), time.perf_counter() - t0))
-
-            if make_trunc:
-                trunc_dir = os.path.join(out_dir, CSV_TRUNC_DIR)
-                os.makedirs(trunc_dir, exist_ok=True)
-                trunc = os.path.join(trunc_dir, job.output_name + ".csv")
-                t0 = time.perf_counter()
-                engine.parquet_to_csv(parquet, trunc, drop_columns)
-                records.append(TimingRecord(job.output_name, "csv.trunc", rows,
-                                            os.path.getsize(trunc), time.perf_counter() - t0))
         return records
     finally:
         shutil.rmtree(work, ignore_errors=True)
@@ -548,10 +523,7 @@ def _write_name_map(jobs: list[CsvJob], out_dir: str) -> None:
 
 def _write_products(names: list[str], out_dir: str) -> None:
     """Record what this ingest put in the run directory, one name per line."""
-    path = layout.products_path(out_dir)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(sorted(set(names))) + "\n")
+    layout.write_products(out_dir, names)
 
 
 def _write_manifest(rows: list[dict], out_dir: str, engine) -> None:
@@ -574,12 +546,12 @@ def _write_manifest(rows: list[dict], out_dir: str, engine) -> None:
     os.remove(csv_path)
 
 
-def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=True,
-               make_trunc=True, exclude_cols=None, password=None, private_key=None,
+def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=False,
+               make_trunc=False, exclude_cols=None, password=None, private_key=None,
                cms_backend=None, engine_name="duckdb", work_dir=None, keep_dir=None,
                refresh=False, strict=False, collection=None,
-               collection_name=None, at_input=False) -> list[TimingRecord]:
-    """Ingest a collection into a run directory.
+               collection_name=None, at_input=False, cache_key=None) -> list[TimingRecord]:
+    """Ingest a collection into a run directory, unless the one there is already current.
 
     'out_dir' and 'keep_dir' default to the current directory (see layout.resolve): the run,
     the decrypted archives and the unsealed sidecars land there. 'at_input' puts them beside
@@ -588,7 +560,18 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
     'collection' is the one Collection to ingest when the caller (fleet, cache) already knows
     it; 'collection_name' is '--collection', resolved here rather than by the caller because
     a sealed directory's Outcomes are only readable once this function has unsealed them.
+
+    'make_csv' / 'make_trunc' write csv\\ / csv-trunc\\ after the parquet (csvout), whether the
+    tables were just built or already there; 'archive' may then be a dataset, and the
+    collection is not needed. 'cache_key' is the caller's key for the run (cache.ensure_dataset),
+    so that both agree on what current means.
     """
+    # Here rather than at the top: cache imports this module.
+    from . import cache
+
+    if cache.is_dataset(archive):
+        csv_over(archive, engine_name, jobs, make_csv, make_trunc, exclude_cols)
+        return []
     # Before anything takes a scratch directory, and not only where the products go: the CMS
     # intermediate is as big as the collection, so a machine whose temp volume is smaller than
     # that cannot ingest it at all unless '--work-dir' moves the scratch as well. The failure
@@ -602,7 +585,6 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
     seven = sevenzip.find_7z()
     if not seven:
         raise RuntimeError("7z.exe not found")
-    drop = list(exclude_cols) if exclude_cols else list(DEFAULT_VOLATILE_COLUMNS)
 
     # keep_dir first and on its own: unsealing needs it, and which collection this is - and
     # so what the dataset is called - is only known once the sidecars are plain.
@@ -635,6 +617,15 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
                 out_dir = os.path.join(os.path.dirname(resolved_out), run)
         os.makedirs(out_dir, exist_ok=True)
 
+        # Before decrypting: a current run costs nothing to ask for again, which is what makes
+        # '--csv' on a collection already ingested a conversion and not a second ingest.
+        options = cache.ingest_options(password, engine_name, strict)
+        key = cache_key or cache.key_for(archive, options, archives=collection.archives)
+        if not refresh and cache.is_current(out_dir, key):
+            print(f"'{out_dir}' is current; not ingesting again (--refresh to force)")
+            csv_over(out_dir, engine_name, jobs, make_csv, make_trunc, exclude_cols)
+            return []
+
         archives = [decrypt_archive(top, keep_dir, private_key, cms_backend, refresh)
                     for top in collection.archives]
 
@@ -652,10 +643,6 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
 
         work_jobs, manifest_rows = discover_jobs(archives, staging, seven, password)
         products += [job.output_name + ".parquet" for job in work_jobs]
-        if make_csv:
-            products.append(CSV_DIR)
-            if make_trunc:
-                products.append(CSV_TRUNC_DIR)
         _write_products(products, out_dir)
 
         _write_name_map(work_jobs, out_dir)
@@ -664,8 +651,8 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
         identity = identity_columns(collection)
         codepage = encoding.host_codepage([os.path.join(out_dir, name) for name in outlines])
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = [pool.submit(ingest_one, j, engine, out_dir, drop, make_csv,
-                                   make_trunc, seven, j.password, identity, codepage)
+            futures = [pool.submit(ingest_one, j, engine, out_dir, seven, j.password,
+                                   identity, codepage)
                        for j in work_jobs]
             records, skipped = collect_results(futures, work_jobs, strict)
     finally:
@@ -676,7 +663,23 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
 
     write_timing_csv(records, layout.timing_path(out_dir))
     print(summarize(records))
+    csv_over(out_dir, engine_name, jobs, make_csv, make_trunc, exclude_cols)
+
+    # Last, so that its absence marks an interrupted ingest (cache.is_current).
+    cache.write_marker(out_dir, archive, key, options)
     return records
+
+
+def csv_over(dataset: str, engine_name: str, jobs, make_csv: bool, make_trunc: bool,
+             exclude_cols=None) -> None:
+    """The CSVs asked for, over the tables 'dataset' holds (csvout). Nothing when none was."""
+    if not (make_csv or make_trunc):
+        return
+
+    workers = jobs or os.cpu_count() or 4
+    drop = list(exclude_cols) if exclude_cols else list(DEFAULT_VOLATILE_COLUMNS)
+    csvout.write_csv(get_engine(engine_name, worker_memory_limit(workers)), dataset,
+                     make_csv, make_trunc, drop, workers)
 
 
 def collect_results(futures, jobs: list, strict: bool = False):

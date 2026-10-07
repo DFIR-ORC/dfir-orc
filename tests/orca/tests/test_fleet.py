@@ -115,6 +115,7 @@ class TestRunFleet(unittest.TestCase):
                 os.makedirs(layout.orca_dir(out_dir), exist_ok=True)
                 with open(layout.products_path(out_dir), "w", encoding="utf-8") as f:
                     f.write(layout.ORCA_DIR + "\n")
+                cache.write_marker(out_dir, source, kwargs["cache_key"], {})
 
             with seven_zip(), mock.patch.object(cache.ingest, "run_ingest", fake_ingest), \
                     redirect_stdout(io.StringIO()):

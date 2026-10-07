@@ -27,7 +27,7 @@ python -m orca <command> ...
 **Ingest an archive and look at the results** - the two commands you will use most:
 
 ```powershell
-# 1. archive -> a dataset of parquet/CSV (does NOT expand the full tree)
+# 1. archive -> a dataset of parquet (does NOT expand the full tree)
 orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host
 
 # 2. quick health view of that dataset
@@ -53,7 +53,7 @@ orca's commands hand each other three different things, and it helps to keep the
 | | what it holds | who writes it |
 |:---|:---|:---|
 | a **collection** | the archives ORC wrote, plus its Outcome, Outlines and log | ORC, or `orca collect` |
-| a **dataset** | per-table parquet, the CSV renderings, the sidecar copies, `.orca` bookkeeping | `orca ingest` |
+| a **dataset** | per-table parquet, the sidecar copies, `.orca` bookkeeping, the CSVs when asked | `orca ingest` |
 | an **expanded tree** | the collected files themselves | `orca extract` |
 
 A **run** is one execution of ORC on one machine: what the Outline describes, what `run_id`
@@ -77,8 +77,8 @@ E:\dumps\ORC_WS_H2ODEV_Offline\
   Errors\                     the 'Errors' sub-archive, expanded
   getthis.parquet             every collected GetThis sample (written by `orca getthis`)
   dfir-orc.parquet            the wide join (written by `orca merge`)
-  csv\                        the same tables as CSV      (`orca ingest`, unless --no-csv)
-  csv-trunc\                  CSV with volatile date columns dropped (for readable diffing)
+  csv\                        the same tables as CSV                      (with --csv)
+  csv-trunc\                  CSV with volatile date columns dropped     (with --csv-trunc)
   .orca\                      orca's own bookkeeping, nothing to read by hand
     name-map.csv              table name -> source archive / entry / mtime
     ingest-timing.csv         per-file timing
@@ -125,9 +125,23 @@ mentions it is a summary you should not take at face value. A run ingested with 
 gets a cache key of its own: it is not the dataset a strict ingest would have produced, since that
 one would have failed.
 
-The CSV renderings keep a directory of their own: a top-level CSV of the collection
-(`VSS_list.csv`) carries the same name as the table ingested from it, and flat they would
-overwrite the collected file.
+A dataset is parquet only unless you ask for the CSVs: no orca command reads them back, and
+writing them cost the big tables (NTFSInfo, USNInfo) a second pass in a larger format.
+`--csv` writes `csv\`, the tables as normalized text (UTF-8, one quoting style, one file per
+table); `--csv-trunc` writes `csv-trunc\`, the same less the volatile columns (`--exclude-cols`),
+for a text diff of two runs. Both work on `orca ingest` and `orca fleet`, and neither is part
+of the cache key: asked for after the fact, they convert the tables already there rather than
+ingest again, and only a table whose CSV is missing or older than its parquet is written. A
+dataset is a source of its own, so `orca ingest <dataset> --csv` needs no collection. A rebuild of
+the tables removes them (they are in `products.txt`). `--no-csv` and `--no-trunc` are still
+accepted, and do nothing.
+
+The CSVs keep a directory of their own: a top-level CSV of the collection (`VSS_list.csv`)
+carries the same name as the table ingested from it, and flat they would overwrite the
+collected file. They are not ORC's own CSVs: for those, as collected, use `orca extract`.
+
+A second `orca ingest` of a collection whose dataset is current builds nothing (`--refresh` to
+force it), as `fleet` and `diff` already did.
 
 Every parquet column is text (`VARCHAR`): ORC's forensic CSVs carry malformed cells that would
 otherwise abort type detection, and text keeps schemas stable across versions for diffing.
@@ -219,11 +233,18 @@ orca ingest E:\dumps\DFIR-ORC_HOST.7z --out-at-input
 # encrypted / password-protected sub-archives (otherwise read from the sibling *_cli_config.xml)
 orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --password S3cret
 
-# parquet only (skip CSV / truncated CSV), more workers
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --no-csv --jobs 12
+# more workers
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --jobs 12
 
-# change which columns count as "volatile" (dropped from csv-trunc)
-orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --exclude-cols SampleCollectionDate CreationDate
+# the CSVs as well - or later, over the dataset already there, without ingesting again
+orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\datasets\host --csv
+orca ingest E:\datasets\host --csv
+
+# CSVs without the volatile columns, choosing which ones count as volatile
+orca ingest E:\datasets\host --csv-trunc --exclude-cols SampleCollectionDate CreationDate
+
+# every host of a fleet, after the fact
+orca fleet C:\share\collect --csv
 ```
 
 ### Fleet (a directory of hosts, one dataset each)
