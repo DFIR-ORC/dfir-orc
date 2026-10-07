@@ -990,6 +990,13 @@ written beside the evidence. `--out-at-input` applies to both sides, so the new 
 lands beside its archive too. Under `--work-dir` the datasets are named after their input's
 location, so the same reference archive maps to the same dataset on every call.
 
+**What is compared.** Every column both sides have, less the volatile dates (above) and orca's
+own identity columns - `OrcComputerName`, `OrcRunId`, `OrcTimestamp` - which say where a row
+came from, not what it holds: two runs differ on every row in them, and compared they made every
+row of every table a change. Name them with `--columns` to compare them anyway. Each side's
+differing rows are found once, in one pass, and the count, `--rows` and `--show` all read them
+from there.
+
 **Reading `--show`** - a NEW row and the REF row carrying the same identity (FRN, USN, ...) are
 reported as one modification, grouped by *which* columns changed, so a `+1 / -1` on a 46-column
 NTFSInfo table names the delta instead of hiding it past the right edge:

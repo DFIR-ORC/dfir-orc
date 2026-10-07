@@ -3,8 +3,8 @@ Pure column-selection + SQL builders here; counts/row-export go through the engi
 import json
 import os
 
-from . import layout
-from .columns import DEFAULT_VOLATILE_COLUMNS
+from . import layout, scratch
+from .columns import DEFAULT_VOLATILE_COLUMNS, IDENTITY_COLUMNS
 from .engine import sql_path
 
 
@@ -20,7 +20,10 @@ def select_columns(cols_a, cols_b, columns=None, exclude_cols=None):
     if columns:
         compare = [c for c in columns if c in set_a and c in set_b]
     else:
-        drop = set(DEFAULT_VOLATILE_COLUMNS) | set(exclude_cols or [])
+        # orca's identity columns say where a row came from, not what it holds: two runs differ
+        # on every row in OrcRunId and OrcTimestamp, and compared they made every row of every
+        # table a change.
+        drop = set(DEFAULT_VOLATILE_COLUMNS) | set(IDENTITY_COLUMNS) | set(exclude_cols or [])
         compare = [c for c in shared if c not in drop]
     return compare, only_a, only_b
 
@@ -59,21 +62,35 @@ def diff_tables(engine, path_a, path_b, columns=None, exclude_cols=None,
 
     ra, rb = reader_for(path_a), reader_for(path_b)
     pa, pb = sql_path(path_a), sql_path(path_b)
-    added = int(engine.query_scalar(build_except_count_sql(ra, pa, rb, pb, compare)))
-    removed = int(engine.query_scalar(build_except_count_sql(rb, pb, ra, pa, compare)))
+
+    # Each side's differing rows computed once, into scratch, and everything else read from
+    # there: the count, the '--rows' export and the '--show' sample each used to run the same
+    # EXCEPT ALL again - six full passes over two tables of millions of rows, for two results.
+    work = scratch.directory("diff_")
+    added_path = os.path.join(work, "added.parquet")
+    removed_path = os.path.join(work, "removed.parquet")
+    engine.query_to_parquet(build_except_sql(ra, pa, rb, pb, compare), added_path)
+    engine.query_to_parquet(build_except_sql(rb, pb, ra, pa, compare), removed_path)
+    added, removed = engine.count(added_path), engine.count(removed_path)
 
     if rows_out_dir:
         os.makedirs(rows_out_dir, exist_ok=True)
         base = name or os.path.splitext(os.path.basename(path_a))[0]
         if added:
-            engine.query_to_csv(build_except_sql(ra, pa, rb, pb, compare),
+            engine.query_to_csv(differing_rows_sql(added_path),
                                 os.path.join(rows_out_dir, base + ".added.csv"))
         if removed:
-            engine.query_to_csv(build_except_sql(rb, pb, ra, pa, compare),
+            engine.query_to_csv(differing_rows_sql(removed_path),
                                 os.path.join(rows_out_dir, base + ".removed.csv"))
 
     return {"compatible": True, "added": added, "removed": removed, "compare_cols": compare,
-            "only_in_a": only_a, "only_in_b": only_b, "path_a": path_a, "path_b": path_b}
+            "only_in_a": only_a, "only_in_b": only_b, "path_a": path_a, "path_b": path_b,
+            "added_path": added_path, "removed_path": removed_path}
+
+
+def differing_rows_sql(path: str) -> str:
+    """The differing rows diff_tables kept for one side."""
+    return f"SELECT * FROM read_parquet('{sql_path(path)}')"
 
 
 def _match_parquet(run_a, run_b):
@@ -361,8 +378,12 @@ def sample_table(engine, dt: dict, limit: int, name=None, key_override=None,
     pa, pb = sql_path(dt["path_a"]), sql_path(dt["path_b"])
     key_cols = key_columns_for(name or os.path.basename(dt["path_a"]), compare, key_override)
 
-    added_sql = build_ordered_sql(build_except_sql(ra, pa, rb, pb, compare), key_cols)
-    removed_sql = build_ordered_sql(build_except_sql(rb, pb, ra, pa, compare), key_cols)
+    # The rows diff_tables already found, when it kept them; computed again otherwise.
+    added_sql = build_ordered_sql(differing_rows_sql(dt["added_path"]) if dt.get("added_path")
+                                  else build_except_sql(ra, pa, rb, pb, compare), key_cols)
+    removed_sql = build_ordered_sql(differing_rows_sql(dt["removed_path"])
+                                    if dt.get("removed_path")
+                                    else build_except_sql(rb, pb, ra, pa, compare), key_cols)
     added = engine.query_rows(added_sql, limit) if dt["added"] else []
     removed = engine.query_rows(removed_sql, limit) if dt["removed"] else []
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 from . import cms, csvout, encoding, journal, layout, naming, scratch, sevenzip
-from .columns import DEFAULT_VOLATILE_COLUMNS
+from .columns import DEFAULT_VOLATILE_COLUMNS, IDENTITY_COLUMNS
 from .engine import get_engine, worker_memory_limit
 from .timing import TimingRecord, write_timing_csv, summarize
 
@@ -892,11 +892,6 @@ def collections_in(directory: str, extra_dirs=()) -> list[Collection]:
     return sidecars.group(directory, sidecars.Resolved(paths, [])).collections
 
 
-# What orca stamps into every table so a row knows which host and which run it came from.
-# Prefixed because ORC emits its own optional 'ComputerName' in the file-info families, and
-# present on every table - unlike ORC's, which is config-dependent and absent from the CSVs
-# other tools produce (autoruns, processes, PersistenceSniper).
-IDENTITY_COLUMNS = ("OrcComputerName", "OrcRunId", "OrcTimestamp")
 
 
 def identity_columns(collection: Collection) -> dict[str, str]:
