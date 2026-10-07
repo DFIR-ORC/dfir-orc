@@ -66,10 +66,11 @@ class TestLocationName(CacheCase):
             f.write(b"more")
         self.assertEqual(cache.location_name(self.archive), before)
 
-    def test_two_archives_of_one_name_in_two_places_are_kept_apart(self):
+    def test_it_is_the_inputs_name_alone(self):
+        """Decision 2026-10-07: a readable name over one that cannot collide."""
+        self.assertEqual(cache.location_name(self.archive), "Little")
         other = os.path.join(self.dir.name, "ref", "Little.7z")
-        self.assertNotEqual(cache.location_name(self.archive), cache.location_name(other))
-        self.assertTrue(cache.location_name(other).startswith("Little-"))
+        self.assertEqual(cache.location_name(other), "Little")
 
 
 class TestKey(CacheCase):
@@ -130,8 +131,9 @@ class TestEnsureRun(CacheCase):
         self.assertEqual(run, os.path.join(self.dir.name, "Little"))
         self.assertEqual(os.listdir(self.cwd.name), [])
 
-    def test_work_dir_moves_the_run_and_keeps_two_archives_apart(self):
-        # Under one --work-dir, NEW\Little.7z and REF\Little.7z would collide on their name.
+    def test_work_dir_moves_the_run_named_after_its_input(self):
+        # Two inputs of one name under one --work-dir share it: the accepted cost of a readable
+        # name (location_name); diff refuses that case.
         other_dir = os.path.join(self.dir.name, "ref")
         os.makedirs(other_dir)
         other = os.path.join(other_dir, "Little.7z")
@@ -143,10 +145,8 @@ class TestEnsureRun(CacheCase):
             one = cache.ensure_dataset(self.archive, self.work_dir)
             two = cache.ensure_dataset(other, self.work_dir)
 
-        self.assertNotEqual(one, two)
-        for run in (one, two):
-            self.assertEqual(os.path.dirname(run), self.work_dir)
-            self.assertTrue(os.path.basename(run).startswith("Little-"))
+        self.assertEqual(one, os.path.join(self.work_dir, "Little"))
+        self.assertEqual(two, one)
 
     def test_ingests_once_then_reuses(self):
         calls, fake = self.fake_ingest()

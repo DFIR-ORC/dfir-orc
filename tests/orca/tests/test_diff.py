@@ -77,3 +77,25 @@ class TestEachSideIsComputedOnce(unittest.TestCase):
                 [call.args[0] for call in engine.query_rows.call_args_list]
         self.assertEqual(len(later), 4)
         self.assertFalse(any("EXCEPT ALL" in sql for sql in later))
+
+
+class TestTwoInputsOfOneName(unittest.TestCase):
+    def test_two_inputs_that_would_share_a_dataset_are_refused(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            for side in ("new", "ref"):
+                os.makedirs(os.path.join(d, side, "1040_vss"))
+            with self.assertRaises(RuntimeError) as caught:
+                diff.refuse_one_dataset(os.path.join(d, "new", "1040_vss"),
+                                        os.path.join(d, "ref", "1040_vss"), None, False)
+        self.assertIn("--out-at-input", str(caught.exception))
+
+    def test_beside_their_input_they_are_apart(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            for side in ("new", "ref"):
+                os.makedirs(os.path.join(d, side, "1040_vss"))
+            diff.refuse_one_dataset(os.path.join(d, "new", "1040_vss"),
+                                    os.path.join(d, "ref", "1040_vss"), None, True)

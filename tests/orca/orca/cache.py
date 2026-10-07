@@ -81,17 +81,24 @@ def key_for(source: str, options: dict, archives: list | None = None) -> str:
 
 
 def location_name(source: str) -> str:
-    """The dataset directory name for 'source' under a shared root: its name plus a digest of
-    where it is.
+    """The dataset directory name for 'source' under a shared root: its name alone ('1040_vss',
+    'Little' for 'Little.7z').
 
-    The place, not the content: a re-collected archive has a new key but is the same input,
-    and has to rebuild its own dataset rather than leave the stale one behind in the current
-    directory. And the place, not only the name: NEW\\Little.7z and REF\\Little.7z share one.
+    A name you can tell apart, by decision (2026-10-07), over one that cannot collide: two
+    inputs of one name ingested into one root - NEW\\Little.7z and REF\\Little.7z from the same
+    directory - share a dataset, each ingest replacing the other's. --out-at-input or --work-dir
+    keeps them apart; diff refuses the case rather than compare a dataset with itself.
     """
-    where = os.path.normcase(os.path.abspath(source))
-    digest = hashlib.sha256(where.encode("utf-8")).hexdigest()[:12]
-    stem = layout.archive_stem(os.path.abspath(source)) or "run"
-    return f"{stem}-{digest}"
+    return layout.archive_stem(os.path.abspath(source)) or "run"
+
+
+def dataset_path(source: str, work_dir: str | None = None, at_input: bool = False) -> str:
+    """Where ensure_dataset puts the dataset of 'source', without ingesting anything."""
+    if is_dataset(source):
+        return os.path.abspath(source)
+    _, dataset = layout.resolve(source, work_dir, at_input=at_input,
+                                name=dataset_name(source, work_dir, None, at_input))
+    return os.path.abspath(dataset)
 
 
 def ingest_options(password=None, engine_name="duckdb", strict=False) -> dict:

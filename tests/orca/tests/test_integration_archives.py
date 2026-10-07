@@ -366,11 +366,11 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
         here = os.listdir(os.getcwd())
         # The decrypted archive is in its run, in the archive's own directory, not loose here.
         self.assertNotIn("DFIR-ORC_REF.7z", here)
-        for name in ("DFIR-ORC_NEW-", "DFIR-ORC_REF-"):
-            runs = [n for n in here if n.startswith(name)]
-            self.assertEqual(len(runs), 1, here)
-            self.assertTrue(os.path.exists(os.path.join(runs[0], "NTFSInfo.parquet")))
-        reference_run = [n for n in here if n.startswith("DFIR-ORC_REF-")][0]
+        # Each named after its input alone.
+        for name in ("DFIR-ORC_NEW", "DFIR-ORC_REF"):
+            self.assertIn(name, here)
+            self.assertTrue(os.path.exists(os.path.join(name, "NTFSInfo.parquet")))
+        reference_run = "DFIR-ORC_REF"
         self.assertTrue(sevenzip.is_archive(
             os.path.join(reference_run, "DFIR-ORC_REF", "DFIR-ORC_REF.7z")))
 

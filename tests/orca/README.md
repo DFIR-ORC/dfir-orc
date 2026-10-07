@@ -987,8 +987,8 @@ orca diff --run E:\dumps\10.3.3 --reference E:\dumps\10.3.1 --private-key contos
 
 The first is the one to prefer: the reference becomes an explicit, named dataset, and nothing is
 written beside the evidence. `--out-at-input` applies to both sides, so the new build's dataset
-lands beside its archive too. Under `--work-dir` the datasets are named after their input's
-location, so the same reference archive maps to the same dataset on every call.
+lands beside its archive too. Under `--work-dir` the datasets are named after their input,
+so the same reference archive maps to the same dataset on every call.
 
 **What is compared.** Every column both sides have, less the volatile dates (above) and orca's
 own identity columns - `OrcComputerName`, `OrcRunId`, `OrcTimestamp` - which say where a row
@@ -1297,10 +1297,11 @@ orca diff NEW.7z REF.7z --refresh                             # re-decrypt and r
 `--work-dir` moves the runs, the decrypted output **and the scratch** somewhere else, all at
 once - a collection larger than the temp volume cannot be decrypted otherwise. Under a shared
 root - the current directory or `--work-dir` - a dataset the cache builds for `diff`, `merge`
-or `getthis` is named after its input plus a digest of where that input is
-(`DFIR-ORC_NEW-0154fef1aff2`): two collections' archives often share a basename, and a
-re-collected archive at the same place rebuilds its own dataset instead of leaving a stale one
-behind. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
+or `getthis` is named after its input alone (`DFIR-ORC_NEW`, `1040_vss`), so it can be told
+apart and found again. The cost, accepted: two inputs of one name ingested into one root share
+that dataset, and each ingest replaces the other's - keep them apart with `--out-at-input` or
+`--work-dir`. `diff` refuses two such inputs rather than compare a dataset with itself. A
+re-collected archive at the same place rebuilds its own dataset, as before. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
 
 A run is reused when its marker still matches the key of its sources - each archive's name,
 size and mtime plus the ingest options, not a content hash, which would mean reading the whole

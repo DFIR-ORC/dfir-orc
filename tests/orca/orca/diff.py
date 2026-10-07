@@ -88,6 +88,25 @@ def diff_tables(engine, path_a, path_b, columns=None, exclude_cols=None,
             "added_path": added_path, "removed_path": removed_path}
 
 
+def refuse_one_dataset(run_a: str, run_b: str, work_dir: str | None, at_input: bool) -> None:
+    """Refuse two different inputs that would be ingested into one dataset.
+
+    Datasets are named after their input alone (cache.location_name), so 'NEW\\1040_vss' and
+    'REF\\1040_vss' from one directory land in the same one: the second ingest would replace the
+    first, and the diff would compare a dataset with itself and find nothing.
+    """
+    from . import cache     # as run_diff does: cache imports the ingest stack
+    if os.path.normcase(os.path.abspath(run_a)) == os.path.normcase(os.path.abspath(run_b)):
+        return
+
+    place_a = cache.dataset_path(run_a, work_dir, at_input)
+    place_b = cache.dataset_path(run_b, work_dir, at_input)
+    if os.path.normcase(place_a) == os.path.normcase(place_b):
+        raise RuntimeError(f"'{run_a}' and '{run_b}' would both be ingested into '{place_a}': "
+                           f"datasets are named after their input. Use --out-at-input, or "
+                           f"ingest one of them with --out and give diff the dataset.")
+
+
 def differing_rows_sql(path: str) -> str:
     """The differing rows diff_tables kept for one side."""
     return f"SELECT * FROM read_parquet('{sql_path(path)}')"
@@ -463,6 +482,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
         resolve = dict(work_dir=work_dir, refresh=refresh, password=password,
                        private_key=private_key, cms_backend=cms_backend,
                        engine_name=engine_name, strict=strict, at_input=at_input)
+        refuse_one_dataset(run_a, run_b, work_dir, at_input)
         run_a = cache.ensure_dataset(run_a, **resolve)
         run_b = cache.ensure_dataset(run_b, **resolve)
 
