@@ -151,8 +151,24 @@ def build_outcome_view(outcome_obj, ignore: list | None = None) -> dict:
     }
 
 
-def run_log_files(directory: str, extra_dirs: list | None = None) -> list[str]:
-    """The logs of a run: the ones ingest put in it, plus the expanded 'Errors' container.
+def archive_dirs(directory: str, outcome_path: str | None = None) -> list[str]:
+    """The names of the run's archive directories, where ingest put each archive's logs.
+
+    Known from the run's own record rather than found by looking: the archives its Outcome
+    names (their stems), and for a run with no Outcome the directories its products.txt
+    names. A directory found by walking could be a tree 'orca extract' expanded there.
+    """
+    names = [layout.archive_stem(name)
+             for name in archives_named_by([outcome_path] if outcome_path else [])]
+    names += [product.replace("\\", "/").split("/")[0] for product in layout.products(directory)
+              if "/" in product.replace("\\", "/")]
+    return sorted(set(name for name in names if name))
+
+
+def run_log_files(directory: str, extra_dirs: list | None = None,
+                  archives: list | None = None) -> list[str]:
+    """The logs of a run: the ones at its top level and in each of its archive directories
+    ('archives', see archive_dirs), each with its expanded 'Errors' container.
 
     Deliberately not a walk of the whole run directory - it may hold a tree 'orca extract'
     expanded, whose every command log would drown the ones this run is about.
@@ -169,8 +185,10 @@ def run_log_files(directory: str, extra_dirs: list | None = None) -> list[str]:
     found, seen = [], set()
     for place in [directory] + list(extra_dirs or []):
         here = sorted(glob.glob(os.path.join(place, "*.log")))
-        for root, _dirs, files in os.walk(os.path.join(place, "Errors")):
-            here += sorted(os.path.join(root, name) for name in files)
+        for where in [os.path.join(place, name) for name in archives or []]:
+            here += sorted(glob.glob(os.path.join(where, "*.log")))
+            for root, _dirs, files in os.walk(os.path.join(where, "Errors")):
+                here += sorted(os.path.join(root, name) for name in files)
 
         for path in here:
             # Sliced rather than relpath'd: every path here was built from 'place', and
@@ -186,13 +204,30 @@ def run_log_files(directory: str, extra_dirs: list | None = None) -> list[str]:
 
 
 def run_logs_of(directory: str, extra_dirs: list | None = None,
-                stem: str | None = None) -> list:
-    """The logs of one run: every log of the directory, or only this run's when a stem says so."""
-    found = run_log_files(directory, extra_dirs)
+                stem: str | None = None, archives: list | None = None) -> list:
+    """The logs of one run: every log of the directory, or only this run's when a stem says so.
+
+    A log in one of the run's own archive directories is the run's whatever its name: the
+    directory was named after an archive this run's Outcome lists.
+    """
+    found = run_log_files(directory, extra_dirs, archives)
     if not stem:
         return found
 
-    return [path for path in found if os.path.basename(path).startswith(stem)]
+    own = {os.path.normcase(name) for name in archives or []}
+    return [path for path in found
+            if os.path.basename(path).startswith(stem)
+            or os.path.normcase(os.path.basename(os.path.dirname(path))) in own
+            or in_archive_errors(path, own)]
+
+
+def in_archive_errors(path: str, archives: set) -> bool:
+    """True for a file under '<archive dir>/Errors/', at any depth below it."""
+    parts = [os.path.normcase(part) for part in os.path.normpath(path).split(os.sep)]
+    for index, part in enumerate(parts[:-1]):
+        if part == os.path.normcase("Errors") and index and parts[index - 1] in archives:
+            return True
+    return False
 
 
 def log_label(path: str, directory: str) -> str:
@@ -232,7 +267,7 @@ def log_stem(outcome_path: str) -> str | None:
 
 def build_log_view(directory: str, extra_dirs: list | None = None,
                    stem: str | None = None, ignore: list | None = None,
-                   context: int | None = None) -> dict:
+                   context: int | None = None, archives: list | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
     could not read at all, which are a hole in the run rather than a message inside it.
 
@@ -246,14 +281,18 @@ def build_log_view(directory: str, extra_dirs: list | None = None,
 
     patterns = ignore or []
     logs = []
-    for path in run_logs_of(directory, extra_dirs, stem):
+    for path in run_logs_of(directory, extra_dirs, stem, archives):
         size = os.path.getsize(path)
         if size == 0:
             continue
 
         logs.append(dict(scan_log(path, context), log=log_label(path, directory), bytes=size))
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
-    kept_logs = [log for log in logs if not ignores.matches(log["log"], patterns)]
+    # The file name too: a log is listed under its archive's directory now, and an ignore
+    # pattern written for 'GetSamples.dev.log' has to keep passing it over.
+    kept_logs = [log for log in logs
+                 if not ignores.matches_any([log["log"], os.path.basename(log["log"])],
+                                            patterns)]
     skipped = layout.skipped(directory)
     kept_skipped = {name: why for name, why in skipped.items()
                     if not ignores.matches(name, patterns)}
@@ -261,7 +300,8 @@ def build_log_view(directory: str, extra_dirs: list | None = None,
     # 'available' is whether there was a log to read, not whether the directory exists: a
     # sealed collection holds only '<name>.log.7z.p7b', and '0 log(s) with matches' would then
     # read as reassurance when nothing had been read at all.
-    return {"available": bool(run_logs_of(directory, extra_dirs, stem)), "logs": kept_logs,
+    return {"available": bool(run_logs_of(directory, extra_dirs, stem, archives)),
+            "logs": kept_logs,
             "skipped": kept_skipped,
             "logs_ignored": len(logs) - len(kept_logs),
             "skipped_ignored": len(skipped) - len(kept_skipped)}
@@ -337,7 +377,8 @@ def build_host_report(directory: str, engine=None, extra_dirs: list | None = Non
     op = outcome_path or _outcome.outcome_file(directory, extra_dirs)
     oc = _outcome.parse_outcome(op) if op else None
     files = empty_output_files(engine, layout.manifest_path(directory)) if engine else []
-    log_view = build_log_view(directory, extra_dirs, stem, ignore, context)
+    log_view = build_log_view(directory, extra_dirs, stem, ignore, context,
+                              archive_dirs(directory, op))
     return {
         "host": host_of(directory, extra_dirs, op),
         "directory": directory,
@@ -1072,9 +1113,15 @@ def archives_of(run: Run) -> tuple[list, list]:
     Sealed ones are named rather than opened: the envelope is CMS over the whole archive, so
     reading one log out of it costs decrypting all of it, which is an extract wearing a
     report's clothes.
+
+    An archive whose directory the run already has is neither: ingest took its logs out
+    there, and opening it again would only read them twice.
     """
     readable, sealed = [], []
     for name in archives_named_by([run.outcome_path] if run.outcome_path else []):
+        if os.path.isdir(os.path.join(run.directory, layout.archive_stem(name))):
+            continue
+
         path = os.path.join(run.directory, name)
         if ingest.sealed_name(name):
             plain = os.path.join(run.directory, ingest.sealed_name(name) + ".7z")

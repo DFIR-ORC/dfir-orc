@@ -626,7 +626,10 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
             csv_over(out_dir, engine_name, jobs, make_csv, make_trunc, exclude_cols)
             return []
 
-        archives = [decrypt_archive(top, keep_dir, private_key, cms_backend, refresh)
+        # Into the archive's own directory in the run, beside the logs taken out of it: the
+        # plain '.7z' is kept for the next ingest, and kept where it belongs.
+        archives = [decrypt_archive(top, os.path.join(out_dir, layout.archive_stem(top)),
+                                    private_key, cms_backend, refresh)
                     for top in collection.archives]
 
         # Everything this ingest writes into the run, by name: a run shares its directory with
@@ -1022,8 +1025,10 @@ def expand_error_container(seven_zip: str, top: str, container_path: str, stage:
 def capture_logs(seven_zip: str, archives: list, out_dir: str, password) -> list[str]:
     """Extract every *.log entry and any 'Errors' sub-archive of each archive.
 
-    They land in the run beside the tables, under the names they carry in the archive - the
-    same place and names 'orca extract' would give them.
+    Each archive's land in a directory of its own named after it ('<out_dir>/<archive stem>/'),
+    under the names they carry in the archive: two archives' 'Errors' containers no longer
+    expand over each other, and a log says which archive it came from. Returns them relative
+    to 'out_dir' ('<stem>/NTFSInfo.log', '<stem>/Errors'), as products.txt records them.
 
     One extraction call per archive, not one per log: ORC writes a single solid block
     (Archive7z.cpp), so reaching an entry costs decoding everything in front of it, and asking
@@ -1033,15 +1038,17 @@ def capture_logs(seven_zip: str, archives: list, out_dir: str, password) -> list
     """
     written = []
     for top in archives:
+        stem = layout.archive_stem(top)
+        place = os.path.join(out_dir, stem)
         # Resolved per archive, not once: a collection holds several, each with its own
         # '_cli_config.xml' beside it, and only an explicit --password overrides them all.
         pw = sevenzip.password_for(top, password)
         entries = sevenzip.list_entries(seven_zip, top, pw)
         logs = [entry.path for entry in entries if entry.path.lower().endswith(".log")]
         if logs:
-            os.makedirs(out_dir, exist_ok=True)
+            os.makedirs(place, exist_ok=True)
             try:
-                sevenzip.extract_matching(seven_zip, top, "*.log", out_dir, pw)
+                sevenzip.extract_matching(seven_zip, top, "*.log", place, pw)
             except RuntimeError as error:
                 # Named, not swallowed: an archive that will not open (a password nobody
                 # passed, most often) returning no logs is indistinguishable from one that
@@ -1051,15 +1058,14 @@ def capture_logs(seven_zip: str, archives: list, out_dir: str, password) -> list
             # What came out, not what was asked for: an entry 7-Zip warned about is missing
             # from the run, and naming it a product would have the cache delete a file that
             # is not there and claim the log was captured.
-            written += [path for path in logs
-                        if os.path.isfile(os.path.join(out_dir, path))]
+            written += [os.path.join(stem, path) for path in logs
+                        if os.path.isfile(os.path.join(place, path))]
 
         for container_path in error_containers(entries):
             stage = scratch.directory("errors_")
             try:
-                if expand_error_container(seven_zip, top, container_path, stage, out_dir,
-                                          pw):
-                    written.append(ERRORS_DIR)
+                if expand_error_container(seven_zip, top, container_path, stage, place, pw):
+                    written.append(os.path.join(stem, ERRORS_DIR))
             finally:
                 shutil.rmtree(stage, ignore_errors=True)
 

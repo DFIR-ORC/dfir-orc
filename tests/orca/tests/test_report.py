@@ -484,7 +484,7 @@ class TestArchivedLogs(unittest.TestCase):
     def test_the_log_inside_the_archive_becomes_one_of_the_runs_extra_dirs(self):
         expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
 
-        found = report.run_log_files(expanded[0].directory, expanded[0].extra_dirs)
+        found = logs_of(expanded[0])
         self.assertIn("NTFSInfo.dev.log", [os.path.basename(p) for p in found])
 
     def test_the_collected_data_is_left_where_it_was(self):
@@ -512,7 +512,7 @@ class TestArchivedLogs(unittest.TestCase):
             expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
 
         extract.assert_not_called()
-        self.assertTrue(report.run_log_files(expanded[0].directory, expanded[0].extra_dirs))
+        self.assertTrue(logs_of(expanded[0]))
 
     def test_refresh_decodes_it_again(self):
         report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
@@ -583,9 +583,15 @@ class TestArchivedLogs(unittest.TestCase):
         with redirect_stdout(printed):
             expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
 
-        found = report.run_log_files(expanded[0].directory, expanded[0].extra_dirs)
+        found = logs_of(expanded[0])
         self.assertIn("NTFSInfo.dev.log", [os.path.basename(p) for p in found])
         self.assertEqual(printed.getvalue(), "")
+
+
+def logs_of(run) -> list:
+    """The logs report reads for 'run': its directories, and its archives' own directories."""
+    return report.run_log_files(run.directory, run.extra_dirs,
+                                report.archive_dirs(run.directory, run.outcome_path))
 
 
 class TestLogsSeenTwice(unittest.TestCase):
@@ -596,7 +602,7 @@ class TestLogsSeenTwice(unittest.TestCase):
     every log counted twice and every critical reported twice.
     """
 
-    def places(self, run_names: list, extra_names: list) -> list:
+    def places(self, run_names: list, extra_names: list, archives=None) -> list:
         root = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, root, True)
         run, extra = os.path.join(root, "run"), os.path.join(root, "extra")
@@ -607,7 +613,7 @@ class TestLogsSeenTwice(unittest.TestCase):
                 with open(path, "w", encoding="utf-8") as f:
                     f.write("x\n")
 
-        return report.run_log_files(run, [extra])
+        return report.run_log_files(run, [extra], archives)
 
     def test_the_same_log_in_both_places_is_read_once(self):
         found = self.places(["NTFSInfo.dev.log"], ["NTFSInfo.dev.log"])
@@ -620,8 +626,9 @@ class TestLogsSeenTwice(unittest.TestCase):
         self.assertIn(os.path.join("run", "NTFSInfo.dev.log"), found[0])
 
     def test_two_logs_of_the_same_name_in_different_places_are_two_logs(self):
-        # 'Errors/NTFSInfo.dev.log' is the failing run's copy; the top-level one is not it.
-        found = self.places(["NTFSInfo.dev.log"], [os.path.join("Errors", "NTFSInfo.dev.log")])
+        # 'A/Errors/NTFSInfo.dev.log' is the failing run's copy; the top-level one is not it.
+        found = self.places(["NTFSInfo.dev.log"],
+                            [os.path.join("A", "Errors", "NTFSInfo.dev.log")], ["A"])
 
         self.assertEqual(len(found), 2)
 
@@ -1116,3 +1123,60 @@ class TestIgnoringFindings(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestArchiveDirectories(unittest.TestCase):
+    """A dataset keeps each archive's logs in a directory named after the archive."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.run = self.dir.name
+        self.outcome = os.path.join(self.run, "ORC_H_20260101_000000_Outcome.json")
+        with open(self.outcome, "w", encoding="utf-8") as f:
+            f.write('{"dfir-orc": {"outcome": {"computer_name": "H", "id": "{H}", '
+                    '"command_set": [{"name": "ORC_General", '
+                    '"archive": {"name": "ORC_H_General.7z.p7b"}}]}}}')
+        self.write("ORC_H_General/NTFSInfo.log", "2026-01-01T00:00:00.000Z [C] gone\n")
+        self.write("ORC_H_General/Errors/Autoruns.dev.log", "x\n")
+
+    def write(self, relative: str, text: str) -> None:
+        path = os.path.join(self.run, *relative.split("/"))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    def test_its_archive_directories_come_from_the_outcome(self):
+        self.assertEqual(report.archive_dirs(self.run, self.outcome), ["ORC_H_General"])
+
+    def test_without_an_outcome_they_come_from_the_products(self):
+        layout.write_products(self.run, [layout.ORCA_DIR,
+                                          os.path.join("ORC_H_General", "NTFSInfo.log")])
+        self.assertEqual(report.archive_dirs(self.run), ["ORC_H_General"])
+
+    def test_the_logs_of_each_archive_directory_are_read(self):
+        found = report.run_log_files(self.run, [], report.archive_dirs(self.run, self.outcome))
+        self.assertEqual(sorted(report.log_label(path, self.run) for path in found),
+                         ["ORC_H_General/Errors/Autoruns.dev.log", "ORC_H_General/NTFSInfo.log"])
+
+    def test_a_directory_no_archive_of_the_run_is_named_after_is_not_read(self):
+        """A tree 'orca extract' expanded inside the dataset is not this run's logs."""
+        self.write("GetThis_Default/buried.log", "x\n")
+        found = report.run_log_files(self.run, [], report.archive_dirs(self.run, self.outcome))
+        self.assertNotIn("buried.log", [os.path.basename(path) for path in found])
+
+    def test_the_critical_reaches_the_host_report(self):
+        hr = report.build_host_report(self.run, None, [], self.outcome)
+        self.assertEqual([m["message"] for m in hr["critical"]["messages"]], ["gone"])
+
+    def test_an_ignore_pattern_on_the_file_name_still_passes_a_log_over(self):
+        view = report.build_log_view(self.run, [], None, ["NTFSInfo.log"], None,
+                                     report.archive_dirs(self.run, self.outcome))
+        self.assertNotIn("ORC_H_General/NTFSInfo.log", [log["log"] for log in view["logs"]])
+        self.assertEqual(view["logs_ignored"], 1)
+
+    def test_an_archive_whose_directory_is_there_is_not_opened_again(self):
+        run = report.Run(self.run, self.outcome, [])
+        with open(os.path.join(self.run, "ORC_H_General.7z.p7b"), "wb") as f:
+            f.write(b"sealed")
+        self.assertEqual(report.archives_of(run), ([], []))

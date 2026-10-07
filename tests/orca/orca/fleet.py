@@ -126,8 +126,8 @@ def stored_dataset(dataset: str, root: str | None) -> str:
 
 def dataset_of(row: dict, where: str) -> str:
     """The dataset a hosts.csv row names, as a path: relative ones are under the fleet's directory,
-    the parent of 'where' (.orca-fleet). Absolute ones, as older fleets wrote, are kept. Empty
-    for a host that failed."""
+    the parent of 'where' (.orca-fleet). An absolute one - a dataset on another drive, see
+    stored_dataset - is kept. Empty for a host that failed."""
     dataset = row.get("dataset") or ""
     if not dataset:
         return ""

@@ -65,7 +65,8 @@ on demand as well, `report` never does.
 
 ## What a dataset contains
 
-A dataset is flat: everything it holds sits in one directory, under the name ORC gave it.
+A dataset is one directory, under the name ORC gave the run: the tables and the run's own
+files at its top, and a directory per archive of the run for what came out of that archive.
 
 ```
 E:\dumps\ORC_WS_H2ODEV_Offline\
@@ -73,8 +74,11 @@ E:\dumps\ORC_WS_H2ODEV_Offline\
   GetThis_Default.parquet     (NTFSInfo, USNInfo, GetThis_*, ...)
   ORC_..._Outcome.json        the run's Outcome, under ORC's own name
   ORC_..._Outline.json        every Outline the collection carried (one per run attempt)
-  ORC_..._172528.log          the collection-level log, plus each command's own
-  Errors\                     the 'Errors' sub-archive, expanded
+  ORC_..._172528.log          the collection-level log
+  ORC_..._General\            one per archive, named after it
+    ORC_..._General.7z        the decrypted archive, kept and reused (encrypted collections only)
+    NTFSInfo.log  ...         each command's own logs, out of this archive
+    Errors\                   its 'Errors' sub-archive, expanded
   getthis.parquet             every collected GetThis sample (written by `orca getthis`)
   dfir-orc.parquet            the wide join (written by `orca merge`)
   csv\                        the same tables as CSV                      (with --csv)
@@ -455,7 +459,7 @@ are worth reporting.
   the list of every host and its dataset - failed ones included. No `--recurse`, and no path at
   all when it is the current directory; `fleet.duckdb` names the same directory. Datasets are
   recorded relative to that directory, so a fleet copied elsewhere still reports; one on another
-  drive is recorded in full, and an older fleet's absolute paths need `--recurse` once moved.
+  drive is recorded in full.
 - **A collection finds its datasets** where `fleet` and `ingest` put them by default: one level
   inside the collection (`--out-at-input`) and in the current directory. A dataset is matched to
   the collection by run id, so the other collections' datasets in the current directory are left
@@ -690,11 +694,11 @@ A signpost, not an explanation: one line however many hosts are sealed.
 
 `ingest` rather than `extract`, and the distinction is not cosmetic: `extract` expands into a
 subdirectory per archive, which `run_log_files` deliberately does not walk, so a report on an
-extracted tree still shows none of them. `ingest --out-at-input` leaves the decrypted `.7z`
-*beside* the collection, which is all this path needs - the next report reads the logs out of it
-with no key and no second decrypt - and it does not need duckdb to get that far. Hence the
-`--out-at-input` in the signpost: a default ingest keeps that copy in its current directory,
-where a report of the collection never looks.
+extracted tree still shows none of them. `ingest --out-at-input` leaves the dataset *inside*
+the collection, each archive's logs in the archive's own directory, which is all this path
+needs - the next report of the collection finds that dataset and reads its logs with no key and
+no second decrypt. Hence the `--out-at-input` in the signpost: a default ingest keeps the
+dataset in its current directory, where a report of the collection does not always look.
 
 Unsealing in `report` itself was measured and rejected. The decrypt is cheap: 0.27 s for a
 98 MB sealed archive, against 1.09 s to pull the logs out of the 65 MB plain one it becomes,
@@ -1267,10 +1271,12 @@ E:\dumps\                                        with --out-at-input
   ORC_WS_H2ODEV_20260921_172528_Outcome.json    sidecar, unsealed in place
   ORC_WS_H2ODEV_20260921_172528_Outline.json
   ORC_WS_H2ODEV_Offline.7z.p7b                  the collected archive
-  ORC_WS_H2ODEV_Offline.7z                      decrypted, kept and reused
-  ORC_WS_H2ODEV_Offline\                        the run (flat; see above)
+  ORC_WS_H2ODEV_Offline\                        the run (see above)
     NTFSInfo_details.parquet  GetThis_Default.parquet  ...
     ORC_..._Outcome.json  ORC_..._Outline.json  ORC_..._172528.log  .orca\
+    ORC_WS_H2ODEV_Offline\                      the archive's directory
+      ORC_WS_H2ODEV_Offline.7z                  decrypted, kept and reused
+      NTFSInfo.log  ...  Errors\
 ```
 
 Without it the same files are in the current directory, and `E:\dumps\` is left as it was.

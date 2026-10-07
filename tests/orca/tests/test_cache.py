@@ -353,3 +353,20 @@ class TestPerCollectionKey(CacheCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestClearKeepsTheDecryptedArchive(unittest.TestCase):
+    def test_a_rebuild_removes_the_logs_and_keeps_the_archive_beside_them(self):
+        with tempfile.TemporaryDirectory() as run:
+            own = os.path.join(run, "ORC_H_General")
+            os.makedirs(os.path.join(own, "Errors"))
+            for name in ("ORC_H_General.7z", "NTFSInfo.log", os.path.join("Errors", "a.log")):
+                with open(os.path.join(own, name), "wb") as f:
+                    f.write(b"x")
+            layout.write_products(run, [layout.ORCA_DIR,
+                                        os.path.join("ORC_H_General", "NTFSInfo.log"),
+                                        os.path.join("ORC_H_General", "Errors")])
+
+            cache.clear_dataset(run)
+
+            self.assertEqual(os.listdir(own), ["ORC_H_General.7z"])

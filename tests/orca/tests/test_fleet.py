@@ -237,7 +237,7 @@ class TestDatasetPaths(unittest.TestCase):
         where = os.path.join(r"C:\fleet", fleet.FLEET_DIR)
         self.assertEqual(fleet.dataset_of({"dataset": "ORC_A"}, where), r"C:\fleet\ORC_A")
 
-    def test_an_absolute_dataset_from_an_older_fleet_is_kept(self):
+    def test_an_absolute_dataset_on_another_drive_is_kept(self):
         where = os.path.join(r"C:\fleet", fleet.FLEET_DIR)
         self.assertEqual(fleet.dataset_of({"dataset": r"D:\old\ORC_A"}, where), r"D:\old\ORC_A")
 

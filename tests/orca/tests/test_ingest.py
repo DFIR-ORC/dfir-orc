@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import types
 import struct
 import subprocess
@@ -503,10 +504,25 @@ class TestCaptureLogs(unittest.TestCase):
 
         # The names are relative to the run dir and separated the way this OS writes paths:
         # 'products' is what cache.clear_dataset joins onto it to know what it may remove.
+        # Each under the archive's own directory, named after the archive.
+        own = "ORC_H_General"
         self.assertEqual(sorted(products),
-                         [os.path.join("Errors", "Autoruns.dev.log"),
-                          "NTFSInfo.dev.log", "USNInfo.dev.log"])
-        self.assertTrue(os.path.isfile(os.path.join(self.run, "Errors", "Autoruns.dev.log")))
+                         [os.path.join(own, "Errors", "Autoruns.dev.log"),
+                          os.path.join(own, "NTFSInfo.dev.log"),
+                          os.path.join(own, "USNInfo.dev.log")])
+        self.assertTrue(os.path.isfile(os.path.join(self.run, own, "Errors",
+                                                    "Autoruns.dev.log")))
+        self.assertFalse(os.path.exists(os.path.join(self.run, "NTFSInfo.dev.log")))
+
+    def test_two_archives_keep_their_logs_apart(self):
+        """Two archives' logs of one name, and their 'Errors', no longer land on each other."""
+        other = os.path.join(self.dir.name, "ORC_H_FastFind.7z")
+        shutil.copy(self.archive, other)
+
+        ingest.capture_logs(SEVEN_ZIP, [self.archive, other], self.run, None)
+
+        for own in ("ORC_H_General", "ORC_H_FastFind"):
+            self.assertTrue(os.path.isfile(os.path.join(self.run, own, "NTFSInfo.dev.log")))
 
     def test_the_collected_data_is_left_in_the_archive(self):
         ingest.capture_logs(SEVEN_ZIP, [self.archive], self.run, None)
@@ -524,7 +540,7 @@ class TestCaptureLogs(unittest.TestCase):
 
         products = ingest.capture_logs(SEVEN_ZIP, [locked], self.run, None)
 
-        self.assertIn("NTFSInfo.dev.log", products)
+        self.assertIn(os.path.join("GetThis", "NTFSInfo.dev.log"), products)
 
     def test_an_archive_that_will_not_open_is_named_rather_than_coming_back_empty(self):
         # 'report' has no --password, so this is reachable there; silently returning no logs

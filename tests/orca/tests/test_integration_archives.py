@@ -358,11 +358,15 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
 
         self.assertEqual(sorted(os.listdir(self.dumps)), before)
         here = os.listdir(os.getcwd())
-        self.assertIn("DFIR-ORC_REF.7z", here)
+        # The decrypted archive is in its run, in the archive's own directory, not loose here.
+        self.assertNotIn("DFIR-ORC_REF.7z", here)
         for name in ("DFIR-ORC_NEW-", "DFIR-ORC_REF-"):
             runs = [n for n in here if n.startswith(name)]
             self.assertEqual(len(runs), 1, here)
             self.assertTrue(os.path.exists(os.path.join(runs[0], "NTFSInfo.parquet")))
+        reference_run = [n for n in here if n.startswith("DFIR-ORC_REF-")][0]
+        self.assertTrue(sevenzip.is_archive(
+            os.path.join(reference_run, "DFIR-ORC_REF", "DFIR-ORC_REF.7z")))
 
     def test_out_at_input_puts_everything_beside_the_archive(self):
         new = self.build_archive("NEW", "200", "aaaa")
@@ -380,10 +384,11 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
             self.assertTrue(os.path.exists(layout.name_map_path(run)), run)
             self.assertTrue(os.path.exists(layout.manifest_path(run)), run)
 
-        # The decrypted archive is kept beside the encrypted one, under its own name.
-        plain = os.path.join(self.dumps, "DFIR-ORC_REF.7z")
-        self.assertTrue(os.path.exists(plain))
+        # The decrypted archive is kept in its run, in the archive's own directory - not
+        # beside the encrypted one.
+        plain = os.path.join(self.dumps, "DFIR-ORC_REF", "DFIR-ORC_REF", "DFIR-ORC_REF.7z")
         self.assertTrue(sevenzip.is_archive(plain))
+        self.assertFalse(os.path.exists(os.path.join(self.dumps, "DFIR-ORC_REF.7z")))
 
         # The comparison's own options change nothing in the datasets: no second ingest.
         compared = io.StringIO()

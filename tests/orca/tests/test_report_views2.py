@@ -33,8 +33,8 @@ class TestOutcomeErrorsViews(unittest.TestCase):
             with open(os.path.join(run, "empty.log"), "w") as f:
                 pass
 
-            # The expanded 'Errors' container counts too; an expanded tree does not.
-            errors = os.path.join(run, "Errors")
+            # An archive's expanded 'Errors' container counts too; an expanded tree does not.
+            errors = os.path.join(run, "ORC_A_General", "Errors")
             os.makedirs(os.path.join(run, "GetThis_Default"))
             os.makedirs(errors)
             with open(os.path.join(errors, "failed.log"), "w", encoding="utf-8") as f:
@@ -43,12 +43,12 @@ class TestOutcomeErrorsViews(unittest.TestCase):
                       encoding="utf-8") as f:
                 f.write("an Error here\n")
 
-            v = report.build_log_view(run)
+            v = report.build_log_view(run, archives=["ORC_A_General"])
 
         self.assertTrue(v["available"])
         names = {x["log"]: x for x in v["logs"]}
         self.assertEqual(names["a.log"]["error_lines"], 2)
-        self.assertEqual(names["Errors/failed.log"]["error_lines"], 1)
+        self.assertEqual(names["ORC_A_General/Errors/failed.log"]["error_lines"], 1)
         self.assertNotIn("empty.log", names)
         self.assertNotIn("GetThis_Default/buried.log", names)
 

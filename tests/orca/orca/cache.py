@@ -23,7 +23,10 @@ from . import ingest, layout
 #    bookkeeping moved into '<run>/.orca/'.
 # 5: every table carries OrcComputerName/OrcRunId/OrcTimestamp. Without the bump a dataset
 #    ingested before this looks current and answers a fleet query with a missing column.
-LAYOUT_VERSION = 5
+# 6: each archive has a directory of its own in the run, holding the logs taken out of it, its
+#    'Errors' container and - for an encrypted collection - its decrypted '.7z'. Without the
+#    bump a run ingested before reads as current and its logs sit where report no longer looks.
+LAYOUT_VERSION = 6
 
 MARKER = "cache-source.json"
 
