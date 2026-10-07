@@ -241,6 +241,17 @@ class TestPlainArchives(Case):
         self.assertEqual(archives, [beside])
 
 
+    def test_a_plain_copy_beside_older_than_the_sealed_one_is_not_used(self):
+        beside = touch(os.path.join(self.dir, "X.7z"), b"7z\xbc\xaf\x27\x1c")
+        os.utime(beside, (1_000_000_000, 1_000_000_000))
+        sealed = touch(os.path.join(self.dir, "X.7z.p7b"))
+        with mock.patch.object(ingest, "decrypt_archive", return_value="decrypted") as decrypt:
+            archives, _unread, _undecrypted = ingest.plain_archives([sealed], self.out)
+
+        decrypt.assert_called_once()
+        self.assertEqual(archives, ["decrypted"])
+
+
 class TestMissingArchiveKey(Case):
     def test_a_missing_archive_is_keyed_by_name_and_its_arrival_changes_the_key(self):
         archive = os.path.join(self.dir, "Late.7z")

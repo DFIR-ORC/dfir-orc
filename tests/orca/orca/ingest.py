@@ -364,6 +364,23 @@ def has_encryption_layer(path: str) -> bool:
     return journal.is_journaled(path) or os.path.splitext(path)[1].lower() == ".p7b"
 
 
+def decrypted_copy_is_current(plain: str, sealed: str) -> bool:
+    """True when 'plain' is an archive decrypted from 'sealed' as it is now: one, and not older.
+
+    The name alone said nothing about which collection it came from: a host collected again at
+    the same path brings a new '.p7b' under the old name, and its old decrypted copy would be
+    ingested in its place. Not older than the sealed file is the cheap answer - a copy made
+    from this '.p7b' is written after it - and '--refresh' is the escape hatch when a copy of
+    the collection did not keep its times.
+    """
+    if not sevenzip.is_archive(plain):
+        return False
+    try:
+        return os.path.getmtime(plain) >= os.path.getmtime(sealed)
+    except OSError:
+        return False
+
+
 def decrypt_archive(path: str, dest_dir: str, private_key: str | None = None,
                     cms_backend: str | None = None, refresh: bool = False) -> str:
     """Return a path to an openable '.7z' for 'path', decrypting into 'dest_dir' if needed.
@@ -386,9 +403,12 @@ def decrypt_archive(path: str, dest_dir: str, private_key: str | None = None,
     # ORC names an encrypted archive '<name>.7z.p7b', so the plain name is the sealed one with
     # only the extension changed - never 'SystemInfo.7z.7z'.
     plain = layout.decrypted_path(path, dest_dir)
-    if not refresh and os.path.exists(plain) and sevenzip.is_archive(plain):
+    if not refresh and decrypted_copy_is_current(plain, path):
         print(f"reusing '{os.path.basename(plain)}'")
         return plain
+    if os.path.exists(plain) and not refresh:
+        print(f"'{os.path.basename(plain)}' is older than '{os.path.basename(path)}'; "
+              "decrypting again")
 
     os.makedirs(dest_dir, exist_ok=True)
     if journaled:
@@ -699,7 +719,7 @@ def plain_archives(tops: list, out_dir: str, private_key=None, cms_backend=None,
             continue
 
         beside = os.path.join(os.path.dirname(top), layout.archive_stem(top) + ".7z")
-        if not refresh and top != beside and sevenzip.is_archive(beside):
+        if not refresh and top != beside and decrypted_copy_is_current(beside, top):
             archives.append(beside)
             continue
 

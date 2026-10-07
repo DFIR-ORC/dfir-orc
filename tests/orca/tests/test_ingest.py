@@ -704,6 +704,28 @@ class TestDecryptArchive(unittest.TestCase):
             self.assertEqual(ingest.decrypt_archive(encrypted, self.work, "key.pem"), plain)
         decrypt.assert_not_called()
 
+    def test_a_copy_older_than_its_sealed_archive_is_decrypted_again(self):
+        """A host collected again at the same path: a new '.p7b' under the old name."""
+        os.makedirs(self.work, exist_ok=True)
+        stale = os.path.join(self.work, "Little.7z")
+        with open(stale, "wb") as f:
+            f.write(b"7z\xbc\xaf\x27\x1c")
+        os.utime(stale, (1_000_000_000, 1_000_000_000))
+        encrypted = self.path("Little.7z.p7b", b"ciphertext")
+
+        def fake_decrypt(src, dst, private_key, backend):
+            with open(dst, "wb") as f:
+                f.write(self.journal_of(b"the-new-collection"))
+            return "openssl"
+
+        out = io.StringIO()
+        with mock.patch.object(ingest.cms, "decrypt", fake_decrypt), redirect_stdout(out):
+            plain = ingest.decrypt_archive(encrypted, self.work, "key.pem")
+
+        with open(plain, "rb") as f:
+            self.assertEqual(f.read(), b"the-new-collection")
+        self.assertIn("older than 'Little.7z.p7b'; decrypting again", out.getvalue())
+
     def test_refresh_decrypts_again(self):
         encrypted = self.path("Little.7z.p7b", b"ciphertext")
         os.makedirs(self.work, exist_ok=True)

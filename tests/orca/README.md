@@ -1096,9 +1096,12 @@ scratch and goes when the process ends.
 
 `--refresh` turns that reuse off, the same way it does for `ingest` and `diff`: the kept
 archive is decrypted again and the sidecars unsealed again, whatever is already there. The
-reuse check is deliberately cheap - the file exists and looks like a 7z - so a copy left behind
-by an interrupted run passes it and then fails as `Unexpected end of archive` on every
-subsequent run. `--refresh` is how you get out of that without deleting the file by hand.
+reuse check is deliberately cheap - the file exists, looks like a 7z, and is not older than the
+sealed archive it came from - so a copy left behind by an interrupted run passes it and then
+fails as `Unexpected end of archive` on every subsequent run. `--refresh` is how you get out of
+that without deleting the file by hand. The age is what catches a host collected again at the
+same path: its new `.p7b` is newer than the old copy, which is decrypted again rather than
+ingested in its place.
 
 ### Check (is this collection intact?)
 
