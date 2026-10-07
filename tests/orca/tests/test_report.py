@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
-from orca import layout, report, sevenzip
+from orca import fleet, ingest, layout, report, sevenzip
 
 TIMING = [
     {"name": "NTFSInfo", "rows": 100, "bytes": 5000, "seconds": 2.0},
@@ -436,164 +436,6 @@ class TestMessageViews(unittest.TestCase):
 SEVEN_ZIP = sevenzip.find_7z()
 
 
-@unittest.skipUnless(SEVEN_ZIP, "7z.exe not found")
-class TestArchivedLogs(unittest.TestCase):
-    """The per-command logs, which sit inside the archive until something pulls them out.
-
-    Without this a report on a collection as it arrives reads WolfLauncher's own log, finds it
-    clean, and says nothing at all about a command that died with a critical in its own log.
-    """
-
-    def setUp(self):
-        self.dir = tempfile.TemporaryDirectory()
-        self.addCleanup(self.dir.cleanup)
-        self.run = os.path.join(self.dir.name, "collection")
-        self.work = os.path.join(self.dir.name, "work")
-        os.makedirs(self.run)
-        src = os.path.join(self.dir.name, "src")
-        os.makedirs(src)
-        with open(os.path.join(src, "NTFSInfo.dev.log"), "w", encoding="utf-8") as f:
-            f.write("2026-10-03T09:14:22.100Z [C] Failed to open volume\n")
-        with open(os.path.join(src, "NTFSInfo.csv"), "w", encoding="utf-8") as f:
-            f.write("a,b\n1,2\n")
-        subprocess.run([SEVEN_ZIP, "a", "-t7z",
-                        os.path.join(self.run, "ORC_HOST_General.7z"),
-                        os.path.join(src, "*")], capture_output=True, text=True, check=True)
-        with open(os.path.join(self.run, "ORC_HOST_Outcome.json"), "w", encoding="utf-8") as f:
-            f.write('{"dfir-orc": {"outcome": {"computer_name": "HOST", "command_set": '
-                    '[{"name": "General", "archive": {"name": "ORC_HOST_General.7z"}, '
-                    '"commands": [{"name": "NTFSInfo", "exit_code": 1, "start": "", '
-                    '"end": ""}]}]}}}')
-
-    def runs(self) -> list:
-        return report.find_runs([self.run], {})
-
-    def seal_the_archive(self, keep_plain: bool = False) -> None:
-        """What an encrypted collection looks like: the Outcome names the '.p7b' ORC wrote."""
-        with open(os.path.join(self.run, "ORC_HOST_General.7z.p7b"), "wb") as f:
-            f.write(b"sealed")
-        if not keep_plain:
-            os.remove(os.path.join(self.run, "ORC_HOST_General.7z"))
-
-        path = os.path.join(self.run, "ORC_HOST_Outcome.json")
-        with open(path, encoding="utf-8") as f:
-            doc = f.read()
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(doc.replace("ORC_HOST_General.7z", "ORC_HOST_General.7z.p7b"))
-
-    def test_the_log_inside_the_archive_becomes_one_of_the_runs_extra_dirs(self):
-        expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        found = logs_of(expanded[0])
-        self.assertIn("NTFSInfo.dev.log", [os.path.basename(p) for p in found])
-
-    def test_the_collected_data_is_left_where_it_was(self):
-        expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        pulled = []
-        for directory in expanded[0].extra_dirs:
-            for _root, _dirs, files in os.walk(directory):
-                pulled += files
-        self.assertNotIn("NTFSInfo.csv", pulled)
-
-    def test_the_critical_reaches_the_report(self):
-        expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-        run = expanded[0]
-
-        hr = report.build_host_report(run.directory, None, run.extra_dirs, run.outcome_path)
-
-        self.assertEqual([c["message"] for c in hr["critical"]["messages"]],
-                         ["Failed to open volume"])
-
-    def test_a_second_report_does_not_decode_the_archive_again(self):
-        report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        with mock.patch("orca.sevenzip.extract_matching") as extract:
-            expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        extract.assert_not_called()
-        self.assertTrue(logs_of(expanded[0]))
-
-    def test_refresh_decodes_it_again(self):
-        report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        with mock.patch("orca.sevenzip.extract_matching",
-                        wraps=sevenzip.extract_matching) as extract:
-            report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP, refresh=True)
-
-        self.assertEqual(extract.call_count, 1)
-
-    def test_a_sealed_archive_is_named_rather_than_passed_over(self):
-        # Decrypting a multi-GB envelope is the whole cost of an extract, which is not what a
-        # report is for. Saying nothing would leave the gap invisible, which is the state this
-        # whole change is about.
-        # ORC records the name it wrote, so a sealed collection's Outcome names the '.p7b'.
-        self.seal_the_archive()
-
-        printed = io.StringIO()
-        with redirect_stdout(printed):
-            report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        self.assertIn("ORC_HOST_General.7z.p7b", printed.getvalue())
-        self.assertIn("orca ingest", printed.getvalue())
-
-    def test_the_notice_is_one_line_that_says_there_is_more(self):
-        # It is a signpost, not an explanation: the archive plain, the command in brackets.
-        self.seal_the_archive()
-
-        printed = io.StringIO()
-        with redirect_stdout(printed):
-            report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        said = printed.getvalue().strip()
-        self.assertEqual(len(said.splitlines()), 1, said)
-        self.assertIn("more", said)
-        self.assertNotIn("(ORC_HOST_General.7z.p7b)", said)
-        self.assertRegex(said, r"\(orca ingest .+\)$")
-
-    def test_a_fleet_of_sealed_collections_says_it_once(self):
-        # The same reasoning as orphan_lines: a line per host buries the thing it is saying.
-        self.seal_the_archive()
-        second = os.path.join(self.dir.name, "second")
-        shutil.copytree(self.run, second)
-        # A copy is the same run - find_runs identifies one by its Outcome's name - so the
-        # second has to be another host right down to the file names.
-        with open(os.path.join(second, "ORC_HOST_Outcome.json"), encoding="utf-8") as f:
-            doc = f.read()
-        os.remove(os.path.join(second, "ORC_HOST_Outcome.json"))
-        with open(os.path.join(second, "ORC_HOST2_Outcome.json"), "w", encoding="utf-8") as f:
-            f.write(doc.replace("HOST", "HOST2"))
-        os.rename(os.path.join(second, "ORC_HOST_General.7z.p7b"),
-                  os.path.join(second, "ORC_HOST2_General.7z.p7b"))
-
-        printed = io.StringIO()
-        with redirect_stdout(printed):
-            report.with_archived_logs(report.find_runs([self.run, second], {}),
-                                      self.work, SEVEN_ZIP)
-
-        self.assertEqual(printed.getvalue().count("orca ingest"), 1)
-        self.assertIn("2 sealed archives", printed.getvalue())
-
-    def test_the_copy_orca_already_decrypted_is_read_rather_than_called_sealed(self):
-        # 'ingest' and 'extract' leave the decrypted archive beside the sealed one, and the
-        # Outcome goes on naming the sealed one.
-        self.seal_the_archive(keep_plain=True)
-
-        printed = io.StringIO()
-        with redirect_stdout(printed):
-            expanded = report.with_archived_logs(self.runs(), self.work, SEVEN_ZIP)
-
-        found = logs_of(expanded[0])
-        self.assertIn("NTFSInfo.dev.log", [os.path.basename(p) for p in found])
-        self.assertEqual(printed.getvalue(), "")
-
-
-def logs_of(run) -> list:
-    """The logs report reads for 'run': its directories, and its archives' own directories."""
-    return report.run_log_files(run.directory, run.extra_dirs,
-                                report.archive_dirs(run.directory, run.outcome_path))
-
-
 class TestLogsSeenTwice(unittest.TestCase):
     """A log in the run dir and the same log in an extra dir is one log.
 
@@ -882,54 +724,28 @@ class TestLogAttribution(unittest.TestCase):
         self.assertEqual(len(view["logs"]), 2)
 
 
-class TestOrphanArchives(unittest.TestCase):
-    """An archive in the directory that no Outcome accounts for.
+def fake_ingest_collections(root: str):
+    """A stand-in for fleet.ingest_collections that 'ingests' each Outcome of a directory into
+    a dataset under 'root': the Outcome, the run's own logs and an empty timing - what report
+    reads of a dataset, without 7-Zip or duckdb."""
+    def ingest_collections(directory, out=None, **_options):
+        collections, ingested = [], []
+        for path in ingest.find_outcome_jsons(directory):
+            run = layout.run_name_for(path)
+            dataset = os.path.join(root, run)
+            os.makedirs(layout.orca_dir(dataset), exist_ok=True)
+            shutil.copy(path, dataset)
+            for name in os.listdir(directory):
+                if name.startswith(run) and name.endswith(".log"):
+                    shutil.copy(os.path.join(directory, name), dataset)
+            with open(layout.timing_path(dataset), "w", encoding="utf-8") as f:
+                f.write("kind,name,rows,bytes,seconds\n")
+            collection = ingest.Collection(path, [], *ingest.outcome_identity(path))
+            collections.append(collection)
+            ingested.append((collection, dataset))
+        return collections, fleet.FleetResult(ingested, []), directory
 
-    In a merged dump that is the thing worth noticing: a collection whose Outcome never
-    arrived, so nothing in the report says anything about it.
-    """
-
-    def setUp(self):
-        self.dir = tempfile.TemporaryDirectory()
-        self.addCleanup(self.dir.cleanup)
-
-    def archive(self, name: str, size: int = 32) -> str:
-        path = os.path.join(self.dir.name, name)
-        with open(path, "wb") as f:
-            f.write(b"x" * size)
-        return path
-
-    def test_an_archive_no_outcome_names_is_reported_with_its_size(self):
-        write_outcome(self.dir.name, "WS-0001")
-        self.archive("ORC_WS-0001_General.7z", 1024)
-        self.archive("ORC_WS-0009_Orphan.7z", 32)
-
-        rows = report.orphan_rows(self.dir.name)
-
-        self.assertEqual(rows, [["ORC_WS-0009_Orphan.7z", "32 bytes"]])
-
-    def test_every_outcome_of_the_directory_has_its_say(self):
-        # Two collections side by side: an archive named by either of them is accounted for.
-        write_outcome(self.dir.name, "WS-0001")
-        write_outcome(self.dir.name, "WS-0002")
-        self.archive("ORC_WS-0001_General.7z")
-        self.archive("ORC_WS-0002_General.7z")
-
-        self.assertEqual(report.orphan_rows(self.dir.name), [])
-
-    def test_an_archive_an_outcome_elsewhere_names_is_no_orphan(self):
-        # 'orca fleet' leaves the archives it decrypts in its output directory, while their
-        # Outcomes sit one level down, in each host's dataset.
-        self.archive("ORC_WS-0001_General.7z")
-
-        rows = report.orphan_rows(self.dir.name, accounted=["ORC_WS-0001_General.7z.p7b"])
-
-        self.assertEqual(rows, [])
-
-    def test_a_directory_with_no_archive_at_all_has_no_orphan(self):
-        write_outcome(self.dir.name, "WS-0001")
-
-        self.assertEqual(report.orphan_rows(self.dir.name), [])
+    return ingest_collections
 
 
 class TestRunReport(unittest.TestCase):
@@ -939,10 +755,16 @@ class TestRunReport(unittest.TestCase):
         self.root = tempfile.TemporaryDirectory()
         self.addCleanup(self.root.cleanup)
         self.dir = self.root.name
+        self.datasets = tempfile.TemporaryDirectory()
+        self.addCleanup(self.datasets.cleanup)
+        ingest_patch = mock.patch.object(report._fleet, "ingest_collections",
+                                         fake_ingest_collections(self.datasets.name))
+        ingest_patch.start()
+        self.addCleanup(ingest_patch.stop)
 
     def invoke(self, *paths, **kwargs) -> str:
         out = io.StringIO()
-        with redirect_stdout(out):
+        with redirect_stdout(out), mock.patch("sys.stderr", io.StringIO()):
             report.run_report(list(paths) or [self.dir], **kwargs)
         return out.getvalue()
 
@@ -996,33 +818,6 @@ class TestRunReport(unittest.TestCase):
 
         self.assertIn("ORC_WS-0001_20260925_144127.log  0W  1E  0C", output)
         self.assertIn("ORC_WS-0002_20260925_144127.log  0W  3E  0C", output)
-
-    def test_an_archive_nothing_accounts_for_is_named(self):
-        write_outcome(self.dir, "WS-0001")
-        with open(os.path.join(self.dir, "ORC_WS-0009_Orphan.7z"), "wb") as f:
-            f.write(b"y" * 32)
-
-        output = self.invoke()
-
-        self.assertIn("archives no Outcome names (1)", output)
-        self.assertIn("ORC_WS-0009_Orphan.7z  32 bytes", output)
-
-    def test_the_orphan_block_names_its_directory_once(self):
-        for host in ("WS-0001", "WS-0002"):
-            write_outcome(self.dir, host)
-        with open(os.path.join(self.dir, "ORC_WS-0009_Orphan.7z"), "wb") as f:
-            f.write(b"y")
-
-        output = self.invoke()
-
-        self.assertEqual(output.count("archives no Outcome names"), 1)
-
-    def test_a_directory_whose_archives_are_all_named_says_nothing(self):
-        write_outcome(self.dir, "WS-0001")
-        with open(os.path.join(self.dir, "ORC_WS-0001_General.7z"), "wb") as f:
-            f.write(b"y")
-
-        self.assertNotIn("archives no Outcome", self.invoke())
 
     def test_nothing_to_report_is_an_error_naming_what_was_looked_at(self):
         with self.assertRaises(RuntimeError) as caught:
@@ -1175,8 +970,3 @@ class TestArchiveDirectories(unittest.TestCase):
         self.assertNotIn("ORC_H_General/NTFSInfo.log", [log["log"] for log in view["logs"]])
         self.assertEqual(view["logs_ignored"], 1)
 
-    def test_an_archive_whose_directory_is_there_is_not_opened_again(self):
-        run = report.Run(self.run, self.outcome, [])
-        with open(os.path.join(self.run, "ORC_H_General.7z.p7b"), "wb") as f:
-            f.write(b"sealed")
-        self.assertEqual(report.archives_of(run), ([], []))

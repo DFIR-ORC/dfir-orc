@@ -5,11 +5,12 @@ import glob
 import hashlib
 import json
 import os
-from concurrent.futures import ThreadPoolExecutor
+import sys
+from contextlib import redirect_stdout
 from dataclasses import asdict
 from typing import NamedTuple
 
-from . import fleet as _fleet, fleetdb as _fleetdb, ignores, ingest, layout, logs as _logs
+from . import cache, fleet as _fleet, fleetdb as _fleetdb, ignores, ingest, layout, logs as _logs
 from . import outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
 
@@ -980,33 +981,6 @@ def archives_named_by(outcome_paths: list) -> list:
     return named
 
 
-def orphan_rows(directory: str, extra_dirs: list | None = None,
-                accounted: list | None = None) -> list:
-    """The archives of 'directory' that no Outcome of it accounts for, with their sizes.
-
-    A collection whose Outcome never arrived leaves exactly this: data sitting in the directory
-    that nothing in the report says a word about.
-
-    Every Outcome of the directory has its say, not just the runs that were reported: a
-    collection whose ingested run won the de-duplication still named its own archives, and
-    calling them orphans because the run directory is where the report came from would be a
-    false alarm.
-
-    'accounted' is what the Outcomes found elsewhere in the report name: 'orca fleet' leaves
-    the archives it decrypts in its output directory, and their Outcomes sit one level down
-    in the datasets - calling those orphans would be the same false alarm.
-    """
-    named = list(accounted or [])
-    for place in [directory] + list(extra_dirs or []):
-        named += archives_named_by(ingest.find_outcome_jsons(place))
-
-    rows = []
-    for path in ingest.archives_not_named(directory, named):
-        rows.append([os.path.basename(path), f"{os.path.getsize(path)} bytes"])
-
-    return rows
-
-
 def run_identity(run: Run) -> str:
     """What makes two sightings of a run the same run: ORC's run id, else the Outcome's name.
 
@@ -1095,118 +1069,6 @@ def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=N
     return mapped
 
 
-def archived_logs_dir(run: Run, work: str) -> str:
-    """Where this run's in-archive logs are kept: a directory of its own under the work dir.
-
-    Per run, not per directory: a merged dump of a fleet is one directory holding one Outcome
-    per machine, and the logs come out under the command's name ('NTFSInfo.dev.log'), which
-    says nothing about which machine they belong to. A directory each is what keeps them
-    apart, since 'extra_dirs' attributes by directory rather than by file name.
-    """
-    return os.path.join(sidecar_dir(run.directory, work), "archived-logs",
-                        log_stem(run.outcome_path) or "run")
-
-
-def archives_of(run: Run) -> tuple[list, list]:
-    """This run's archives as (readable paths, names that are sealed).
-
-    Sealed ones are named rather than opened: the envelope is CMS over the whole archive, so
-    reading one log out of it costs decrypting all of it, which is an extract wearing a
-    report's clothes.
-
-    An archive whose directory the run already has is neither: ingest took its logs out
-    there, and opening it again would only read them twice.
-    """
-    readable, sealed = [], []
-    for name in archives_named_by([run.outcome_path] if run.outcome_path else []):
-        if os.path.isdir(os.path.join(run.directory, layout.archive_stem(name))):
-            continue
-
-        path = os.path.join(run.directory, name)
-        if ingest.sealed_name(name):
-            plain = os.path.join(run.directory, ingest.sealed_name(name) + ".7z")
-            if os.path.isfile(plain):
-                readable.append(plain)
-            elif os.path.isfile(path):
-                sealed.append(name)
-
-            continue
-
-        if os.path.isfile(path):
-            readable.append(path)
-
-    return readable, sealed
-
-
-def capture_archived_logs(run: Run, work: str, seven_zip: str,
-                          refresh: bool) -> tuple[str | None, list]:
-    """Pull this run's in-archive logs into the work dir. (where they went, what stayed sealed)
-
-    Never into the collection: a report only reads, and what it reads has to stay as it was
-    found. Kept between runs because the decode is the expensive part - an archive already
-    expanded is reused, and '--refresh' is how you ask for it again.
-
-    The sealed ones are returned rather than announced here, so a fleet of them is one line
-    instead of one per host.
-    """
-    target = archived_logs_dir(run, work)
-    if os.path.isdir(target) and not refresh:
-        return (target if os.listdir(target) else None), []
-
-    readable, sealed = archives_of(run)
-    if not readable:
-        return None, sealed
-
-    os.makedirs(target, exist_ok=True)
-    try:
-        # capture_logs names an archive it could not open itself, so only what it does not
-        # handle is caught here.
-        ingest.capture_logs(seven_zip, readable, target, None)
-    except OSError as error:
-        print(f"could not keep the logs of '{run.directory}': {error}")
-
-    return (target if os.listdir(target) else None), sealed
-
-
-def sealed_archive_line(sealed: list, directories: list) -> str:
-    """One line for the archives no report can open: there is more in them, and what opens it.
-
-    A signpost, not an explanation. Said at all because an invisible gap is what this whole
-    path exists to close - a report that quietly skipped them would read as a clean run - and
-    said once rather than per host, the way orphan_lines is, since a fleet's worth of the same
-    sentence buries it.
-    """
-    names = sorted(set(sealed))
-    shown = ", ".join(names[:3]) + (", ..." if len(names) > 3 else "")
-    plural = "archive" if len(names) == 1 else "archives"
-    where = directories[0] if len(set(directories)) == 1 else os.path.dirname(directories[0])
-    # --out-at-input: the next report reads the decrypted archives only from beside the sealed.
-    return f"more in {len(names)} sealed {plural}: {shown} (orca ingest {where} --out-at-input)"
-
-
-def with_archived_logs(runs: list, work: str, seven_zip: str, refresh: bool = False,
-                       workers: int = 8) -> list:
-    """Every run, with the logs out of its archives added to its extra_dirs.
-
-    In parallel across runs because each one is a decode: a fleet of hosts is the case where
-    this is worth anything, and they do not wait on each other.
-    """
-    if not seven_zip:
-        print("cannot read the logs inside the archives: 7z.exe not found")
-        return runs
-
-    with ThreadPoolExecutor(max_workers=min(workers, len(runs)) or 1) as pool:
-        found = list(pool.map(lambda run: capture_archived_logs(run, work, seven_zip, refresh),
-                              runs))
-
-    sealed = [name for _directory, names in found for name in names]
-    if sealed:
-        print(sealed_archive_line(sealed, [run.directory for run in runs]))
-
-    return [run if directory is None else run._replace(extra_dirs=run.extra_dirs + [directory])
-            for run, (directory, _sealed) in zip(runs, found)]
-
-
 def shared_dirs(runs: list) -> set:
     """The directories holding more than one run, where a log has to be attributed."""
     counts: dict = {}
@@ -1215,23 +1077,6 @@ def shared_dirs(runs: list) -> set:
         counts[key] = counts.get(key, 0) + 1
 
     return {directory for directory, count in counts.items() if count > 1}
-
-
-def orphan_lines(dirs: list, sealed: dict, accounted: list | None = None) -> list:
-    """One block per directory holding an archive no Outcome accounts for.
-
-    Said once per directory rather than under each of its collections: it is a fact about the
-    directory, and a fleet's worth of hosts repeating it would bury it.
-    """
-    blocks = []
-    for directory in dirs:
-        rows = orphan_rows(directory, _extra(sealed, directory), accounted)
-        if rows:
-            blocks.append("\n".join([directory]
-                                    + section(f"archives no Outcome names ({len(rows)})",
-                                              rows, "<>")))
-
-    return blocks
 
 
 class FleetRecord(NamedTuple):
@@ -1329,36 +1174,6 @@ def ignored_gaps(records: list, ignore: list | None) -> dict[str, int]:
     return counts
 
 
-def _subdirectories(directory: str) -> list[str]:
-    try:
-        names = sorted(os.listdir(directory))
-    except OSError:
-        return []
-    return [os.path.join(directory, n) for n in names
-            if n != layout.ORCA_DIR and os.path.isdir(os.path.join(directory, n))]
-
-
-def datasets_near(given: list, known: list, identities: set, current: str) -> list:
-    """The datasets of the runs found in 'given', where ingest and fleet put them by default.
-
-    One level deep in two places: inside each given directory (--out-at-input) and in the
-    current directory (the default). Kept only when one of its runs has the identity of a run
-    already found: the run id is the link - 'orca ingest' writes no source marker, and a fleet's
-    names the shared directory, not the host - so other collections' datasets add nothing.
-    """
-    seen = {os.path.abspath(d) for d in known}
-    near = []
-    for place in list(given) + [current]:
-        for candidate in _subdirectories(place):
-            key = os.path.abspath(candidate)
-            if key in seen or not os.path.isdir(layout.orca_dir(candidate)):
-                continue
-            seen.add(key)
-            if any(run_identity(run) in identities for run in runs_in(candidate, [])):
-                near.append(candidate)
-    return near
-
-
 def render_fleet_block(records: list, reported: set, ignore: list | None = None) -> str:
     """The fleet's own say, before the hosts: how many answered, who did not, and the gaps.
 
@@ -1413,54 +1228,143 @@ NOTHING_FOUND = ("give a collection, a dataset, a fleet's output directory (one 
                  ".orca-fleet) or its fleet.duckdb")
 
 
+def holds_outcome(directory: str) -> bool:
+    """True when 'directory' has an ORC Outcome, plain or sealed: what makes it a collection."""
+    if ingest.find_outcome_jsons(directory):
+        return True
+
+    suffix = OUTCOME_SUFFIX.lower() + ingest.SEALED_SUFFIX
+    return any(os.path.basename(path).lower().endswith(suffix)
+               for path in ingest.sealed_sidecars(directory))
+
+
+def outcome_only(views: list | None, list_commands: bool, one_line: bool,
+                 as_json: bool) -> bool:
+    """True when nothing asked for needs a dataset: '--list', or the outcome view alone.
+
+    Those read the Outcome and nothing else, and a sealed Outcome is a few KB to unseal - an
+    ingest would decode every archive of the collection to answer it. '--one-line' and '--json'
+    summarise every view, tables included, so they need the dataset.
+    """
+    if list_commands:
+        return True
+    if one_line or as_json:
+        return False
+    return set(expand_views(views)) <= {"outcome"}
+
+
+def sort_dirs(dirs: list, given: list, outcome_only_asked: bool) -> tuple[list, list]:
+    """(directories read as they are, directories whose collections are ingested first).
+
+    A dataset and a fleet's output directory are read as they are. So is every collection when
+    only its Outcome is asked for (outcome_only): a sealed Outcome is unsealed rather than the
+    collection ingested. Everything else that is a collection goes through ingest.
+
+    A directory counts as a collection when it has an Outcome. Loose archives with none count
+    only in a directory named on the command line: under --recurse they would include every
+    nested container of an expanded tree, and the archives kept in a dataset's own directories.
+    """
+    named = {os.path.normcase(os.path.abspath(directory)) for directory in given}
+    as_they_are, to_ingest = [], []
+    for directory in dirs:
+        # A fleet's output directory holds datasets, not archives - unless the fleet ran with
+        # --out-at-input, when it is the collection directory as well, and a collection.
+        output_only = fleet_record(directory) and not ingest.loose_archives(directory)
+        if cache.is_dataset(directory) or output_only:
+            as_they_are.append(directory)
+            continue
+
+        if outcome_only_asked:
+            if holds_outcome(directory):
+                as_they_are.append(directory)
+            continue
+
+        explicit = os.path.normcase(os.path.abspath(directory)) in named
+        if holds_outcome(directory) or (explicit and ingest.loose_archives(directory)):
+            to_ingest.append(directory)
+
+    return as_they_are, to_ingest
+
+
+def ingest_dirs(directories: list, work_dir: str | None, options: dict) -> tuple[list, list]:
+    """A dataset for every collection in 'directories': (datasets, [(who, why)] that failed).
+
+    Ingested or reused (cache.ensure_dataset), and a current dataset in the other default place
+    is used rather than ingested again. Ingest's progress goes to stderr: what report prints on
+    stdout is the report, and '--json' or '--one-line' must stay that alone.
+    """
+    if directories:
+        print(f"{len(directories)} collection director{'y' if len(directories) == 1 else 'ies'}"
+              f": ingesting what has no current dataset", file=sys.stderr)
+
+    datasets, failed = [], []
+    with redirect_stdout(sys.stderr):
+        for directory in directories:
+            _collections, result, _keep = _fleet.ingest_collections(
+                directory, work_dir, elsewhere=True, **options)
+            datasets += [dataset for _collection, dataset in result.ingested]
+            failed += [(collection.computer_name or os.path.basename(directory), message)
+                       for collection, message in result.failed]
+
+    return datasets, failed
+
+
+def failure_lines(failed: list) -> list:
+    """The collections that could not be ingested, as hosts: a report that drops them reads as
+    a smaller, cleaner set of hosts."""
+    if not failed:
+        return []
+
+    return [f"ingest failed ({len(failed)})"] + [f"  {who}: {why}" for who, why in failed]
+
+
 def run_report(paths, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
                refresh=False, ignore_file=None, ignore_patterns=None, recurse=False,
-               context=None, archive_logs=True, engine_name="duckdb") -> None:
+               context=None, engine_name="duckdb", password=None, at_input=False,
+               strict=False, jobs=None) -> None:
     """Report on every collection in every directory given.
+
+    A report reads datasets. A collection is handed to ingest first - or its current dataset
+    reused - as diff, merge and getthis do, so the logs inside its archives and the Outcome it
+    sealed are read the one way ingest reads them.
 
     A directory is read for what it holds rather than taken for one run: a fleet arrives either
     as a directory of per-host folders or as one directory holding every machine's files side
-    by side, and the second shape used to report the first Outcome and drop the rest.
+    by side, and each of its collections is a run of its own.
     """
     if failed_only and not list_commands:
         raise RuntimeError("--failed filters the --list output; add --list")
 
     # Read before anything expensive: a mistyped ignore file must not surface after a fleet's
-    # worth of decryption, and must never be read as "nothing to ignore".
+    # worth of ingest, and must never be read as "nothing to ignore".
     ignore = ignores.load(ignore_file) + ignores.patterns(ignore_patterns)
     given = [as_directory(path) for path in (paths or ["."])]
     dirs, fleets = expand_fleets(candidate_dirs(given, recurse))
 
     scratch.use(work_dir)
-    work = work_dir or scratch.directory("report_")
-    sealed = unsealed_sidecar_dirs(dirs, work, private_key, cms_backend, refresh)
-    runs = find_runs(dirs, sealed)
+    reading_outcome = outcome_only(views, list_commands, one_line, as_json)
+    as_they_are, to_ingest = sort_dirs(dirs, given, reading_outcome)
+    options = dict(password=password, private_key=private_key, cms_backend=cms_backend,
+                   engine_name=engine_name, jobs=jobs, refresh=refresh, strict=strict,
+                   at_input=at_input)
+    datasets, failed = ingest_dirs(to_ingest, work_dir, options)
 
-    # A collection's datasets where fleet and ingest put them by default, matched by run id.
-    identities = {run_identity(run) for run in runs if run.outcome_path}
-    near = datasets_near(given, dirs, identities, os.getcwd()) if identities else []
-    if near:
-        dirs += near
-        runs = find_runs(dirs, sealed)
+    # Only the Outcome is asked for: a sealed one is unsealed into the work dir, a few KB,
+    # rather than its collection ingested.
+    sealed = {}
+    if reading_outcome:
+        sealed = unsealed_sidecar_dirs(as_they_are, work_dir or scratch.directory("report_"),
+                                       private_key, cms_backend, refresh)
+    runs = find_runs(as_they_are + datasets, sealed)
 
     reported = {run_identity(run) for run in runs}
-    if not runs and not fleets:
+    if not runs and not fleets and not failed:
         # Name the flag: a parent of per-host folders is the likeliest reason, and the fix is
         # one word rather than a hunt for which directory to point at.
         inside = "" if recurse else ", or add --recurse to look inside"
         raise RuntimeError(f"no collection in {', '.join(paths or ['.'])}: {NOTHING_FOUND}"
                            f"{inside}")
-
-    # Before the views, and not for '--list', which reads the Outcome alone: the per-command
-    # logs are inside the archives, and without this the errors and criticals views read
-    # WolfLauncher's own log and nothing else.
-    if archive_logs and not list_commands:
-        runs = with_archived_logs(runs, work, sevenzip.find_7z() or "", refresh)
-
-    orphans = orphan_lines(dirs, sealed,
-                           archives_named_by([run.outcome_path for run in runs
-                                              if run.outcome_path]))
 
     if list_commands:
         if fleets:
@@ -1474,8 +1378,8 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
             # Named, not raised: one machine missing an Outcome must not cost you the other
             # eight, and a silent gap in a fleet sweep is worse than a short note.
             print(f'  no Outcome in {len(without)} run dir(s): {", ".join(without)}')
-        for block in orphans:
-            print("\n" + block)
+        for line in failure_lines(failed):
+            print(line)
         return
 
     # The manifest needs the engine to read; a report still prints without one, just without
@@ -1494,18 +1398,25 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
 
     if as_json:
         hosts = [host_json(r) for r in reports]
-        print(render_json(fleet_json(hosts, fleets, reported, ignore) if fleets else hosts))
+        hosts = fleet_json(hosts, fleets, reported, ignore) if fleets else hosts
+        hosts += [{"host": who, "ok": False, "ingest": "failed", "error": why}
+                  for who, why in failed]
+        print(render_json(hosts))
         return
     if one_line:
         for r in reports:
             print(render_one_line(summary_of(r)))
         for line in fleet_one_lines(fleets, reported):
             print(line)
+        for who, _why in failed:
+            print(f"{who}: ok=False ingest=failed")
         return
 
     # 'explicit' is whether a view was named: a named view prints its heading even when it is
     # empty, and the default report leaves the empty ones out.
     explicit = bool(views)
     blocks = [render_fleet_block(fleets, reported, ignore)] if fleets else []
-    blocks += [render_human(r, views, explicit, context) for r in reports] + orphans
+    blocks += [render_human(r, views, explicit, context) for r in reports]
+    if failed:
+        blocks.append("\n".join(failure_lines(failed)))
     print("\n\n".join(blocks))

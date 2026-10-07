@@ -319,15 +319,14 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Is this collection healthy. Per host: whether every command succeeded "
                     "and which did not, the tables an ingest produced and which came out "
                     "empty, the logs carrying errors and what the critical ones said. It "
-                    "reads ORC's own Outcome, Outlines and log - unsealing them when they "
-                    "are encrypted, and pulling each command's log out of the archive it is "
-                    "in - so most of it works on a collection as it arrives, before anything "
-                    "is ingested; "
-                    "only the two views built from '.orca' need a dataset, and they name the "
-                    "command that would fill them rather than running it. Every Outcome in a "
-                    "directory is a run of its own, so a merged dump of a fleet reports every "
-                    "machine in it. Two row tables are modes: 'orca report outcome' (one row "
-                    "per command run) and 'orca report outline' (one row per ORC run).",
+                    "reads datasets: given a collection, it ingests it first - or reuses its "
+                    "current dataset, here or beside the collection - as diff, merge and "
+                    "getthis do - unless only the Outcome is asked for (--list, --view "
+                    "outcome), which is unsealed and read alone. Every Outcome in a directory "
+                    "is a run of its own, so a merged dump of a fleet reports every machine in "
+                    "it. Two "
+                    "row tables are modes: 'orca report outcome' (one row per command run) "
+                    "and 'orca report outline' (one row per ORC run).",
         epilog="orca report outcome E:\\datasets --recurse --out fleet.parquet")
     rp.add_argument("paths", nargs="*", default=["."],
                     help="collection(s), ingested dataset(s), a directory holding either, or a "
@@ -340,8 +339,6 @@ def _build_parser() -> argparse.ArgumentParser:
                     const=logs.DEFAULT_CONTEXT, default=None, metavar="LINES",
                     help="with a message view: print the LINES log lines either side of each "
                          f"message (default: {logs.DEFAULT_CONTEXT})")
-    rp.add_argument("--no-archive-logs", dest="archive_logs", action="store_false",
-                    help="do not pull the per-command logs out of the archives")
     shape = rp.add_mutually_exclusive_group()
     shape.add_argument("--one-line", action="store_true", help="one summary line per host")
     shape.add_argument("--json", action="store_true", help="one JSON object per host")
@@ -356,14 +353,24 @@ def _build_parser() -> argparse.ArgumentParser:
                          "with commas, e.g. --ignore 'Azure*,PersistenceSniper'")
     rp.add_argument("--ignore-file", default=None,
                     help="JSON list of names (fnmatch) to pass over, added to --ignore")
-    rp.add_argument("--private-key", default=None,
-                    help="PEM key to unseal a sealed Outcome, Outline or log")
+    # What the ingest of a collection takes, as diff, merge and getthis take it.
+    rp.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
+    rp.add_argument("--password", default=None, help="archive password")
     rp.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                     help="pin the .p7b decryption backend")
     rp.add_argument("--work-dir", default=None,
-                    help="keep the unsealed sidecars here instead of throwing them away")
+                    help="put the datasets of the collections given here instead of the "
+                         "current directory")
+    rp.add_argument("--out-at-input", action="store_true",
+                    help="put the datasets of the collections given beside them instead of "
+                         "the current directory")
     rp.add_argument("--refresh", action="store_true",
-                    help="unseal again even if the sidecars are already there")
+                    help="ingest the collections given again even if their datasets are "
+                         "current")
+    rp.add_argument("--strict", action="store_true",
+                    help="stop at the first collected file orca cannot read, instead of "
+                         "skipping it and saying so")
+    rp.add_argument("--jobs", type=int, default=None, help="parallel workers (default: CPUs)")
     rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     gt = sub.add_parser(
@@ -546,9 +553,9 @@ def main(argv=None) -> int:
                           private_key=args.private_key, cms_backend=args.cms_backend,
                           work_dir=args.work_dir, refresh=args.refresh,
                           ignore_file=args.ignore_file, ignore_patterns=args.ignore,
-                          recurse=args.recurse,
-                          context=args.backtrace, archive_logs=args.archive_logs,
-                          engine_name=args.engine)
+                          recurse=args.recurse, context=args.backtrace,
+                          engine_name=args.engine, password=args.password,
+                          at_input=args.out_at_input, strict=args.strict, jobs=args.jobs)
     elif args.command == "diff":
         pa, pb = (args.paths + [None, None])[:2]
         diff.run_diff(path_a=pa, path_b=pb, run_a=args.run, run_b=args.reference,

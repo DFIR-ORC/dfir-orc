@@ -158,11 +158,30 @@ def write_marker(dataset: str, source: str, key: str, options: dict) -> None:
                   f, indent=2)
 
 
+def dataset_name(source: str, work_dir: str | None, collection, at_input: bool) -> str | None:
+    """The directory name of the dataset 'source' ingests into; None for layout's own default.
+
+    One collection of a fleet directory is named after its own run: the directory's name is
+    shared by every host in it. One with no Outcome has no run name and takes its location -
+    never layout.run_name, which would hand it the first host's directory and have
+    clear_dataset empty that host's dataset before writing over it.
+    """
+    if collection and collection.outcome_path:
+        return layout.run_name_for(collection.outcome_path)
+
+    if collection or layout.output_root(work_dir, at_input):
+        # Beside the archive the directory name is the archive's; under a shared root - the
+        # current directory, or --work-dir - two collections' archives often share a basename.
+        return location_name(source)
+
+    return None
+
+
 def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
                refresh: bool = False, strict: bool = False, collection=None,
                jobs=None, at_input: bool = False, csv: bool = False,
-               csv_trunc: bool = False) -> str:
+               csv_trunc: bool = False, elsewhere: bool = False) -> str:
     """Return a dataset for 'source', ingesting it when there is not a current one.
 
     A path that is already a dataset is used in place and never copied. 'collection' narrows a
@@ -171,6 +190,10 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
 
     'csv' / 'csv_trunc' write the CSVs over the tables, whether just built or already current
     (csvout); 'exclude_cols' is what csv-trunc drops, and only that.
+
+    'elsewhere' also accepts a current dataset in the other default place - beside the
+    collection when asked for the current directory, and the other way round - rather than
+    ingesting again: a collection ingested with --out-at-input is reported from anywhere.
     """
     if is_dataset(source):
         ingest.csv_over(source, engine_name, jobs, csv, csv_trunc, exclude_cols)
@@ -182,23 +205,19 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     options = ingest_options(password, engine_name, strict)
     key = key_for(source, options, archives=collection.archives if collection else None)
 
-    # One collection of a fleet directory is named after its own run: the directory's name is
-    # shared by every host in it. One with no Outcome has no run name and takes its location -
-    # never layout.run_name, which would hand it the first host's directory and have
-    # clear_dataset empty that host's dataset before writing over it.
-    if collection and collection.outcome_path:
-        name = layout.run_name_for(collection.outcome_path)
-    elif collection or layout.output_root(work_dir, at_input):
-        # Beside the archive the directory name is the archive's; under a shared root - the
-        # current directory, or --work-dir - two collections' archives often share a basename.
-        name = location_name(source)
-    else:
-        name = None
-    keep_dir, dataset = layout.resolve(source, work_dir, name=name, at_input=at_input)
+    keep_dir, dataset = layout.resolve(source, work_dir, at_input=at_input,
+                                       name=dataset_name(source, work_dir, collection, at_input))
 
     if not refresh and is_current(dataset, key):
         ingest.csv_over(dataset, engine_name, jobs, csv, csv_trunc, exclude_cols)
         return dataset
+
+    if elsewhere and not refresh and not work_dir:
+        _, other = layout.resolve(source, None, at_input=not at_input,
+                                  name=dataset_name(source, None, collection, not at_input))
+        if is_current(other, key):
+            ingest.csv_over(other, engine_name, jobs, csv, csv_trunc, exclude_cols)
+            return other
 
     clear_dataset(dataset)
     os.makedirs(dataset, exist_ok=True)

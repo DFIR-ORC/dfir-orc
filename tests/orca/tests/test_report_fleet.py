@@ -6,8 +6,9 @@ import os
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from unittest import mock
 
-from orca import fleet, fleetdb, layout, report
+from orca import fleet, fleetdb, ingest, layout, report
 
 
 def write_outcome(directory: str, host: str, run_id: str) -> None:
@@ -153,40 +154,122 @@ class TestFleetDatabase(FleetCase):
             self.invoke([other])
 
 
-class TestCollectionFindsItsDatasets(FleetCase):
+class TestCollectionIsIngested(FleetCase):
+    """A collection is handed to ingest - or its current dataset reused - and the report is
+    read from the dataset (§8 of the dataset layout spec)."""
+
+    def setUp(self):
+        super().setUp()
+        self.calls = []
+        self.failures = []
+
+        def ingest_collections(directory, out=None, **options):
+            self.calls.append((directory, options))
+            ingested = []
+            for path in ingest.find_outcome_jsons(directory):
+                host, run_id, _stamp = ingest.outcome_identity(path)
+                dataset = write_dataset(os.path.join(self.cwd.name, "ds-" + host), host, run_id,
+                                        tables=3)
+                ingested.append((ingest.Collection(path, [], host, run_id, ""), dataset))
+            failed = [(ingest.Collection(None, [], who, "", ""), why)
+                      for who, why in self.failures]
+            return [], fleet.FleetResult(ingested, failed), directory
+
+        patch = mock.patch.object(report._fleet, "ingest_collections", ingest_collections)
+        patch.start()
+        self.addCleanup(patch.stop)
+
     def collection(self) -> str:
         directory = os.path.join(self.dir, "collect")
         write_outcome(directory, "a.lab", "{A}")
         return directory
 
-    def test_in_the_current_directory(self):
-        collection = self.collection()
-        write_dataset(os.path.join(self.cwd.name, "ORC_A"), "a.lab", "{A}", tables=3)
-        self.assertIn("tables=3", self.invoke([collection], one_line=True))
+    def test_a_collection_is_reported_from_the_dataset_ingest_gives(self):
+        self.assertIn("tables=3", self.invoke([self.collection()], one_line=True))
+        self.assertEqual(len(self.calls), 1)
 
-    def test_inside_the_collection(self):
-        collection = self.collection()
-        write_dataset(os.path.join(collection, "ORC_A"), "a.lab", "{A}", tables=4)
-        self.assertIn("tables=4", self.invoke([collection], one_line=True))
+    def test_a_dataset_elsewhere_is_reused_rather_than_ingested_again(self):
+        self.invoke([self.collection()], one_line=True)
+        self.assertTrue(self.calls[0][1]["elsewhere"])
 
-    def test_another_collections_dataset_is_not_added(self):
-        collection = self.collection()
-        write_dataset(os.path.join(self.cwd.name, "ORC_B"), "b.lab", "{B}", tables=1)
-        lines = self.invoke([collection], one_line=True).strip().splitlines()
-        self.assertEqual(len(lines), 1)
-        self.assertIn("tables=?", lines[0])
+    def test_the_ingest_options_reach_the_ingest(self):
+        self.invoke([self.collection()], one_line=True, private_key="k.pem", password="S3cret",
+                    at_input=True, strict=True, refresh=True, jobs=3)
+        options = self.calls[0][1]
+        self.assertEqual((options["private_key"], options["password"], options["at_input"],
+                          options["strict"], options["refresh"], options["jobs"]),
+                         ("k.pem", "S3cret", True, True, True, 3))
 
-    def test_the_newest_ingest_wins(self):
-        """A dataset left beside the collection by an older orca must not hide the new one."""
+    def test_a_dataset_is_read_as_it_is(self):
+        dataset = write_dataset(os.path.join(self.dir, "ORC_A"), "a.lab", "{A}", tables=2)
+        self.assertIn("tables=2", self.invoke([dataset], one_line=True))
+        self.assertEqual(self.calls, [])
+
+    def test_list_on_a_plain_outcome_ingests_nothing(self):
+        self.invoke([self.collection()], list_commands=True)
+        self.assertEqual(self.calls, [])
+
+    def test_list_on_a_sealed_outcome_unseals_it_and_ingests_nothing(self):
+        directory = os.path.join(self.dir, "sealed")
+        os.makedirs(directory)
+        open(os.path.join(directory, "ORC_A_Outcome.json.7z.p7b"), "wb").close()
+
+        def unseal(dirs, work, *args):
+            write_outcome(work, "a.lab", "{A}")
+            return {directory: work}
+
+        with mock.patch.object(report, "unsealed_sidecar_dirs", side_effect=unseal) as unsealed:
+            self.invoke([directory], list_commands=True)
+
+        self.assertEqual(self.calls, [])
+        self.assertEqual(unsealed.call_args.args[0], [directory])
+
+    def test_the_outcome_view_alone_ingests_nothing(self):
+        self.invoke([self.collection()], views=["outcome"])
+        self.assertEqual(self.calls, [])
+
+    def test_a_view_that_reads_the_logs_ingests(self):
+        self.invoke([self.collection()], views=["outcome", "log"])
+        self.assertEqual(len(self.calls), 1)
+
+    def test_loose_archives_are_ingested_only_where_named(self):
+        """Under --recurse they could be a dataset's kept archives or an expanded tree's."""
+        loose = os.path.join(self.dir, "loose")
+        os.makedirs(loose)
+        open(os.path.join(loose, "ORC_X_General.7z"), "wb").close()
+        self.collection()
+
+        self.invoke([self.dir], recurse=True, one_line=True)
+        self.assertNotIn(loose, [directory for directory, _ in self.calls])
+
+        self.calls.clear()
+        with self.assertRaises(RuntimeError):     # the fake ingests nothing from it
+            self.invoke([loose], one_line=True)
+        self.assertEqual([directory for directory, _ in self.calls], [loose])
+
+    def test_a_collection_that_could_not_be_ingested_is_a_host_in_every_shape(self):
+        self.failures.append(("b.lab", "archive is truncated"))
         collection = self.collection()
-        old = write_dataset(os.path.join(collection, "ORC_A"), "a.lab", "{A}", tables=1)
-        os.utime(layout.timing_path(old), (1_000_000_000, 1_000_000_000))
-        write_dataset(os.path.join(self.cwd.name, "ORC_A"), "a.lab", "{A}", tables=5)
-        self.assertIn("tables=5", self.invoke([collection], one_line=True))
+
+        self.assertIn("b.lab: ok=False ingest=failed", self.invoke([collection], one_line=True))
+        hosts = json.loads(self.invoke([collection], as_json=True))
+        self.assertIn({"host": "b.lab", "ok": False, "ingest": "failed",
+                       "error": "archive is truncated"}, hosts)
+        self.assertIn("b.lab: archive is truncated", self.invoke([collection]))
+
+    def test_what_ingest_prints_stays_off_the_report(self):
+        def chatty(directory, out=None, **options):
+            print("ingesting something")
+            return [], fleet.FleetResult([], []), directory
+
+        with mock.patch.object(report._fleet, "ingest_collections", chatty), \
+                mock.patch("sys.stderr", io.StringIO()) as stderr, \
+                self.assertRaises(RuntimeError):
+            self.invoke([self.collection()], as_json=True)
+        self.assertIn("ingesting something", stderr.getvalue())
 
     def test_a_plain_collection_report_has_no_fleet_block(self):
-        collection = self.collection()
-        self.assertNotIn("fleet:", self.invoke([collection]))
+        self.assertNotIn("fleet:", self.invoke([self.collection()]))
 
 
 class TestNothingFound(FleetCase):

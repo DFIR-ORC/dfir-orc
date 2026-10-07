@@ -121,12 +121,18 @@ class TestCli(unittest.TestCase):
     def test_the_backtrace_is_off_unless_asked_for(self):
         self.assertIsNone(cli._build_parser().parse_args(["report", "E:/runs"]).backtrace)
 
-    def test_the_logs_inside_the_archives_are_read_unless_declined(self):
-        parser = cli._build_parser()
+    def test_report_takes_what_the_ingest_of_a_collection_takes(self):
+        args = cli._build_parser().parse_args(
+            ["report", "E:/runs", "--private-key", "k.pem", "--password", "S3cret",
+             "--out-at-input", "--strict", "--refresh", "--jobs", "3"])
 
-        self.assertTrue(parser.parse_args(["report", "E:/runs"]).archive_logs)
-        self.assertFalse(parser.parse_args(["report", "E:/runs",
-                                            "--no-archive-logs"]).archive_logs)
+        self.assertEqual((args.private_key, args.password, args.out_at_input, args.strict,
+                          args.refresh, args.jobs), ("k.pem", "S3cret", True, True, True, 3))
+
+    def test_report_no_longer_reads_archives_itself(self):
+        # The logs inside the archives are ingest's to take out; the flag went with that path.
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            cli._build_parser().parse_args(["report", "E:/runs", "--no-archive-logs"])
 
     def test_the_report_output_shapes_are_mutually_exclusive(self):
         for argv in (["report", "x", "--list", "--json"],

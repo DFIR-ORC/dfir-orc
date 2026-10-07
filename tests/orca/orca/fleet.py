@@ -35,39 +35,16 @@ def run_fleet(directory: str, out: str | None = None, *, password=None, private_
     one truncated archive must not take the other ninety-nine with it, which is what '--strict'
     would do and what the default - skipping a single table - does not cover.
     """
-    seven = sevenzip.find_7z()
-    if not seven:
-        raise RuntimeError("7z.exe not found")
-
     # Before any host, not after: a mistyped --schema should not cost the length of an ingest.
     typing = orcschema.resolve(schema)
 
-    # Unseal before grouping, never after: an encrypted fleet's Outcomes are
-    # '<run>_Outcome.json.7z.p7b' and collections_in reads plain JSON, so grouping first finds
-    # no Outcome, one unnamed collection, and ingests every host into one dataset. keep_dir is
-    # where the plain sidecars land - the current directory, --out, beside the archives with
-    # --out-at-input, or scratch when that is read-only - and is where collections_in has to
-    # look as well.
-    keep_dir, _ = layout.resolve(directory, out, at_input=at_input)
-    ingest.unseal_sidecars(directory, seven, keep_dir, private_key, cms_backend, refresh)
-    collections = ingest.collections_in(directory, ingest.sidecar_dirs(directory, keep_dir))
+    collections, result, keep_dir = ingest_collections(
+        directory, out, password=password, private_key=private_key, cms_backend=cms_backend,
+        engine_name=engine_name, jobs=jobs, refresh=refresh, strict=strict, at_input=at_input,
+        csv=csv, csv_trunc=csv_trunc, exclude_cols=exclude_cols)
     if not collections:
         raise RuntimeError(f"no collection found in '{directory}': no Orc Outcome json "
                            "and no archive")
-
-    result = FleetResult([], [])
-    for collection in collections:
-        who = collection.computer_name or "unnamed collection"
-        try:
-            dataset = cache.ensure_dataset(
-                directory, out, collection=collection, jobs=jobs, password=password,
-                private_key=private_key, cms_backend=cms_backend, engine_name=engine_name,
-                refresh=refresh, strict=strict, at_input=at_input, csv=csv,
-                csv_trunc=csv_trunc, exclude_cols=exclude_cols)
-            result.ingested.append((collection, dataset))
-        except (RuntimeError, OSError) as error:
-            print(f"'{who}' failed: {error}")
-            result.failed.append((collection, str(error)))
 
     # Under keep_dir, the same place the decrypted archives went: the current directory, --out,
     # the collection directory, or the scratch fallback - so a directory orca could not write
@@ -83,6 +60,48 @@ def run_fleet(directory: str, out: str | None = None, *, password=None, private_
         return 1
 
     return 1 if result.failed else 0
+
+
+def ingest_collections(directory: str, out: str | None = None, *, password=None,
+                       private_key=None, cms_backend=None, engine_name="duckdb", jobs=None,
+                       refresh: bool = False, strict: bool = False, at_input: bool = False,
+                       csv: bool = False, csv_trunc: bool = False, exclude_cols=None,
+                       elsewhere: bool = False) -> tuple[list, FleetResult, str]:
+    """A dataset for every collection in 'directory', ingested or reused: (collections, result,
+    keep_dir). No collection is an empty list, not an error: the caller says what that means.
+
+    The loop 'fleet' and 'report' share. 'elsewhere' is cache.ensure_dataset's: a current
+    dataset in the other default place is used rather than ingested again.
+    """
+    seven = sevenzip.find_7z()
+    if not seven:
+        raise RuntimeError("7z.exe not found")
+
+    # Unseal before grouping, never after: an encrypted fleet's Outcomes are
+    # '<run>_Outcome.json.7z.p7b' and collections_in reads plain JSON, so grouping first finds
+    # no Outcome, one unnamed collection, and ingests every host into one dataset. keep_dir is
+    # where the plain sidecars land - the current directory, --out, beside the archives with
+    # --out-at-input, or scratch when that is read-only - and is where collections_in has to
+    # look as well.
+    keep_dir, _ = layout.resolve(directory, out, at_input=at_input)
+    ingest.unseal_sidecars(directory, seven, keep_dir, private_key, cms_backend, refresh)
+    collections = ingest.collections_in(directory, ingest.sidecar_dirs(directory, keep_dir))
+
+    result = FleetResult([], [])
+    for collection in collections:
+        who = collection.computer_name or "unnamed collection"
+        try:
+            dataset = cache.ensure_dataset(
+                directory, out, collection=collection, jobs=jobs, password=password,
+                private_key=private_key, cms_backend=cms_backend, engine_name=engine_name,
+                refresh=refresh, strict=strict, at_input=at_input, csv=csv,
+                csv_trunc=csv_trunc, exclude_cols=exclude_cols, elsewhere=elsewhere)
+            result.ingested.append((collection, dataset))
+        except (RuntimeError, OSError) as error:
+            print(f"'{who}' failed: {error}")
+            result.failed.append((collection, str(error)))
+
+    return collections, result, keep_dir
 
 
 HOST_COLUMNS = ["OrcComputerName", "OrcRunId", "dataset", "status", "error"]

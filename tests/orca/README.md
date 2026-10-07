@@ -60,8 +60,8 @@ A **run** is one execution of ORC on one machine: what the Outline describes, wh
 identifies, and what a collection is the product of. `check` and `extract` read a collection;
 `merge` and `getthis` read a dataset and take it as their argument (`orca merge
 E:\datasets\host`) since they read exactly one - and they **ingest it for you** if you hand
-them a collection or an archive instead. `report` and `diff` take either kind; `diff` ingests
-on demand as well, `report` never does.
+them a collection or an archive instead. `report` and `diff` take either kind, and ingest a
+collection on demand as well.
 
 ## What a dataset contains
 
@@ -394,13 +394,12 @@ orca report E:\datasets\host --view log            # one view (outcome | stats |
 orca report E:\datasets\host --view critical,error         # several, in one list or by repeating the flag
 orca report E:\datasets\host --view error --backtrace      # and 5 log lines either side of each
 orca report E:\datasets\host --view error --backtrace 10   # 10 lines either side instead
-orca report E:\datasets\host --no-archive-logs      # do not open the archives for their logs
 orca report E:\datasets                      # every run or collection under a parent
 orca report E:\datasets --one-line           # one summary line per host
 orca report E:\datasets\host --json                 # one flat JSON object per host
 orca report E:\datasets --list               # one line per command, every host
 orca report E:\datasets --list --failed      # only the commands that did not exit 0
-orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed collection
+orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a collection: ingested first
 orca report E:\datasets --ignore "Azure*,PersistenceSniper"   # pass over what you already know about
 orca report E:\datasets --ignore-file ignore.json    # the same, from a JSON list
 orca report                                  # in a fleet's output directory: the whole fleet
@@ -460,10 +459,9 @@ are worth reporting.
   all when it is the current directory; `fleet.duckdb` names the same directory. Datasets are
   recorded relative to that directory, so a fleet copied elsewhere still reports; one on another
   drive is recorded in full.
-- **A collection finds its datasets** where `fleet` and `ingest` put them by default: one level
-  inside the collection (`--out-at-input`) and in the current directory. A dataset is matched to
-  the collection by run id, so the other collections' datasets in the current directory are left
-  out. Where a past `--out` wrote is not remembered: name it, or `--recurse`.
+- **A collection is ingested first**, or its current dataset reused: in the current directory,
+  or inside the collection when it was ingested with `--out-at-input`. A dataset somewhere else
+  (a past `--work-dir`) is not remembered: name it.
 
 A fleet report starts with what the fleet itself recorded - and says who it could not read,
 since a report that drops a failed host reads as a smaller, cleaner fleet:
@@ -490,19 +488,9 @@ directory each collection reads its own log instead of all of them. In a dataset
 own every log belongs to the one run, which is what makes the expanded `Errors` container and
 ORC's console output show up where they should.
 
-**Archives nothing accounts for are named**, once per directory, after the hosts:
-
-```
-\\host\archive\merged
-  archives no Outcome names (1)
-    ORC_WS-0009_Orphan.7z  32 bytes
-```
-
-In a merged dump that is the thing worth noticing: a collection whose Outcome never arrived, so
-data is sitting there that nothing in the report says a word about. Matched by archive stem, so
-the decrypted copy of a sealed archive is not mistaken for an orphan - and against every Outcome
-the report read, not only the directory's own: `fleet` leaves the archives it decrypted in its
-output directory while their Outcomes sit one level down in each host's dataset.
+**An archive no Outcome names is ingested all the same**, as a collection of its own: in a
+merged dump that is a collection whose Outcome never arrived, and its data is reported rather
+than left sitting there. It has no Outcome, so it is reported under its dataset's name.
 
 #### The default report
 
@@ -653,143 +641,68 @@ was critical. It is off by default, and the lines are not even kept without it: 
 either side of every message, over a fleet of logs, is most of the memory a scan takes. The
 count bounds the scan as well as the printing.
 
-#### The per-command logs are inside the archives
+#### The per-command logs come from the dataset
 
 WolfLauncher's own log sits beside the archives; each command's `<Command>.dev.log` is *in*
-one, and ORC's failing commands put theirs in an `Errors` container in there too. So a report
-on a collection as it arrives used to read the collection log, find it clean, and print no
-logs section at all - while the critical explaining the failure it had just listed sat in the
-archive next to it. `report` now pulls those logs out before building the views:
+one, and ORC's failing commands put theirs in an `Errors` container in there too. Ingest takes
+them out of each archive into that archive's directory in the dataset, and `report` reads them
+there - the archive directories named by the run's Outcome, never a walk of the dataset, so a
+tree `orca extract` expanded inside it is not read:
 
 ```
   failed commands (1)
     ORC_General  NTFSInfo  -  0m0s  cpu=?  read=?  wrote=?  0x00000001
 
   logs with errors (1 of 2)
-    NTFSInfo.dev.log  0W  1E  1C
+    ORC_HOST_General/NTFSInfo.dev.log  0W  1E  1C
 
   critical (1)
-    NTFSInfo.dev.log  09:14:22  Failed to open volume \.\C: [access denied]
+    ORC_HOST_General/NTFSInfo.dev.log  09:14:22  Failed to open volume \.\C: [access denied]
 ```
 
-**It costs one decode per archive, and only the first time.** ORC writes a single solid block
-(`Archive7z.cpp`), so reaching an entry means decoding everything in front of it - measured
-here at ~250 MB/s of uncompressed content, 1.4 s for a 244 MB archive whose logs sit at the
-very end. That is why it is one `7z` call per archive asking for every log at once rather than
-a call per log, which would pay that again for each; listing first, to name the `Errors`
-container for the same call, is free by comparison because it only reads the header. The logs
-land in the work dir beside the unsealed sidecars, under a directory per run, and the next
-report reuses them (`--refresh` to redo). `--no-archive-logs` skips the whole thing.
-
-**A sealed archive is named, not opened.** The envelope is CMS over the whole archive, so one
-log out of it costs decrypting all of it, which is an extract wearing a report's clothes. The
-report says which archives it did not read and what would read them, rather than leaving the
-gap invisible:
-
-```
-more in 1 sealed archive: ORC_HOST_General.7z.p7b (orca ingest <dir>)
-```
-
-A signpost, not an explanation: one line however many hosts are sealed.
-
-`ingest` rather than `extract`, and the distinction is not cosmetic: `extract` expands into a
-subdirectory per archive, which `run_log_files` deliberately does not walk, so a report on an
-extracted tree still shows none of them. `ingest --out-at-input` leaves the dataset *inside*
-the collection, each archive's logs in the archive's own directory, which is all this path
-needs - the next report of the collection finds that dataset and reads its logs with no key and
-no second decrypt. Hence the `--out-at-input` in the signpost: a default ingest keeps the
-dataset in its current directory, where a report of the collection does not always look.
-
-Unsealing in `report` itself was measured and rejected. The decrypt is cheap: 0.27 s for a
-98 MB sealed archive, against 1.09 s to pull the logs out of the 65 MB plain one it becomes,
-so it is a fifth of a cost already being paid. It cannot be narrowed to the log entries
-either - a 7z keeps its header at the end, so nothing can say where an entry is, or that one
-exists, before the whole plain archive is on disk. That last point is the objection: `report`
-would write a full-size copy of every archive, and without `--work-dir` rewrite it every run.
-`ingest` writes that same copy once, and everything afterwards reuses it.
+The archives themselves are not opened by `report`: after an ingest everything it reads is in
+the dataset, and the decrypted `.7z` kept there serves the next ingest only.
 
 **A protected archive usually arrives with its own password.** ORC archives each
 sub-command's `/config` next to that command's output as `<name>_cli_config.xml`
 (`CommandAgent.cpp`), and a password-protected archive's password is in it, so nothing has to
-be told: `report` reads it from beside the archive. `ingest`, `extract` and `check` take an
-explicit `--password`, which overrides it; `report` has no such flag and does not need one.
-An archive that still will not open is named rather than quietly yielding no logs, which would
-look exactly like an archive holding none.
+be told: ingest reads it from beside the archive. `--password` overrides it, on `report` as on
+`ingest`.
 
-**A log seen twice is one log.** `ingest` leaves the per-command logs beside the tables, and a
-report on that dataset also finds the archives still sitting there - so a log is keyed by its
-path within the place it was found (`Errors/NTFSInfo.dev.log` and `NTFSInfo.dev.log` stay two
-logs) and the run directory's copy is the one kept.
-
-#### A collection as it arrives, with everything sealed
+#### A collection: ingested first
 
 ```powershell
-# no ingest, no extract: the Outcome, the Outlines and the log are unsealed and read
+# the collection is ingested - or its current dataset reused - then reported
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key
 
-# a whole fleet of them, failures only
+# a whole fleet of them, failures only: --list reads the Outcomes alone, no ingest
 orca report \\host\dumps --list --failed --private-key contoso.com.key
 
-# and the row tables read the same sealed sidecars
+# the row tables read the Outcomes and Outlines, unsealing them when needed
 orca report outline \\host\dumps --private-key contoso.com.key --json
 ```
 
-When ORC encrypts a collection it seals its own outputs too, one `.7z.p7b` per file, so a
-collection arrives holding `ORC_..._Outcome.json.7z.p7b`, an Outline and WolfLauncher's log in
-the same state. Without reading them a report can say almost nothing - not the machine's name
-(it would be reported under the *folder* name), not which command failed, not what the log
-said. `report` now unseals what it needs, which makes a sealed collection reportable before
-anything has been ingested or extracted:
+`report` reads datasets. Given a collection it does what `diff`, `merge` and `getthis` do: the
+collection is ingested, or its current dataset reused, and the report is read from the dataset
+- tables, empty outputs, the Outcome and every log, a sealed collection the same as a plain
+one. It takes the same options as they do: `--private-key`, `--password`, `--out-at-input`,
+`--work-dir`, `--refresh`, `--strict`, `--jobs`. The dataset goes where every command puts one:
+the current directory by default, never into the collection.
 
-```
-DESKTOP-U9N26B0  //host/dumps/ORC_HOST
-  ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
+**The first report of a collection costs an ingest**, and needs `duckdb.exe`, `7z.exe` and, for
+a sealed one, the key; every report after it reads the dataset, in well under a second. On the
+three-DC sample: 9 s the first time, 0.3 s the second. Ingest's progress goes to stderr, so
+`--json` and `--one-line` stay what they were. A collection that cannot be ingested is a host
+of its own (`ingest failed`), in every shape, the way a fleet's failed host is.
 
-  failed commands (12)
-    ORC_General  USNInfo                   USNInfo   0m22s  0x00000012
-    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s  0x00000009
-    ORC_General  Autoruns                  -          0m0s  0x00000001
+**Only when a view needs it.** `--list` and `--view outcome` read the Outcome alone, so they
+never ingest: a sealed Outcome is unsealed into the work dir - a few KB, the key still needed -
+and read, without duckdb. The other views, `--one-line` and `--json` read tables or logs, and
+those are what the ingest is for.
 
-  tables: (no ingest timing: not a dataset)
-
-  empty tables: (no ingest timing: not a dataset)
-
-  logs with errors (1 of 1)
-    ORC_..._144127.log  106
-```
-
-**Into the work dir, never beside the collection.** `ingest` and `extract` keep what they
-unseal, so the next command finds plain files and nothing decrypts twice; a report only reads,
-and what it reads has to stay as it was found - the collection directory is often read-only
-anyway. `--work-dir` keeps the unsealed sidecars (under `<collection>-<digest>`, since two
-machines' collections routinely share a folder name) and the next report reuses them;
-`--refresh` unseals again; without a work dir they go to scratch and vanish with the process.
-They are a few KB, so paying for the decryption again costs nothing.
-
-`7z.exe` is needed only when sidecars are sealed, and nothing becomes fatal: if it is missing,
-or no key or certificate can open them, each failure is named and the report prints the views
-it can still build.
-
-**A directory means every collection in it**, and `--recurse` means every collection under it.
-There is no `--root`: a directory is read for what it holds (see *What a directory means*
-below).
-
-#### `report` never ingests
-
-`report` is fast - under a second on a sealed two-machine share - and that is the point of it:
-the question "is this fleet healthy" should not turn into a fleet ingest. So where a view needs
-a dataset it was not given, it names the command rather than running it:
-
-```
-  tables: (not ingested; orca ingest \\host\archive\merged)
-  empty tables: (not ingested; orca ingest \\host\archive\merged)
-```
-
-The outcome, the failures, `--list`, the log view and the message views all read ORC's own
-sidecars, so they work on a collection as it arrives; only the two views built from `.orca`
-need the ingest. This
-is the opposite choice from `merge` and `diff` on purpose: for them the ingest *is* the work,
-and for `report` it would be a surprise.
+**What counts as a collection under `--recurse`**: a directory with an Outcome, plain or sealed.
+Loose archives with no Outcome are ingested only in a directory you name - under `--recurse`
+they could be the nested containers of an expanded tree, or the archives a dataset keeps.
 
 #### `--ignore`, `--ignore-file`: the findings you have already decided about
 
@@ -1256,11 +1169,10 @@ its undamaged containers are still sound; run `extract` when you need to know th
 
 ### Where orca writes
 
-Everything `ingest`, `fleet`, `diff`, `merge` and `getthis` derive from a collection - the
-dataset, the decrypted archives, the unsealed sidecars - lands in the **current directory**. A
-collection is evidence, and by default not one file is written into it. (`extract` writes only
-under its own `--out`, the current directory too, and `check` and `report` only read - see
-above.)
+Everything `ingest`, `fleet`, `diff`, `merge`, `getthis` and `report` derive from a collection -
+the dataset, the decrypted archives, the unsealed sidecars - lands in the **current directory**.
+A collection is evidence, and by default not one file is written into it. (`extract` writes only
+under its own `--out`, the current directory too, and `check` only reads - see above.)
 
 `--out-at-input` puts all of it **beside the input** instead: inside a collection directory, or
 beside an archive, so one place holds everything that came out of one collection.

@@ -190,6 +190,23 @@ class TestEnsureRun(CacheCase):
             cache.ensure_dataset(self.archive, csv=True)
         self.assertEqual(len(calls), 2)
 
+    def test_elsewhere_reuses_a_current_dataset_beside_the_collection(self):
+        """Ingested with --out-at-input, then asked for from the current directory: reused."""
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            beside = cache.ensure_dataset(self.archive, at_input=True)
+            found = cache.ensure_dataset(self.archive, elsewhere=True)
+        self.assertEqual(found, beside)
+        self.assertEqual(len(calls), 1)
+
+    def test_without_elsewhere_the_current_directory_gets_its_own(self):
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            beside = cache.ensure_dataset(self.archive, at_input=True)
+            here = cache.ensure_dataset(self.archive)
+        self.assertNotEqual(here, beside)
+        self.assertEqual(len(calls), 2)
+
     def test_csv_options_do_not_re_ingest(self):
         """The CSVs are written over the tables: asking for them must not cost an ingest."""
         calls, fake = self.fake_ingest()
