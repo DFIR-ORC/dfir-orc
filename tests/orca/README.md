@@ -257,42 +257,71 @@ A directory holding several machines' results is several runs. `orca ingest` rea
 refuses the rest; `orca fleet` reads all of them, one dataset per host:
 
 ```
-orca fleet C:\share\collect --private-key contoso.com.key                  # into .\<run>\
-orca fleet C:\share\collect --private-key contoso.com.key --out-at-input   # into C:\share\collect\<run>\
+orca fleet C:\share\collect --private-key contoso.com.key                  # into .\hosts\<run>\
+orca fleet C:\share\collect --private-key contoso.com.key --out-at-input   # into C:\share\collect\hosts\<run>\
 ```
+
+```
+C:\temp\orca\                 the fleet's output: three entries, whatever its size
+  fleet.duckdb                the fleet database
+  fleet\                      one parquet per table, every host stacked (what the database reads)
+    .orca\                    the fleet's record: hosts.csv, coverage.csv - who answered, what
+                              is missing - and what each table was stacked from
+  hosts\                      one dataset per host
+    ORC_DomainController_DOM-DC-W2008.dom2008.lab_20261006_120552\
+    ...
+```
+
+The datasets go under `hosts\` so the top level stays readable at sixty hosts. `orca ingest` of
+one collection, and `report` on one, still put its dataset at the top of the output; every
+command that looks for an existing dataset - `report` reusing one, a sealed sidecar's plain copy
+- looks in `hosts\` as well.
 
 Each dataset is named after its own run, and every table in it carries `OrcComputerName`,
 `OrcRunId` and `OrcTimestamp` - as does every table `orca ingest` writes, so a dataset made by
 hand answers the same query.
 
-**The fleet database.** `fleet` also writes `fleet.duckdb` beside the datasets: one view per
-table across every host of the fleet, so the fleet is one file to open, from any directory. Two
-fleets ingested into one directory overwrite each other's; `--out` keeps them apart. Worked
+**The fleet database.** `fleet` also writes `fleet.duckdb` beside `hosts\`, and a `fleet\`
+directory beside it holding one parquet per table across every host (zstd): the views of the
+database read those files, so the fleet is one thing to open. Two fleets ingested into one
+directory overwrite each other's; `--out` keeps them apart. Worked
 queries - stacking, timelines, timestomping, hashes, WMI persistence - are in
 [fleet-database-examples.md](fleet-database-examples.md).
 
 ```
-fleet database: .\fleet.duckdb (26 view(s), 22 typed; open with: duckdb ".\fleet.duckdb")
+fleet database: .\fleet.duckdb (26 view(s), 22 typed, over fleet\; open from its directory:
+  duckdb fleet.duckdb, or elsewhere after SET file_search_path='C:\temp\orca')
 ```
 
 ```sql
--- duckdb fleet.duckdb
+-- cd C:\temp\orca; duckdb fleet.duckdb
 -- stacking: the autorun one host has and ninety-nine do not
 SELECT "Image Path", "SHA-256", count(DISTINCT OrcComputerName) AS hosts
 FROM autoruns GROUP BY ALL ORDER BY hosts ASC;
 
--- every host's MFT in one table; OrcParquetFile says which volume a row came from
+-- every host's MFT in one table; OrcParquetFile says which host file (which volume) a row
+-- came from, relative to the fleet directory
 SELECT OrcComputerName, OrcParquetFile, count(*) FROM NTFSInfo GROUP BY ALL;
 ```
 
 A view is per table **family**, not per file name. ORC names a per-volume table after its volume
 (`NTFSInfo_00000000_DiskInterface_0x4e106ff4106fe187_`), so no two hosts share one; the view
-`NTFSInfo` holds all of them, whatever the volume. Views, never copies: a host re-ingested in
-place is current at once. Re-run `fleet` after adding or removing a host - it reuses every
-current dataset, so that costs the views only. The views list their files by absolute path, so
-a moved fleet needs that re-run too; a view whose file is gone fails with DuckDB's own
-`No files found`, naming it. A view whose files cannot be read is skipped and named, and the
-rest of the database is still written.
+`NTFSInfo` holds all of them, whatever the volume.
+
+**`fleet\` is a copy, and moves with the database.** Each family's file is every host's rows
+stacked once; the views name it by a path relative to the database's directory
+(`fleet/NTFSInfo.parquet`). So `fleet.duckdb` and `fleet\` can be moved or copied anywhere
+together and still answer - without the per-host datasets, which they no longer read. DuckDB
+resolves a relative path against the directory it was started in, not the database's: open it
+from its own directory, or `SET file_search_path` to it first. On the three-DC sample `fleet\`
+is 36 MB for 26 families, against 59 MB of per-host parquet - zstd finds the same values on every
+host.
+
+A copy can be stale, so every `fleet` run checks it: a family's file is rebuilt when the set of
+host files it was made from changes, or one of them is newer, and left as it is otherwise; a
+family no longer produced loses its file. A host re-ingested by `orca ingest` alone is in the
+database once `fleet` runs again. A family whose files cannot be read is skipped and named,
+and the rest of the database is still written.
 
 **Typed views.** Every column is text, as collected. Each table ORC describes, and each table
 whose values say what they are, also gets a typed companion, `<family>_typed`: timestamps as
@@ -365,8 +394,8 @@ Read the denominator with it - the database carries it too:
 
 | table | holds |
 |:---|:---|
-| `orca_hosts` | every host and whether it ingested (`.orca-fleet/hosts.csv`) |
-| `orca_coverage` | only the gaps: a table a host skipped, or a family every other host produced and this one did not (`.orca-fleet/coverage.csv`) |
+| `orca_hosts` | every host and whether it ingested (`fleet/.orca/hosts.csv`) |
+| `orca_coverage` | only the gaps: a table a host skipped, or a family every other host produced and this one did not (`fleet/.orca/coverage.csv`) |
 | `orca_tables` | one row per view: how many hosts and files it spans, the ORC table a typed view reads, or why it was skipped |
 | `orca_schema` | where the typed views' schemas came from |
 
@@ -454,20 +483,21 @@ are worth reporting.
 
 `report` meets `fleet` without being told how:
 
-- **A fleet's output directory is reported as a fleet.** It is known by `.orca-fleet/hosts.csv`,
+- **A fleet's output directory is reported as a fleet.** It is known by `fleet/.orca/hosts.csv`,
   the list of every host and its dataset - failed ones included. No `--recurse`, and no path at
   all when it is the current directory; `fleet.duckdb` names the same directory. Datasets are
   recorded relative to that directory, so a fleet copied elsewhere still reports; one on another
   drive is recorded in full.
 - **A collection is ingested first**, or its current dataset reused: in the current directory,
-  or inside the collection when it was ingested with `--out-at-input`. A dataset somewhere else
+  or inside the collection when it was ingested with `--out-at-input` - at the top, or under
+  `hosts\` where a fleet put it. A dataset somewhere else
   (a past `--work-dir`) is not remembered: name it.
 
 A fleet report starts with what the fleet itself recorded - and says who it could not read,
 since a report that drops a failed host reads as a smaller, cleaner fleet:
 
 ```
-fleet: 3 collection(s), 2 ingested, 1 failed  (.\.orca-fleet)
+fleet: 3 collection(s), 2 ingested, 1 failed  (.\fleet\.orca)
   c.lab: ingest failed: archive is truncated
   coverage gaps:
     DOM-DC-W2008.dom2008.lab: missing AD_computers, missing DNS_records, ... (10)

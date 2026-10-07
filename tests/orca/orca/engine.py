@@ -204,12 +204,18 @@ class DuckDbEngine(Engine):
         # LOCAL disk, never the (SMB) working directory: a large spill onto a share fails with
         # WinError 1450, insufficient system resources.
         self.temp_directory = os.path.join(tempfile.gettempdir(), "orca_duckdb_tmp")
+        # Where a relative file path in a statement - or in a view it reads - is found, instead
+        # of the process's working directory: the fleet database's views name their files
+        # relative to the database's own directory (fleetdb).
+        self.file_search_path = None
 
     def _settings(self) -> str:
         """Prologue every statement runs with: somewhere to spill, a memory budget that accounts
         for the other duckdb processes orca may be running alongside this one, and a thread count
         that budget can feed."""
         settings = f"SET temp_directory='{_fwd(self.temp_directory)}'; "
+        if self.file_search_path:
+            settings += f"SET file_search_path='{sql_path(self.file_search_path)}'; "
         if self.memory_limit:
             settings += f"SET memory_limit='{self.memory_limit}'; "
             threads = thread_limit(self.memory_limit)

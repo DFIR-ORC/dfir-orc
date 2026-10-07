@@ -1146,13 +1146,13 @@ def shared_dirs(runs: list) -> set:
 
 class FleetRecord(NamedTuple):
     """What 'orca fleet' wrote about one fleet: who answered, and the gaps (fleet.py)."""
-    where: str             # the .orca-fleet directory
+    where: str             # the fleet's record: fleet\.orca (fleet.FLEET_DIR)
     hosts: list            # hosts.csv rows
     coverage: list         # coverage.csv rows
 
 
 def fleet_record(directory: str) -> FleetRecord | None:
-    """The fleet whose output directory 'directory' is, or None. Known by '.orca-fleet/hosts.csv',
+    """The fleet whose output directory 'directory' is, or None. Known by 'fleet/.orca/hosts.csv',
     which fleet writes beside its datasets and fleet.duckdb."""
     where = os.path.join(directory, _fleet.FLEET_DIR)
     if not os.path.isfile(os.path.join(where, _fleet.HOSTS_FILE)):
@@ -1162,7 +1162,7 @@ def fleet_record(directory: str) -> FleetRecord | None:
 
 def as_directory(path: str) -> str:
     """A path as report reads it: 'fleet.duckdb' stands for the fleet directory holding it - fleet
-    writes the database and its .orca-fleet record together, in one place."""
+    writes the database and its fleet\.orca record together, in one place."""
     if os.path.isfile(path) and os.path.basename(path).lower() == _fleetdb.DATABASE_NAME:
         return os.path.dirname(os.path.abspath(path))
     return path
@@ -1290,7 +1290,7 @@ def fleet_one_lines(records: list, reported: set) -> list[str]:
 
 
 NOTHING_FOUND = ("give a collection, a dataset, a fleet's output directory (one holding "
-                 ".orca-fleet) or its fleet.duckdb")
+                 "fleet\\.orca) or its fleet.duckdb")
 
 
 def holds_outcome(directory: str) -> bool:

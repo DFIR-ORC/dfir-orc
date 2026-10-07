@@ -183,11 +183,34 @@ def dataset_name(source: str, work_dir: str | None, collection, at_input: bool) 
     return None
 
 
+def grouped(name: str | None, group: str | None, source: str) -> str | None:
+    """'name' under 'group' ('hosts/<run>'), or 'name' alone when there is no group."""
+    if not group:
+        return name
+    return os.path.join(group, name or layout.archive_stem(os.path.abspath(source)) or "run")
+
+
+def other_places(source: str, collection, at_input: bool, group: str | None) -> list[str]:
+    """Where else a dataset of 'source' may be, by default: the other root (the current
+    directory or beside the collection), and in each of them at the top or under 'hosts'."""
+    places = []
+    for at in (at_input, not at_input):
+        for under in (None, layout.HOSTS_DIR):
+            if (at, under) == (at_input, group):
+                continue
+            _, dataset = layout.resolve(source, None, at_input=at,
+                                        name=grouped(dataset_name(source, None, collection, at),
+                                                     under, source))
+            places.append(dataset)
+    return places
+
+
 def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, private_key=None,
                cms_backend=None, exclude_cols=None, engine_name="duckdb",
                refresh: bool = False, strict: bool = False, collection=None,
                jobs=None, at_input: bool = False, csv: bool = False,
-               csv_trunc: bool = False, elsewhere: bool = False) -> str:
+               csv_trunc: bool = False, elsewhere: bool = False,
+               group: str | None = None) -> str:
     """Return a dataset for 'source', ingesting it when there is not a current one.
 
     A path that is already a dataset is used in place and never copied. 'collection' narrows a
@@ -197,9 +220,11 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     'csv' / 'csv_trunc' write the CSVs over the tables, whether just built or already current
     (csvout); 'exclude_cols' is what csv-trunc drops, and only that.
 
-    'elsewhere' also accepts a current dataset in the other default place - beside the
-    collection when asked for the current directory, and the other way round - rather than
-    ingesting again: a collection ingested with --out-at-input is reported from anywhere.
+    'group' is a directory under the output the dataset goes into ('hosts' for a fleet).
+    'elsewhere' also accepts a current dataset in the other default places - beside the
+    collection when asked for the current directory and the other way round, each at the top
+    or under 'hosts' - rather than ingesting again: a collection a fleet ingested, here or with
+    --out-at-input, is reported from anywhere.
     """
     if is_dataset(source):
         ingest.csv_over(source, engine_name, jobs, csv, csv_trunc, exclude_cols)
@@ -211,19 +236,19 @@ def ensure_dataset(source: str, work_dir: str | None = None, *, password=None, p
     options = ingest_options(password, engine_name, strict)
     key = key_for(source, options, archives=collection.archives if collection else None)
 
-    keep_dir, dataset = layout.resolve(source, work_dir, at_input=at_input,
-                                       name=dataset_name(source, work_dir, collection, at_input))
+    keep_dir, dataset = layout.resolve(
+        source, work_dir, at_input=at_input,
+        name=grouped(dataset_name(source, work_dir, collection, at_input), group, source))
 
     if not refresh and is_current(dataset, key):
         ingest.csv_over(dataset, engine_name, jobs, csv, csv_trunc, exclude_cols)
         return dataset
 
     if elsewhere and not refresh and not work_dir:
-        _, other = layout.resolve(source, None, at_input=not at_input,
-                                  name=dataset_name(source, None, collection, not at_input))
-        if is_current(other, key):
-            ingest.csv_over(other, engine_name, jobs, csv, csv_trunc, exclude_cols)
-            return other
+        for other in other_places(source, collection, at_input, group):
+            if is_current(other, key):
+                ingest.csv_over(other, engine_name, jobs, csv, csv_trunc, exclude_cols)
+                return other
 
     clear_dataset(dataset)
     os.makedirs(dataset, exist_ok=True)

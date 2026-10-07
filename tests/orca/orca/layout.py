@@ -37,6 +37,10 @@ RUN_NAME_SUFFIXES = ("_Outcome.json", "_Outline.json")
 # collection's own files, which now share the directory.
 ORCA_DIR = ".orca"
 
+# Where a fleet puts its per-host datasets, under its output directory: the fleet's top level
+# stays fleet.duckdb, fleet\ and hosts\ at any size (dataset layout spec, section 4.9).
+HOSTS_DIR = "hosts"
+
 # Tables the other commands derive from a run and write into it. They are parquet sitting next
 # to the ingested tables, so whatever answers "which parquet is a collected table" has to know
 # them - name-map.csv does; a bare glob does not.

@@ -105,6 +105,8 @@ class TestRunFleet(unittest.TestCase):
 
             got = sorted(call.kwargs["collection"].computer_name for call in ens.call_args_list)
             self.assertEqual(got, ["orc_a.lab", "orc_b.lab"])
+            # A fleet's datasets go under 'hosts', so its top level stays a few entries.
+            self.assertEqual({call.kwargs["group"] for call in ens.call_args_list}, {"hosts"})
 
     def test_a_second_run_ingests_only_what_changed(self):
         """Spec test 8: resume is the cache doing its job, host by host."""
@@ -233,6 +235,14 @@ class TestCoverage(unittest.TestCase):
             rows = self._read(os.path.join(where, "coverage.csv"))
             self.assertEqual(rows, [{"OrcComputerName": "a.lab", "table": "autoruns",
                                      "status": "missing"}])
+
+
+class TestFleetRecordPlace(unittest.TestCase):
+    def test_the_record_is_fleets_own_orca_directory(self):
+        self.assertEqual(fleet.FLEET_DIR, os.path.join("fleet", ".orca"))
+
+    def test_the_fleet_root_is_two_levels_above_the_record(self):
+        self.assertEqual(fleet.fleet_root(os.path.join(r"C:\out", fleet.FLEET_DIR)), r"C:\out")
 
 
 class TestDatasetPaths(unittest.TestCase):

@@ -1,15 +1,24 @@
-"""The fleet database: one DuckDB file of views over every host's parquet.
+"""The fleet database: one DuckDB file of views over the whole fleet's tables.
 
 'orca fleet' leaves one dataset per host; this is what makes them one thing to query.
-'duckdb fleet.duckdb', then 'SELECT ... FROM NTFSInfo' reads every host of the fleet, from any
-working directory. Views, never copies: a host re-ingested in place is current at once, which
-is the staleness a materialised fleet table could not avoid (fleet spec 5.3).
+Each table family is stacked once into 'fleet/<family>.parquet' beside the database - every
+host's rows in one file, zstd - and the database's views read those files by a path relative
+to its own directory. So the fleet directory can be moved or copied whole, and 'duckdb
+fleet.duckdb' run from it reads every host without the per-host datasets being where they were.
+
+The stacked files are a copy, and a copy can be stale: a family's file is rebuilt whenever the
+set of host files it was made from changes or one of them is newer, which every 'orca fleet'
+run checks. A host re-ingested by 'orca ingest' alone is in the database once 'orca fleet'
+runs again. (The views used to read the hosts' files directly, which was never stale but tied
+the database to their absolute paths - dataset layout spec, item 7.)
 
 A view is per table *family*, not per table name: ORC names a per-volume output after the
 volume ('NTFSInfo_00000000_DiskInterface_0x4e106ff4106fe187_'), so no two hosts share one
 and a view per name would stack nothing. See docs/superpowers/specs/
 2026-10-06-orca-fleet-database-design.md.
 """
+import copy
+import json
 import os
 import re
 from typing import NamedTuple
@@ -26,6 +35,11 @@ _PER_VOLUME = re.compile(r"^(.+?)_\d{8}_.+_$")
 RESERVED_PREFIX = "orca_"
 
 PARQUET_FILE_COLUMN = "OrcParquetFile"
+
+# The stacked family files, beside the database; and what each was stacked from, in orca's
+# own '.orca' of that directory.
+STACK_DIR = "fleet"
+STACK_RECORD = os.path.join(layout.ORCA_DIR, "sources.json")
 
 
 def table_family(base: str) -> str:
@@ -76,12 +90,102 @@ def _literal(value) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def view_sql(family: str, paths: list[str]) -> str:
-    """The view of one family: its files listed absolutely, so it reads from any directory and
-    reads this fleet's hosts only. A glob would be resolved against DuckDB's working directory."""
-    files = ", ".join(f"'{sql_path(path)}'" for path in paths)
-    return (f"CREATE VIEW {quote_identifier(family)} AS SELECT * FROM read_parquet([{files}], "
-            f"union_by_name = true, filename = '{PARQUET_FILE_COLUMN}');\n")
+def view_sql(family: str, stacked: str) -> str:
+    """The view of one family: its stacked file, by a path relative to the database's
+    directory - which is where DuckDB finds it when opened from there (file_search_path)."""
+    return (f"CREATE VIEW {quote_identifier(family)} AS SELECT * FROM "
+            f"read_parquet('{sql_path(stacked)}');\n")
+
+
+def stack_sql(paths: list[str], target: str, root: str) -> str:
+    """COPY every file of a family into 'target', one zstd parquet.
+
+    'OrcParquetFile' still says which host file a row came from, relative to 'root' (the fleet
+    directory) so that it stays true when the directory moves. A dataset on another drive has
+    no relative path and keeps its absolute one.
+    """
+    files = ", ".join(f"'{sql_path(os.path.abspath(path))}'" for path in paths)
+    prefix = sql_path(os.path.abspath(root)) + "/"
+    column = quote_identifier(PARQUET_FILE_COLUMN)
+    return (f"COPY (SELECT * REPLACE (replace({column}, '{prefix}', '') AS {column}) "
+            f"FROM read_parquet([{files}], union_by_name = true, "
+            f"filename = '{PARQUET_FILE_COLUMN}')) "
+            f"TO '{sql_path(target)}' (FORMAT parquet, COMPRESSION zstd);\n")
+
+
+def _stack_record(root: str) -> dict:
+    try:
+        with open(os.path.join(root, STACK_DIR, STACK_RECORD), encoding="utf-8") as f:
+            record = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return record if isinstance(record, dict) else {}
+
+
+def stack_is_current(target: str, paths: list[str], recorded: list | None) -> bool:
+    """True when 'target' was stacked from exactly 'paths' and none of them is newer."""
+    if not os.path.exists(target) or sorted(recorded or []) != sorted(paths):
+        return False
+    try:
+        built = os.path.getmtime(target)
+        return all(os.path.getmtime(path) <= built for path in paths)
+    except OSError:
+        return False
+
+
+def stack_families(engine, staging: str, root: str, families: dict) -> tuple[dict, list]:
+    """Stack each family into '<root>/fleet/<family>.parquet' unless it is current.
+
+    Returns (family -> its stacked file relative to 'root', [(family, reason)] that could not
+    be stacked). One unreadable parquet costs its family, not the fleet. What is no longer
+    produced is removed by prune_stacks, once the new database is in place.
+    """
+    directory = os.path.join(root, STACK_DIR)
+    os.makedirs(directory, exist_ok=True)
+    record = _stack_record(root)
+    stacked, failed, kept = {}, [], {}
+    for family, paths in families.items():
+        relative = f"{STACK_DIR}/{family}.parquet"
+        target = os.path.join(root, STACK_DIR, family + ".parquet")
+        if not stack_is_current(target, paths, record.get(family)):
+            try:
+                engine.run_in_database(staging, stack_sql(paths, target, root))
+            except RuntimeError as error:
+                failed.append((family, _one_line(error)))
+                continue
+        stacked[family] = relative
+        kept[family] = sorted(paths)
+
+    record.update(kept)
+    os.makedirs(os.path.dirname(os.path.join(directory, STACK_RECORD)), exist_ok=True)
+    with open(os.path.join(directory, STACK_RECORD), "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=1)
+    return stacked, failed
+
+
+def prune_stacks(root: str, stacked: dict) -> None:
+    """Remove the stacked files of families the database no longer has a view of.
+
+    Only after the new database replaced the old one: until then the old one still reads them,
+    and a failed build has to leave it whole.
+    """
+    directory = os.path.join(root, STACK_DIR)
+    for name in os.listdir(directory):
+        if name.endswith(".parquet") and name[:-len(".parquet")] not in stacked:
+            os.remove(os.path.join(directory, name))
+
+    record = {family: paths for family, paths in _stack_record(root).items()
+              if family in stacked}
+    with open(os.path.join(directory, STACK_RECORD), "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=1)
+
+
+def searching(engine, root: str):
+    """A copy of 'engine' that resolves relative paths in 'root' (DuckDbEngine.file_search_path):
+    the views name their files relative to the database's directory."""
+    found = copy.copy(engine)
+    found.file_search_path = os.path.abspath(root)
+    return found
 
 
 def table_sql(name: str, columns: list[str], rows: list[list]) -> str:
@@ -224,7 +328,7 @@ DATABASE_NAME = "fleet.duckdb"
 
 
 def database_path(where: str) -> str:
-    """'<where>/fleet.duckdb', beside .orca-fleet/: one fleet per place, as its bookkeeping is.
+    """'<where>/fleet.duckdb', beside fleet\: one fleet per place, as its bookkeeping is.
     Two fleets in one working directory overwrite each other; --out keeps them apart."""
     return os.path.join(where, DATABASE_NAME)
 
@@ -253,19 +357,20 @@ class BuildResult(NamedTuple):
     outdated: list         # (family, [columns]) the schema does not know: a newer ORC's tables
 
 
-def _family_views(engine, staging: str, family: str, paths: list[str], typing) -> list[list]:
-    """Create a family's text view, and its typed companion when a schema describes it.
+def _family_views(engine, staging: str, family: str, paths: list[str], stacked: str | None,
+                  typing, failure: str = "") -> list[list]:
+    """Create a family's text view over its stacked file, and its typed companion when a schema
+    describes it.
 
-    Returns its catalog rows. Each is its own statement: CREATE VIEW reads every listed file's
-    schema, and one unreadable parquet must cost its family's view, not the database.
+    Returns its catalog rows. Each is its own statement, and one unreadable family must cost
+    its own view, not the database. 'failure' is why it could not be stacked, when it could not.
     """
     hosts, files = len({os.path.dirname(path) for path in paths}), len(paths)
-    if family.lower().startswith(RESERVED_PREFIX):
-        reason = f"the '{RESERVED_PREFIX}' prefix is reserved for orca's own tables"
-        return [[family, family, hosts, files, "skipped", reason, "", ""]]
+    if stacked is None:
+        return [[family, family, hosts, files, "skipped", failure, "", ""]]
 
     try:
-        engine.run_in_database(staging, view_sql(family, paths))
+        engine.run_in_database(staging, view_sql(family, stacked))
     except RuntimeError as error:
         return [[family, family, hosts, files, "skipped", _one_line(error), "", ""]]
 
@@ -296,15 +401,27 @@ def build_database(engine, database: str, families: dict[str, list[str]],
                    tables: dict[str, tuple[list[str], list[list]]], typing=None) -> BuildResult:
     """Write 'database' from scratch: the views of every family, then orca's own 'tables'.
 
-    Built beside it and moved over it at the end, so a failed build leaves the previous
-    database whole. 'typing' (orcschema.Typing) adds the typed views; None leaves text only.
+    Each family is stacked first into 'fleet/' beside the database (stack_families), and its
+    view reads that file by a relative path. Built beside it and moved over it at the end, so a
+    failed build leaves the previous database whole. 'typing' (orcschema.Typing) adds the typed
+    views; None leaves text only.
     """
     staging = database + ".tmp"
     _remove(staging)
+    root = os.path.dirname(os.path.abspath(database))
+    engine = searching(engine, root)
+
+    reserved = {family for family in families if family.lower().startswith(RESERVED_PREFIX)}
+    stacked, failed = stack_families(engine, staging, root,
+                                     {f: p for f, p in families.items() if f not in reserved})
+    failures = dict(failed)
+    failures.update({family: f"the '{RESERVED_PREFIX}' prefix is reserved for orca's own tables"
+                     for family in reserved})
 
     catalog: list[list] = []
     for family, paths in families.items():
-        catalog += _family_views(engine, staging, family, paths, typing)
+        catalog += _family_views(engine, staging, family, paths, stacked.get(family), typing,
+                                 failures.get(family, ""))
 
     own = dict(tables)
     own["orca_tables"] = (CATALOG_COLUMNS, catalog)
@@ -318,6 +435,7 @@ def build_database(engine, database: str, families: dict[str, list[str]],
         raise RuntimeError(f"cannot replace '{database}' ({error}); if it is open in a DuckDB "
                            f"shell, close it and re-run") from error
 
+    prune_stacks(root, stacked)
     skipped = [(row[1], row[5]) for row in catalog if row[4] == "skipped"]
     typed = sum(1 for row in catalog if row[4] == "typed")
     outdated = [(row[0], row[7].split(", ")) for row in catalog if row[7]]

@@ -71,6 +71,18 @@ class TestResolve(Case):
         unseal.assert_not_called()
         self.assertEqual(resolved.from_sealed, [plain])
 
+    def test_a_plain_copy_in_a_fleets_hosts_dataset_is_used(self):
+        self.seal("ORC_A_Outcome.json")
+        dataset = os.path.join(self.out, layout.HOSTS_DIR, "ORC_A")
+        os.makedirs(layout.orca_dir(dataset))
+        plain = write_json(os.path.join(dataset, "ORC_A_Outcome.json"), "outcome", outcome())
+
+        with mock.patch.object(ingest, "unseal_one") as unseal:
+            resolved = self.resolve()
+
+        unseal.assert_not_called()
+        self.assertEqual(resolved.from_sealed, [plain])
+
     def test_a_plain_copy_beside_the_sealed_one_is_used(self):
         self.seal("ORC_A_Outcome.json")
         plain = write_json(os.path.join(self.dir, "ORC_A_Outcome.json"), "outcome", outcome())

@@ -2,7 +2,8 @@
 
 `orca fleet` writes `fleet.duckdb` beside the datasets: one view per table across every host, a
 `<table>_typed` companion with real types, and orca's own record of the fleet (see the README,
-"Fleet"). Open it from any directory:
+"Fleet"). The views read `fleet\`, one parquet per table beside the database, by a relative path:
+open it from its own directory, or `SET file_search_path` to it first.
 
 ```powershell
 orca fleet E:\collect --private-key contoso.com.key

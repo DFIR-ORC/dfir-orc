@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -77,12 +78,19 @@ class TestFamilies(unittest.TestCase):
 
 
 class TestSql(unittest.TestCase):
-    def test_a_view_lists_its_files_absolutely_and_names_the_source_column(self):
-        sql = fleetdb.view_sql("NTFSInfo", ["C:\\run\\O'B\\x.parquet"])
-        self.assertIn("'C:/run/O''B/x.parquet'", sql)
+    def test_a_view_reads_its_stacked_file_by_a_relative_path(self):
+        sql = fleetdb.view_sql("NTFSInfo", "fleet/NTFSInfo.parquet")
+        self.assertTrue(sql.startswith('CREATE VIEW "NTFSInfo"'))
+        self.assertIn("read_parquet('fleet/NTFSInfo.parquet')", sql)
+
+    def test_a_stack_lists_its_files_and_keeps_their_path_relative_to_the_fleet(self):
+        sql = fleetdb.stack_sql(["C:\\fleet\\O'B\\x.parquet"], "C:\\fleet\\fleet\\N.parquet",
+                                "C:\\fleet")
+        self.assertIn("'C:/fleet/O''B/x.parquet'", sql)
         self.assertIn("union_by_name = true", sql)
         self.assertIn("filename = 'OrcParquetFile'", sql)
-        self.assertTrue(sql.startswith('CREATE VIEW "NTFSInfo"'))
+        self.assertIn("replace(\"OrcParquetFile\", 'C:/fleet/', '')", sql)
+        self.assertIn("COMPRESSION zstd", sql)
 
     def test_a_table_quotes_its_values(self):
         sql = fleetdb.table_sql("orca_hosts", ["a"], [["it's"]])
@@ -141,22 +149,56 @@ class TestBuildDatabase(unittest.TestCase):
         return fleetdb.build_database(engine.DuckDbEngine(DUCKDB), self.database, families,
                                       tables)
 
-    def test_a_family_view_reads_every_host_from_any_directory(self):
+    def test_a_family_view_reads_every_host_from_the_fleet_directory(self):
         self.assertEqual(self.build().skipped, [])
 
         out = query(self.database, 'SELECT OrcComputerName, Value FROM "NTFSInfo" ORDER BY 1',
-                    self.elsewhere.name)
+                    self.dir.name)
         self.assertEqual(out.split(), ["OrcComputerName,Value", "a.lab,Volume_C",
                                        "b.lab,Volume_D"])
-        files = query(self.database, 'SELECT OrcParquetFile FROM "NTFSInfo"', self.elsewhere.name)
-        self.assertIn("NTFSInfo_00000000_Volume_C_.parquet", files)
+        # Which host file a row came from, relative to the fleet directory.
+        files = query(self.database, 'SELECT OrcParquetFile FROM "NTFSInfo" ORDER BY 1',
+                      self.dir.name).split()
+        self.assertEqual(files[1:], ["a.lab/NTFSInfo_00000000_Volume_C_.parquet",
+                                     "b.lab/NTFSInfo_00000000_Volume_D_.parquet"])
+
+    def test_each_family_is_stacked_into_one_file(self):
+        self.build()
+        self.assertEqual(sorted(os.listdir(os.path.join(self.dir.name, "fleet"))),
+                         [".orca", "NTFSInfo.parquet"])
+
+    def test_the_fleet_directory_moves_whole_without_its_datasets(self):
+        self.build()
+        moved = os.path.join(self.elsewhere.name, "moved")
+        os.makedirs(moved)
+        shutil.copy(self.database, moved)
+        shutil.copytree(os.path.join(self.dir.name, "fleet"), os.path.join(moved, "fleet"))
+        for dataset in self.datasets:
+            shutil.rmtree(dataset)
+
+        out = query(os.path.join(moved, "fleet.duckdb"), 'SELECT count(*) AS n FROM "NTFSInfo"',
+                    moved)
+        self.assertEqual(out.split(), ["n", "2"])
+
+    def test_a_current_family_file_is_not_stacked_again(self):
+        self.build()
+        stacked = os.path.join(self.dir.name, "fleet", "NTFSInfo.parquet")
+        os.utime(stacked, (2_000_000_000, 2_000_000_000))
+        self.build()
+        self.assertEqual(os.path.getmtime(stacked), 2_000_000_000)
+
+    def test_a_host_gone_restacks_the_family(self):
+        self.build()
+        self.datasets = self.datasets[:1]
+        self.build()
+        self.assertNotIn("b.lab", query(self.database, 'SELECT * FROM "NTFSInfo"', self.dir.name))
 
     def test_orcas_own_tables_are_there(self):
         self.build()
         self.assertIn("b.lab", query(self.database, "SELECT * FROM orca_hosts",
-                                     self.elsewhere.name))
+                                     self.dir.name))
         catalog = query(self.database, "SELECT family, hosts, files, status FROM orca_tables",
-                        self.elsewhere.name)
+                        self.dir.name)
         self.assertIn("NTFSInfo,2,2,view", catalog)
 
     def test_a_value_outside_ascii_reaches_the_database(self):
@@ -182,18 +224,18 @@ class TestBuildDatabase(unittest.TestCase):
         skipped = self.build().skipped
 
         self.assertEqual([family for family, _ in skipped], ["autoruns"])
-        self.assertIn("a.lab", query(self.database, 'SELECT * FROM "NTFSInfo"',
-                                     self.elsewhere.name))
+        self.assertIn("a.lab", query(self.database, 'SELECT * FROM "NTFSInfo"', self.dir.name))
         self.assertIn("autoruns,1,1,skipped", query(
             self.database, "SELECT family, hosts, files, status FROM orca_tables",
-            self.elsewhere.name))
+            self.dir.name))
+        self.assertFalse(os.path.exists(os.path.join(self.dir.name, "fleet", "autoruns.parquet")))
 
     def test_a_rebuild_replaces_the_previous_database(self):
         self.build()
         self.datasets = self.datasets[:1]
         self.build()
         self.assertNotIn("b.lab", query(self.database, 'SELECT * FROM "NTFSInfo"',
-                                        self.elsewhere.name))
+                                        self.dir.name))
 
     def test_a_failed_build_leaves_the_previous_database_whole(self):
         self.build()
@@ -201,8 +243,8 @@ class TestBuildDatabase(unittest.TestCase):
         broken.run_in_database.side_effect = RuntimeError("duckdb failed: disk full")
         with self.assertRaises(RuntimeError):
             fleetdb.build_database(broken, self.database, {}, {})
-        self.assertIn("a.lab", query(self.database, 'SELECT * FROM "NTFSInfo"',
-                                     self.elsewhere.name))
+        # The previous database, and the stacked files it reads.
+        self.assertIn("a.lab", query(self.database, 'SELECT * FROM "NTFSInfo"', self.dir.name))
 
 
 FILEINFO = orcschema.SchemaTable("NTFSInfo", "fileinfo", {

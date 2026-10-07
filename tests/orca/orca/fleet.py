@@ -15,8 +15,17 @@ from typing import NamedTuple
 from . import cache, fleetdb, ingest, layout, orcschema, sevenzip, sidecars
 from .engine import get_engine
 
-# The fleet's own bookkeeping, beside the per-host datasets rather than inside any one of them.
-FLEET_DIR = ".orca-fleet"
+# The fleet's own bookkeeping (hosts.csv, coverage.csv): orca's '.orca' of the fleet directory
+# fleetdb writes, so the fleet's output stays fleet.duckdb, fleet\ and hosts\.
+FLEET_DIR = os.path.join(fleetdb.STACK_DIR, layout.ORCA_DIR)
+
+
+def fleet_root(where: str) -> str:
+    """The fleet's output directory, from 'where' (its FLEET_DIR)."""
+    root = os.path.abspath(where)
+    for _part in FLEET_DIR.split(os.sep):
+        root = os.path.dirname(root)
+    return root
 
 
 class FleetResult(NamedTuple):
@@ -41,7 +50,7 @@ def run_fleet(directory: str, out: str | None = None, *, password=None, private_
     collections, result, keep_dir = ingest_collections(
         directory, out, password=password, private_key=private_key, cms_backend=cms_backend,
         engine_name=engine_name, jobs=jobs, refresh=refresh, strict=strict, at_input=at_input,
-        csv=csv, csv_trunc=csv_trunc, exclude_cols=exclude_cols)
+        csv=csv, csv_trunc=csv_trunc, exclude_cols=exclude_cols, group=layout.HOSTS_DIR)
     if not collections:
         raise RuntimeError(f"no collection found in '{directory}': no Orc Outcome json "
                            "and no archive")
@@ -66,12 +75,14 @@ def ingest_collections(directory: str, out: str | None = None, *, password=None,
                        private_key=None, cms_backend=None, engine_name="duckdb", jobs=None,
                        refresh: bool = False, strict: bool = False, at_input: bool = False,
                        csv: bool = False, csv_trunc: bool = False, exclude_cols=None,
-                       elsewhere: bool = False) -> tuple[list, FleetResult, str]:
+                       elsewhere: bool = False,
+                       group: str | None = None) -> tuple[list, FleetResult, str]:
     """A dataset for every collection in 'directory', ingested or reused: (collections, result,
     keep_dir). No collection is an empty list, not an error: the caller says what that means.
 
-    The loop 'fleet' and 'report' share. 'elsewhere' is cache.ensure_dataset's: a current
-    dataset in the other default place is used rather than ingested again.
+    The loop 'fleet' and 'report' share. 'elsewhere' and 'group' are cache.ensure_dataset's:
+    a current dataset in another default place is used rather than ingested again, and a fleet
+    puts its datasets under 'hosts'.
     """
     seven = sevenzip.find_7z()
     if not seven:
@@ -95,7 +106,8 @@ def ingest_collections(directory: str, out: str | None = None, *, password=None,
                 directory, out, collection=collection, jobs=jobs, password=password,
                 private_key=private_key, cms_backend=cms_backend, engine_name=engine_name,
                 refresh=refresh, strict=strict, at_input=at_input, csv=csv,
-                csv_trunc=csv_trunc, exclude_cols=exclude_cols, elsewhere=elsewhere)
+                csv_trunc=csv_trunc, exclude_cols=exclude_cols, elsewhere=elsewhere,
+                group=group)
             result.ingested.append((collection, dataset))
         except (RuntimeError, OSError) as error:
             print(f"'{who}' failed: {error}")
@@ -144,13 +156,13 @@ def stored_dataset(dataset: str, root: str | None) -> str:
 
 
 def dataset_of(row: dict, where: str) -> str:
-    """The dataset a hosts.csv row names, as a path: relative ones are under the fleet's directory,
-    the parent of 'where' (.orca-fleet). An absolute one - a dataset on another drive, see
+    """The dataset a hosts.csv row names, as a path: relative ones are under the fleet's directory
+    (fleet_root of 'where', the FLEET_DIR). An absolute one - a dataset on another drive, see
     stored_dataset - is kept. Empty for a host that failed."""
     dataset = row.get("dataset") or ""
     if not dataset:
         return ""
-    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(where)), dataset))
+    return os.path.normpath(os.path.join(fleet_root(where), dataset))
 
 
 def coverage_rows(result: FleetResult) -> list[list[str]]:
@@ -195,7 +207,7 @@ def _read_csv(path: str) -> list[dict]:
 
 
 def read_hosts(where: str) -> list[dict]:
-    """hosts.csv as write_coverage wrote it under 'where' (the .orca-fleet directory)."""
+    """hosts.csv as write_coverage wrote it under 'where' (the FLEET_DIR)."""
     return _read_csv(os.path.join(where, HOSTS_FILE))
 
 
@@ -221,7 +233,7 @@ def write_coverage(where: str, collections: list, result: FleetResult) -> None:
     """
     os.makedirs(where, exist_ok=True)
     _write_csv(os.path.join(where, HOSTS_FILE), HOST_COLUMNS,
-               host_rows(collections, result, os.path.dirname(os.path.abspath(where))))
+               host_rows(collections, result, fleet_root(where)))
     _write_csv(os.path.join(where, COVERAGE_FILE), COVERAGE_COLUMNS, coverage_rows(result))
 
 
@@ -247,8 +259,9 @@ def write_database(where: str, collections: list, result: FleetResult,
         return False
 
     views = len(families) - sum(1 for view, _ in built.skipped if view in families)
-    print(f"fleet database: {database} ({views} view(s), {built.typed} typed; "
-          f"open with: duckdb \"{database}\")")
+    print(f"fleet database: {database} ({views} view(s), {built.typed} typed, over "
+          f"{fleetdb.STACK_DIR}{os.sep}; open from its directory: duckdb {fleetdb.DATABASE_NAME}, "
+          f"or elsewhere after SET file_search_path='{os.path.dirname(os.path.abspath(database))}')")
     print(f"  typed views: {typing.source}" if typing else
           "  no ORC schema found: no typed views (pass --schema)")
     for view, reason in built.skipped:

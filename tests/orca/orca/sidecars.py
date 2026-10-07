@@ -21,15 +21,19 @@ SIDECAR_EXTENSIONS = ingest.SEALED_OUTPUT_EXTENSIONS
 
 
 def dataset_dirs(root: str | None) -> list[str]:
-    """The datasets directly under 'root': the directories an ingest wrote its bookkeeping in."""
+    """The datasets under 'root': directly under it, where ingest puts one, and under its
+    'hosts', where a fleet puts them - the directories an ingest wrote its bookkeeping in."""
     if not root:
         return []
-    try:
-        names = sorted(os.listdir(root))
-    except OSError:
-        return []
-    return [os.path.join(root, name) for name in names
-            if os.path.isdir(layout.orca_dir(os.path.join(root, name)))]
+    found = []
+    for place in (root, os.path.join(root, layout.HOSTS_DIR)):
+        try:
+            names = sorted(os.listdir(place))
+        except OSError:
+            continue
+        found += [os.path.join(place, name) for name in names
+                  if os.path.isdir(layout.orca_dir(os.path.join(place, name)))]
+    return found
 
 
 def look_for(name: str, places: list[str]) -> str | None:

@@ -199,6 +199,29 @@ class TestEnsureRun(CacheCase):
         self.assertEqual(found, beside)
         self.assertEqual(len(calls), 1)
 
+    def test_a_group_puts_the_dataset_under_it(self):
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            dataset = cache.ensure_dataset(self.archive, group="hosts")
+        self.assertEqual(os.path.basename(os.path.dirname(dataset)), "hosts")
+
+    def test_elsewhere_finds_a_fleets_dataset_under_hosts_beside_the_collection(self):
+        """A fleet ran with --out-at-input; a report from anywhere reuses its dataset."""
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            fleet = cache.ensure_dataset(self.archive, at_input=True, group="hosts")
+            found = cache.ensure_dataset(self.archive, elsewhere=True)
+        self.assertEqual(found, fleet)
+        self.assertEqual(len(calls), 1)
+
+    def test_elsewhere_finds_a_fleets_dataset_under_hosts_here(self):
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            fleet = cache.ensure_dataset(self.archive, group="hosts")
+            found = cache.ensure_dataset(self.archive, elsewhere=True)
+        self.assertEqual(found, fleet)
+        self.assertEqual(len(calls), 1)
+
     def test_without_elsewhere_the_current_directory_gets_its_own(self):
         calls, fake = self.fake_ingest()
         with mock.patch.object(cache.ingest, "run_ingest", fake):
