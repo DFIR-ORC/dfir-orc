@@ -125,12 +125,19 @@ def find_7z() -> str | None:
     return default if os.path.exists(default) else None
 
 
+def run_7z(args: list[str], password: str | None = None) -> subprocess.CompletedProcess:
+    """Run 7-Zip so that it can never wait for a password.
+
+    '-p' is passed even with no password, and stdin is closed: an encrypted archive would
+    otherwise make 7-Zip prompt on the console, and an ingest or a report blocked on a prompt
+    nobody is there to answer is worse than one that names the archive it could not open.
+    """
+    return subprocess.run(args + ["-p" + (password or "")], capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL)
+
+
 def list_entries(seven_zip: str, archive: str, password: str | None = None) -> list[ArchiveEntry]:
-    args = [seven_zip, "l", "-slt"]
-    if password:
-        args.append("-p" + password)
-    args.append(archive)
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = run_7z([seven_zip, "l", "-slt", archive], password)
     return parse_listing(result.stdout.splitlines())
 
 
@@ -140,12 +147,10 @@ def test_archive(seven_zip: str, archive: str, password: str | None = None) -> A
     The only layer that reads the payload: a listing reports the CRC the archive claims for an
     entry, this recomputes it. Nothing is written, so it costs a read and some CPU, not space.
 
-    '-p' is passed even with no password, and stdin is closed: an encrypted entry would
-    otherwise make 7-Zip prompt on the console, and a verification pass that hangs waiting for
-    a password nobody is there to type is worse than one that reports the archive as failed.
+    A verification pass that hangs waiting for a password nobody is there to type is worse than
+    one that reports the archive as failed (see run_7z).
     """
-    args = [seven_zip, "t", archive, "-y", "-bsp0", "-p" + (password or "")]
-    result = subprocess.run(args, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    result = run_7z([seven_zip, "t", archive, "-y", "-bsp0"], password)
     problems = parse_test_output(result.stdout.splitlines() + result.stderr.splitlines())
     if result.returncode and not problems:
         # Fail closed: a non-zero 7-Zip whose output held nothing quotable still has to read
@@ -160,10 +165,8 @@ def extract_entry(seven_zip: str, archive: str, entry_path: str, dest_dir: str,
                   password: str | None = None) -> str:
     # -bsp0: silence the console progress line, which 7-Zip writes straight to the console
     # (bypassing captured stdout) and would otherwise leak into the caller's terminal.
-    args = [seven_zip, "x", archive, entry_path, "-o" + dest_dir, "-y", "-bsp0"]
-    if password:
-        args.append("-p" + password)
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = run_7z([seven_zip, "x", archive, entry_path, "-o" + dest_dir, "-y", "-bsp0"],
+                    password)
     out_path = os.path.join(dest_dir, entry_path)
 
     # 7-Zip returns 1 for non-fatal warnings yet still writes the entry; the PowerShell pipeline
@@ -194,10 +197,8 @@ def extract_matching(seven_zip: str, archive: str, patterns, dest_dir: str,
     callers extract several archives of one run into one directory and want the whole of it.
     """
     wanted = [patterns] if isinstance(patterns, str) else list(patterns)
-    args = [seven_zip, "x", archive, *wanted, "-o" + dest_dir, "-y", "-bsp0", "-r"]
-    if password:
-        args.append("-p" + password)
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = run_7z([seven_zip, "x", archive, *wanted, "-o" + dest_dir, "-y", "-bsp0", "-r"],
+                    password)
 
     # An archive with no match is ordinary (7-Zip still returns 0), so emptiness is not a
     # failure; only a fatal code is, and then with 7z's own message. Warnings (1) mean some
@@ -221,10 +222,7 @@ def extract_all(seven_zip: str, archive: str, dest_dir: str, password: str | Non
     not come out, which is the difference between an archive whose contents are now on disk and
     one that is still the only copy of something.
     """
-    args = [seven_zip, "x", archive, "-o" + dest_dir, "-y", "-bsp0"]
-    if password:
-        args.append("-p" + password)
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = run_7z([seven_zip, "x", archive, "-o" + dest_dir, "-y", "-bsp0"], password)
 
     # Tolerate 7-Zip's warning code (1); only a fatal error (>= 2) aborts, and then with 7z's
     # own message so the failing archive is identifiable without a rerun.

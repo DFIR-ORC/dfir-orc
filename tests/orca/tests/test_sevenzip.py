@@ -88,6 +88,29 @@ class TestExtractTolerance(unittest.TestCase):
                 sevenzip.extract_all("7z", "a.7z", "dest")
 
 
+class TestNeverPrompts(unittest.TestCase):
+    """Without '-p' and with stdin open, 7-Zip prompts for an encrypted archive's password and
+    waits - the suite hung on 'ORC_H_Locked.7z', and so would a report of a protected archive."""
+
+    def test_every_call_closes_stdin_and_passes_a_password(self):
+        calls = (lambda: sevenzip.list_entries("7z", "a.7z"),
+                 lambda: sevenzip.test_archive("7z", "a.7z"),
+                 lambda: sevenzip.extract_all("7z", "a.7z", "dest"),
+                 lambda: sevenzip.extract_matching("7z", "a.7z", "*.log", "dest"))
+        for call in calls:
+            with mock.patch("orca.sevenzip.subprocess.run",
+                            return_value=mock.Mock(returncode=0, stdout="", stderr="")) as run:
+                call()
+            self.assertIs(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
+            self.assertIn("-p", run.call_args.args[0])
+
+    def test_the_given_password_is_the_one_passed(self):
+        with mock.patch("orca.sevenzip.subprocess.run",
+                        return_value=mock.Mock(returncode=0, stdout="", stderr="")) as run:
+            sevenzip.extract_all("7z", "a.7z", "dest", "S3cret")
+        self.assertIn("-pS3cret", run.call_args.args[0])
+
+
 class TestIsArchive(unittest.TestCase):
     def blob(self, content: bytes) -> str:
         path = os.path.join(self.dir.name, "blob")
