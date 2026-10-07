@@ -138,7 +138,7 @@ def build_outcome_view(outcome_obj, ignore: list | None = None) -> dict:
         return {"available": False}
 
     kept = [fl for fl in outcome_obj.failures
-            if not ignores.matches_any([fl.command, f"{fl.set}/{fl.command}"], ignore or [])]
+            if not ignores.matches_any(ignores.command_names(fl.set, fl.command), ignore or [])]
     return {
         "available": True,
         "ok": len(kept) == 0,
@@ -837,9 +837,8 @@ def render_command_lines(rows: list[dict], failed_only: bool = False,
     """
     patterns = ignore or []
     kept = [row for row in rows
-            if not ignores.matches_any([row.get("command") or "",
-                                        f'{row.get("command_set")}/{row.get("command")}'],
-                                       patterns)]
+            if not ignores.matches_any(ignores.command_names(row.get("command_set"),
+                                                             row.get("command")), patterns)]
     selected = [row for row in sort_command_rows(kept)
                 if not failed_only or command_failed(row)]
     hosts = {row.get("computer_name") or "?" for row in kept}
@@ -1258,14 +1257,28 @@ def fleet_problems(records: list, reported: set) -> list[tuple[str, str, str]]:
     return problems
 
 
-def coverage_gaps(records: list) -> dict[str, list[str]]:
-    """host -> its gaps as coverage.csv words them ('missing DNS_records', 'skipped autoruns')."""
+def coverage_gaps(records: list, ignore: list | None = None) -> dict[str, list[str]]:
+    """host -> its gaps as coverage.csv words them ('missing DNS_records', 'skipped autoruns'),
+    less the tables 'ignore' passes over."""
     gaps: dict[str, list[str]] = {}
     for record in records:
         for row in record.coverage:
+            if ignores.matches(row.get("table", ""), ignore or []):
+                continue
             gaps.setdefault(row.get("OrcComputerName", ""), []).append(
                 f"{row.get('status', '')} {row.get('table', '')}")
     return gaps
+
+
+def ignored_gaps(records: list, ignore: list | None) -> dict[str, int]:
+    """host -> how many of its gaps 'ignore' passed over, so the fleet block can say so."""
+    counts: dict[str, int] = {}
+    for record in records:
+        for row in record.coverage:
+            if ignores.matches(row.get("table", ""), ignore or []):
+                host = row.get("OrcComputerName", "")
+                counts[host] = counts.get(host, 0) + 1
+    return counts
 
 
 def _subdirectories(directory: str) -> list[str]:
@@ -1298,10 +1311,15 @@ def datasets_near(given: list, known: list, identities: set, current: str) -> li
     return near
 
 
-def render_fleet_block(records: list, reported: set) -> str:
-    """The fleet's own say, before the hosts: how many answered, who did not, and the gaps."""
+def render_fleet_block(records: list, reported: set, ignore: list | None = None) -> str:
+    """The fleet's own say, before the hosts: how many answered, who did not, and the gaps.
+
+    A host whose every gap was ignored keeps its line, with nothing but the count: the line is
+    the only record that something was passed over.
+    """
     problems = fleet_problems(records, reported)
-    gaps = coverage_gaps(records)
+    gaps = coverage_gaps(records, ignore)
+    passed = ignored_gaps(records, ignore)
     lines = []
     for record in records:
         total = len(record.hosts)
@@ -1310,21 +1328,24 @@ def render_fleet_block(records: list, reported: set) -> str:
                      f"({record.where})")
     for host, _kind, message in problems:
         lines.append(f"  {host}: {message}")
-    if gaps:
+    if gaps or passed:
         lines.append("  coverage gaps:")
-        for host in sorted(gaps):
-            shown = ", ".join(gaps[host][:6]) + (", ..." if len(gaps[host]) > 6 else "")
-            lines.append(f"    {host}: {shown} ({len(gaps[host])})")
+        for host in sorted(set(gaps) | set(passed)):
+            kept = gaps.get(host, [])
+            shown = ", ".join(kept[:6]) + (", ..." if len(kept) > 6 else "")
+            count = counted("", len(kept), passed.get(host, 0)).strip()
+            lines.append(f"    {host}: {shown} {count}" if shown else f"    {host}: {count}")
     return "\n".join(lines)
 
 
-def fleet_json(host_objects: list, records: list, reported: set) -> list:
+def fleet_json(host_objects: list, records: list, reported: set,
+               ignore: list | None = None) -> list:
     """The host objects, each told how its fleet saw it, plus one per host with no dataset.
 
     On the hosts rather than in a top-level object: the JSON is a flat list so that filtering a
     fleet stays a one-liner (host_json), and a wrapper would break every such filter.
     """
-    gaps = coverage_gaps(records)
+    gaps = coverage_gaps(records, ignore)
     for host in host_objects:
         host["ingest"] = "ingested"
         host["coverage_gaps"] = gaps.get(host.get("host", ""), [])
@@ -1346,8 +1367,8 @@ NOTHING_FOUND = ("give a collection, a dataset, a fleet's output directory (one 
 
 def run_report(paths, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
-               refresh=False, ignore_file=None, recurse=False, context=None,
-               archive_logs=True, engine_name="duckdb") -> None:
+               refresh=False, ignore_file=None, ignore_patterns=None, recurse=False,
+               context=None, archive_logs=True, engine_name="duckdb") -> None:
     """Report on every collection in every directory given.
 
     A directory is read for what it holds rather than taken for one run: a fleet arrives either
@@ -1359,7 +1380,7 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
 
     # Read before anything expensive: a mistyped ignore file must not surface after a fleet's
     # worth of decryption, and must never be read as "nothing to ignore".
-    ignore = ignores.load(ignore_file)
+    ignore = ignores.load(ignore_file) + ignores.patterns(ignore_patterns)
     given = [as_directory(path) for path in (paths or ["."])]
     dirs, fleets = expand_fleets(candidate_dirs(given, recurse))
 
@@ -1395,7 +1416,7 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
 
     if list_commands:
         if fleets:
-            print(render_fleet_block(fleets, reported))
+            print(render_fleet_block(fleets, reported, ignore))
         # The same rows 'orca report outcome' writes to parquet, so the text and the table can
         # never disagree - and no engine is needed to print them.
         paths = [run.outcome_path for run in runs if run.outcome_path]
@@ -1425,7 +1446,7 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
 
     if as_json:
         hosts = [host_json(r) for r in reports]
-        print(render_json(fleet_json(hosts, fleets, reported) if fleets else hosts))
+        print(render_json(fleet_json(hosts, fleets, reported, ignore) if fleets else hosts))
         return
     if one_line:
         for r in reports:
@@ -1437,6 +1458,6 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     # 'explicit' is whether a view was named: a named view prints its heading even when it is
     # empty, and the default report leaves the empty ones out.
     explicit = bool(views)
-    blocks = [render_fleet_block(fleets, reported)] if fleets else []
+    blocks = [render_fleet_block(fleets, reported, ignore)] if fleets else []
     blocks += [render_human(r, views, explicit, context) for r in reports] + orphans
     print("\n\n".join(blocks))

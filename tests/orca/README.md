@@ -376,7 +376,8 @@ orca report E:\datasets\host --json                 # one flat JSON object per h
 orca report E:\datasets --list               # one line per command, every host
 orca report E:\datasets --list --failed      # only the commands that did not exit 0
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed collection
-orca report E:\datasets --ignore ignore.json         # pass over what you already know about
+orca report E:\datasets --ignore "Azure*,PersistenceSniper"   # pass over what you already know about
+orca report E:\datasets --ignore-file ignore.json    # the same, from a JSON list
 orca report                                  # in a fleet's output directory: the whole fleet
 orca report fleet.duckdb --one-line          # the same, named by its database
 ```
@@ -763,17 +764,19 @@ need the ingest. This
 is the opposite choice from `merge` and `diff` on purpose: for them the ingest *is* the work,
 and for `report` it would be a surprise.
 
-#### `--ignore`: the findings you have already decided about
+#### `--ignore`, `--ignore-file`: the findings you have already decided about
 
 ```powershell
-orca report \\host\archive\merged --private-key contoso.com.key --ignore ignore.json
+orca report \\host\archive\merged --private-key contoso.com.key --ignore-file ignore.json
+orca report --list --failed --ignore "PersistenceSniper,Azure*" --ignore ADComputers,DNS_records
 ```
 
 A fleet has findings you already know about - a command that always fails on these machines, an
 output ORC always writes empty - and a report that repeats them every time trains you to skim
-past the ones that matter. `--ignore` takes one JSON list of names; `*` and `?` work, and case
-does not matter, since ORC's own names mix cases (the `Autoruns` command writes an `autoruns`
-table):
+past the ones that matter. `--ignore` takes names on the command line, repeated or
+comma-separated; `--ignore-file` takes the same names as one JSON list, for a set you keep; both
+add up. `*` and `?` work, and case does not matter, since ORC's own names mix cases (the
+`Autoruns` command writes an `autoruns` table):
 
 ```json
 [
@@ -787,9 +790,21 @@ table):
 ```
 
 A name is matched against **every named finding**: a failed command, an empty output, an empty
-table, an unread table, a log with errors, and the lines of `--list`. A failed command can also
-be given as `set/command` (`ORC_Little/Autoruns`), so a name that means one thing in one command
-set can be passed over without silencing it everywhere.
+table, an unread table, a log with errors, the lines of `--list`, and a fleet's coverage gaps. A
+failed command can also be given as `set/command` (`ORC_Little/Autoruns`), so a name that means
+one thing in one command set can be passed over without silencing it everywhere, or by its key
+alone (`ORC_General`, the command set as `/key=` names it) to pass over every command of that
+key. A command and the table it writes may be named differently: `ADComputers` writes
+`AD_computers`, so silencing both takes both names.
+
+A fleet's coverage gaps say what they passed over the same way, and a host whose every gap was
+ignored keeps its line:
+
+```
+  coverage gaps:
+    DOM-DC-W2008.dom2008.lab: missing EventConsumer, missing FatInfo, ... (7 of 10, 3 ignored)
+    DOM-DC-W2008R2.dom2008r2.lab: missing FatInfo (1 of 3, 2 ignored)
+```
 
 **Nothing is hidden.** Each section heading says what it kept of how many and how many it passed
 over, `--one-line` and the JSON carry an `ignored` total, and a section whose every row was
@@ -818,7 +833,7 @@ without:  DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ...
 with:     DESKTOP-U9N26B0: ok=False cmds=35 fails=2 ... ignored=10
           w11test:         ok=False cmds=35 fails=2 ... ignored=10
 
-orca report ... --ignore ignore.json --list --failed
+orca report ... --ignore-file ignore.json --list --failed
   DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m36s  0x00000012
   DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  6m14s  0x00000009
   w11test          ORC_General  USNInfo                   USNInfo   0m23s  0x00000012
@@ -829,7 +844,8 @@ orca report ... --ignore ignore.json --list --failed
 
 The file is read before anything is decrypted, and a file that is there but unreadable is an
 error naming it: an ignore file with a typo that silently ignored nothing would make a report
-look clean for the wrong reason. `report outcome` and `report outline` do not take `--ignore` -
+look clean for the wrong reason. `report outcome` and `report outline` do not take `--ignore` or
+`--ignore-file` -
 they write a queryable table, and a row you want gone belongs in the query, not in the table.
 
 #### `--one-line`: one line per host

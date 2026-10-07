@@ -99,5 +99,36 @@ class TestMatches(unittest.TestCase):
                                             ["ORC_General/*"]))
 
 
+class TestCommandNames(unittest.TestCase):
+    def test_a_command_is_named_alone_by_its_key_and_as_key_slash_command(self):
+        self.assertEqual(ignores.command_names("ORC_General", "Autoruns"),
+                         ["Autoruns", "ORC_General", "ORC_General/Autoruns"])
+
+    def test_a_bare_key_passes_over_every_command_of_that_key_only(self):
+        self.assertTrue(ignores.matches_any(ignores.command_names("ORC_General", "Autoruns"),
+                                            ["ORC_General"]))
+        self.assertFalse(ignores.matches_any(ignores.command_names("ORC_FastFind", "FastFind"),
+                                             ["ORC_General"]))
+
+    def test_without_a_key_only_the_command_names_it(self):
+        self.assertEqual(ignores.command_names(None, "Autoruns"), ["Autoruns"])
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPatterns(unittest.TestCase):
+    """'--ignore' on the command line: repeated, and each one a comma-separated list."""
+
+    def test_repeated_and_comma_separated_say_the_same_thing(self):
+        self.assertEqual(ignores.patterns(["Azure*,PersistenceSniper", "DNS_records"]),
+                         ["Azure*", "PersistenceSniper", "DNS_records"])
+
+    def test_blanks_are_not_patterns(self):
+        # A trailing comma must not become a pattern.
+        self.assertEqual(ignores.patterns(["Azure*, ,", " AD_computers "]),
+                         ["Azure*", "AD_computers"])
+
+    def test_no_flag_is_no_pattern(self):
+        self.assertEqual(ignores.patterns(None), [])

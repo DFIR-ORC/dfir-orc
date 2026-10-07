@@ -626,6 +626,11 @@ class TestListIgnored(unittest.TestCase):
         self.assertNotIn("Autoruns", text)
         self.assertIn("USNInfo", text)
 
+    def test_a_key_alone_passes_over_its_every_command(self):
+        text = report.render_command_lines(self.rows(), False, ["ORC_General"])
+
+        self.assertIn("0 command(s), 0 failed, 3 ignored", text)
+
     def test_the_summary_says_how_many_were_passed_over(self):
         text = report.render_command_lines(self.rows(), False, ["Autoruns"])
 

@@ -39,6 +39,16 @@ def load(path: str | None) -> list[str]:
     return data
 
 
+def patterns(values: list[str] | None) -> list[str]:
+    """The names given on the command line: '--ignore' repeated, each one a comma-separated
+    list, so 'Azure*,PersistenceSniper' and two flags say the same thing. Blanks are dropped -
+    a trailing comma must not become a pattern."""
+    found = []
+    for value in values or []:
+        found += [name.strip() for name in value.split(",") if name.strip()]
+    return found
+
+
 def matches(name: str, patterns: list[str]) -> bool:
     """True when 'name' is one the patterns cover. '*' and '?' work; case does not matter.
 
@@ -48,6 +58,19 @@ def matches(name: str, patterns: list[str]) -> bool:
     """
     folded = (name or "").lower()
     return any(fnmatch.fnmatchcase(folded, pattern.lower()) for pattern in patterns)
+
+
+def command_names(command_set: str | None, command: str | None) -> list[str]:
+    """The ways of naming one command of one run, as an ignore pattern may name it.
+
+    The command on its own, its key (the command set, as '/key=' names it) to pass over every
+    command of that key, and 'set/command' so a name that means one thing in one key can be
+    ignored without silencing it everywhere.
+    """
+    names = [command or ""]
+    if command_set:
+        names += [command_set, f"{command_set}/{command or ''}"]
+    return names
 
 
 def matches_any(names: list[str], patterns: list[str]) -> bool:

@@ -196,10 +196,16 @@ class TestCli(unittest.TestCase):
                 cli._build_mode_parser(mode).parse_args(["--root", "E:/runs"])
 
     def test_report_takes_an_ignore_file(self):
-        args = cli._build_parser().parse_args(["report", "E:/runs", "--ignore",
+        args = cli._build_parser().parse_args(["report", "E:/runs", "--ignore-file",
                                                "ignore.json"])
 
-        self.assertEqual(args.ignore, "ignore.json")
+        self.assertEqual(args.ignore_file, "ignore.json")
+
+    def test_report_takes_ignore_patterns_repeated(self):
+        args = cli._build_parser().parse_args(["report", "--ignore", "Azure*,PersistenceSniper",
+                                               "--ignore", "DNS_records"])
+
+        self.assertEqual(args.ignore, ["Azure*,PersistenceSniper", "DNS_records"])
 
     def test_report_without_a_path_reports_the_current_directory(self):
         # In a fleet's output directory a bare 'orca report' reports the fleet.

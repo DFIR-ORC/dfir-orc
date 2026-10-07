@@ -1056,6 +1056,20 @@ class TestIgnoringFindings(unittest.TestCase):
 
         self.assertEqual([f["set"] for f in view["failures"]], ["ORC_General"])
 
+    def test_a_key_alone_passes_over_every_failure_of_that_key(self):
+        from orca.outcome import Failure, Outcome
+
+        run = Outcome(host="H", start="", end="", duration_seconds=1.0, commands=5,
+                      failures=[Failure("ORC_General", "Autoruns", "1", 0.0, ""),
+                                Failure("ORC_General", "USNInfo", "1", 0.0, ""),
+                                Failure("ORC_FastFind", "FastFind", "1", 0.0, "")],
+                      memory_peak_bytes=0, memory_peak_set="")
+
+        view = report.build_outcome_view(run, ["ORC_General"])
+
+        self.assertEqual([f["set"] for f in view["failures"]], ["ORC_FastFind"])
+        self.assertEqual(view["failures_ignored"], 2)
+
     def test_a_run_whose_every_failure_is_expected_reads_as_ok(self):
         # The point of the list: a command that always fails on this fleet is not news.
         from orca.outcome import Failure, Outcome

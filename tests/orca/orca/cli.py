@@ -349,8 +349,11 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="with --list: only the commands that did not exit 0")
     rp.add_argument("--recurse", action="store_true",
                     help="look in every directory under the ones given")
-    rp.add_argument("--ignore", default=None,
-                    help="JSON list of names (fnmatch) this report should pass over")
+    rp.add_argument("--ignore", action="append", default=None, metavar="PATTERN",
+                    help="name (fnmatch) this report should pass over; repeat it or separate "
+                         "with commas, e.g. --ignore 'Azure*,PersistenceSniper'")
+    rp.add_argument("--ignore-file", default=None,
+                    help="JSON list of names (fnmatch) to pass over, added to --ignore")
     rp.add_argument("--private-key", default=None,
                     help="PEM key to unseal a sealed Outcome, Outline or log")
     rp.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
@@ -514,7 +517,8 @@ def main(argv=None) -> int:
                           list_commands=args.list, failed_only=args.failed,
                           private_key=args.private_key, cms_backend=args.cms_backend,
                           work_dir=args.work_dir, refresh=args.refresh,
-                          ignore_file=args.ignore, recurse=args.recurse,
+                          ignore_file=args.ignore_file, ignore_patterns=args.ignore,
+                          recurse=args.recurse,
                           context=args.backtrace, archive_logs=args.archive_logs,
                           engine_name=args.engine)
     elif args.command == "diff":

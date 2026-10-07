@@ -93,6 +93,23 @@ class TestFleetDirectory(FleetCase):
         self.assertIn("c.lab: ingest failed: archive is truncated", text)
         self.assertIn("b.lab: missing autoruns (1)", text)
 
+    def test_an_ignored_gap_is_passed_over_and_counted(self):
+        self.fleet(failed=False)
+        write_fleet(self.dir, [["a.lab", "{A}", os.path.join(self.dir, "ORC_A"), "ingested", ""],
+                               ["b.lab", "{B}", os.path.join(self.dir, "ORC_B"), "ingested", ""]],
+                    [["a.lab", "DNS_records", "missing"], ["b.lab", "autoruns", "missing"],
+                     ["b.lab", "AD_computers", "skipped"]])
+
+        text = self.invoke([self.dir], ignore_patterns=["DNS_records,AD_*"])
+
+        # a.lab keeps its line: it is the only record that something was passed over.
+        self.assertIn("a.lab: (0 of 1, 1 ignored)", text)
+        self.assertIn("b.lab: missing autoruns (1 of 2, 1 ignored)", text)
+        self.assertNotIn("DNS_records", text)
+        hosts = json.loads(self.invoke([self.dir], as_json=True,
+                                       ignore_patterns=["DNS_records,AD_*"]))
+        self.assertEqual([h["coverage_gaps"] for h in hosts], [[], ["missing autoruns"]])
+
     def test_a_dataset_that_is_gone_is_named(self):
         self.fleet(failed=False)
         write_fleet(self.dir, [["a.lab", "{A}", os.path.join(self.dir, "ORC_A"), "ingested", ""],
