@@ -228,14 +228,24 @@ def table_names(dataset: str) -> list[str]:
     files too, and a glob would offer 'dfir-orc.parquet' and friends as if a tool had collected
     them. The glob is the fallback for a run directory written by hand.
     """
+    return [name for name, _entry in table_entries(dataset)]
+
+
+def table_entries(dataset: str) -> list[tuple[str, str]]:
+    """(table name, collected entry path) for each table, in the order the ingest named them.
+
+    The entry is what ORC called the file ('NTFSInfo_00000000_..._.csv'), which the table name
+    may extend (see naming.assign_names). Empty for a run directory written by hand.
+    """
     path = name_map_path(dataset)
     if not os.path.exists(path):
-        return [os.path.basename(p)[:-len(".parquet")]
+        return [(os.path.basename(p)[:-len(".parquet")], "")
                 for p in sorted(glob.glob(os.path.join(dataset, "*.parquet")))
                 if os.path.basename(p) not in DERIVED_PARQUET]
 
     with open(path, newline="", encoding="utf-8", errors="replace") as f:
-        return [row["name"] for row in csv.DictReader(f) if row.get("name")]
+        return [(row["name"], row.get("entry_path") or "")
+                for row in csv.DictReader(f) if row.get("name")]
 
 
 def table_paths(dataset: str) -> dict[str, str]:

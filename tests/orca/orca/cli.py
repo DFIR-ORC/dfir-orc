@@ -205,6 +205,13 @@ def _build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--out-at-input", action="store_true",
                     help="put them inside the collection directory instead, so they are "
                          "found again from anywhere")
+    fl.add_argument("--schema", default="auto", metavar="auto|bundled|infer|PATH",
+                    help="what types the database's *_typed views: 'auto' (default), ORC's table "
+                         "schemas shipped with orca, then types read from the values for what "
+                         "they do not describe; 'bundled', the schemas only; 'infer', the values "
+                         "only, for every table (scans all of them); or the path of a "
+                         "DFIR-ORC.exe, its own schemas then the values, for a collection made "
+                         "by a newer ORC")
     fl.add_argument("--password", default=None, help="archive password")
     fl.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
     fl.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
@@ -470,7 +477,7 @@ def main(argv=None) -> int:
                                private_key=args.private_key, cms_backend=args.cms_backend,
                                engine_name=args.engine, jobs=args.jobs,
                                refresh=args.refresh, strict=args.strict,
-                               at_input=args.out_at_input)
+                               at_input=args.out_at_input, schema=args.schema)
     elif args.command == "extract":
         extract.run_extract(args.collection, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,

@@ -238,24 +238,118 @@ orca fleet C:\share\collect --private-key contoso.com.key --out-at-input   # int
 
 Each dataset is named after its own run, and every table in it carries `OrcComputerName`,
 `OrcRunId` and `OrcTimestamp` - as does every table `orca ingest` writes, so a dataset made by
-hand answers the same query. That makes the fleet view a glob: no second copy of the data, and
-nothing to rebuild when one host is re-collected:
+hand answers the same query.
 
-```sql
--- stacking: the autorun one host has and ninety-nine do not
-SELECT "Image Path", "SHA-256", count(DISTINCT "OrcComputerName") AS hosts
-FROM read_parquet('*/autoruns.parquet', union_by_name = true)
-GROUP BY ALL ORDER BY hosts ASC;
+**The fleet database.** `fleet` also writes `fleet.duckdb` beside the datasets: one view per
+table across every host of the fleet, so the fleet is one file to open, from any directory. Two
+fleets ingested into one directory overwrite each other's; `--out` keeps them apart. Worked
+queries - stacking, timelines, timestomping, hashes, WMI persistence - are in
+[fleet-database-examples.md](fleet-database-examples.md).
+
+```
+fleet database: .\fleet.duckdb (26 view(s), 22 typed; open with: duckdb ".\fleet.duckdb")
 ```
 
-`union_by_name = true` is required rather than cosmetic: ORC versions and configurations differ
-across an estate, and a positional union would misalign the columns.
+```sql
+-- duckdb fleet.duckdb
+-- stacking: the autorun one host has and ninety-nine do not
+SELECT "Image Path", "SHA-256", count(DISTINCT OrcComputerName) AS hosts
+FROM autoruns GROUP BY ALL ORDER BY hosts ASC;
 
-Read the denominator with it. `.orca-fleet/hosts.csv` (beside the datasets, wherever they went)
-lists every host and whether it ingested; `.orca-fleet/coverage.csv` lists only the gaps - a
-table a host skipped, or one every other host produced and this one did not. A stacking result
-without them describes the hosts that answered while reading as though it described all of
-them.
+-- every host's MFT in one table; OrcParquetFile says which volume a row came from
+SELECT OrcComputerName, OrcParquetFile, count(*) FROM NTFSInfo GROUP BY ALL;
+```
+
+A view is per table **family**, not per file name. ORC names a per-volume table after its volume
+(`NTFSInfo_00000000_DiskInterface_0x4e106ff4106fe187_`), so no two hosts share one; the view
+`NTFSInfo` holds all of them, whatever the volume. Views, never copies: a host re-ingested in
+place is current at once. Re-run `fleet` after adding or removing a host - it reuses every
+current dataset, so that costs the views only. The views list their files by absolute path, so
+a moved fleet needs that re-run too; a view whose file is gone fails with DuckDB's own
+`No files found`, naming it. A view whose files cannot be read is skipped and named, and the
+rest of the database is still written.
+
+**Typed views.** Every column is text, as collected. Each table ORC describes, and each table
+whose values say what they are, also gets a typed companion, `<family>_typed`: timestamps as
+`TIMESTAMP`, sizes, FRNs and USNs as integers (hex or decimal), `Y`/`N` as `BOOLEAN`, GUIDs as
+`UUID`; hashes and names stay text. A cell that does
+not parse is NULL there and still exact in the text view - a truncated timestamp included, which
+a plain cast would have turned into a time nobody recorded.
+
+```sql
+SELECT OrcComputerName, FullName, CreationDate FROM NTFSInfo_typed
+WHERE CreationDate BETWEEN '2026-10-01' AND '2026-10-06' ORDER BY CreationDate;
+```
+
+`--schema` says where the types come from:
+
+```powershell
+orca fleet E:\collect                                          # auto: ORC's schemas, then the values
+orca fleet E:\collect --schema bundled                         # ORC's schemas only
+orca fleet E:\collect --schema infer                           # the values only, every table
+orca fleet E:\collect --schema E:\builds\10.4.0\DFIR-ORC.exe   # that binary's schemas, then the values
+```
+
+**`auto`, the default: ORC's schemas first, then the values.** ORC's own table schemas
+(`*SqlSchema.xml`, copied into `orca/schemas`) type every table ORC describes - its large ones,
+NTFSInfo, USNInfo, I30Info, without reading a row. What no schema types is then read from its
+values: the tables of the other tools (autoruns, processes, DNS_records, ...) and any column a
+newer ORC added. A column the schema calls text stays text - a hash is never re-read as a number.
+
+Reading from the values means checking every non-empty value of a column, across the whole
+fleet, against a strict list - `Y`/`N`/`true`/`false`, unsigned (decimal or `0x` hex) and signed
+integers, timestamps in ORC's, ISO and autorunsc's formats, GUIDs - and the first that fits them
+all is the column's type. One value that fits none keeps the column text, and so does an empty
+column; no date whose day and month order depends on the locale (systeminfo's `02/10/2019`) is
+ever guessed.
+
+Between ORC versions columns are added, types do not change, so the bundled schemas type any
+older collection. A collection made by a **newer** ORC carries columns they do not know; `fleet`
+names them and types them from their values meanwhile:
+
+```
+  1 table(s) have columns the schema does not know; typed from their values:
+    NTFSInfo: NewColumn
+  the collection was likely made by a newer ORC than the bundled schema; for its own types,
+  pass --schema with the path of the DFIR-ORC.exe that collected it
+```
+
+**The alternatives.**
+
+- **A `DFIR-ORC.exe`**: its own schemas in place of the bundled ones, then the values as `auto`
+  does - for that newer collection; `orca collect` leaves the binary that ran beside the results.
+  It is never run - it is evidence - only its resources are read; a capsule's runners are
+  zstd-compressed, which needs Python 3.14, and with an older Python the per-architecture
+  `DFIR-ORC_x64.exe` works.
+- **`bundled`**: ORC's schemas only. Fastest, and every typed column is one ORC declared; the
+  other tools' tables stay text.
+- **`infer`**: the values only, for every table. It reads every table, and its answer depends on
+  the data: NTFSInfo's `EASize`, `OwnerId` and `VolumeID`, empty on the sample, stay text where
+  the schema knows them as integers - another fleet would type them.
+
+On the sample: `auto` typed 22 tables in 14 s (17 by schema, 5 inferred), `bundled` 17 in 3 s,
+`infer` 21 in 30 s.
+
+Timestamps are held to their full width before they are parsed, whatever the source:
+`'11:4:22.390'` is NULL in a typed view, never `11:04:22`. `orca_schema` says which source typed
+the views, `orca_tables.schema` what each was read as - an ORC table (matched by column names,
+since nothing in a schema says which collected file it describes), `inferred`, or both - and
+`orca_tables.not_in_schema` the columns a schema did not know.
+
+Read the denominator with it - the database carries it too:
+
+| table | holds |
+|:---|:---|
+| `orca_hosts` | every host and whether it ingested (`.orca-fleet/hosts.csv`) |
+| `orca_coverage` | only the gaps: a table a host skipped, or a family every other host produced and this one did not (`.orca-fleet/coverage.csv`) |
+| `orca_tables` | one row per view: how many hosts and files it spans, the ORC table a typed view reads, or why it was skipped |
+| `orca_schema` | where the typed views' schemas came from |
+
+A stacking result without them describes the hosts that answered while reading as though it
+described all of them. Without the database, the same stacking is a glob from the fleet's
+directory - `read_parquet('*/autoruns.parquet', union_by_name = true)`, where `union_by_name`
+is required: ORC versions and configurations differ across an estate, and a positional union
+would misalign the columns.
 
 ### GetThis summary
 

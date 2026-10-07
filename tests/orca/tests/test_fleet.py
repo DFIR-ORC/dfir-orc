@@ -143,7 +143,8 @@ class TestCoverage(unittest.TestCase):
 
             tables = {a: ["autoruns", "NTFSInfo"], b: ["NTFSInfo"]}
             where = os.path.join(d, fleet.FLEET_DIR)
-            with mock.patch.object(fleet.layout, "table_names", side_effect=lambda p: tables[p]), \
+            with mock.patch.object(fleet.fleetdb, "dataset_families",
+                                      side_effect=lambda p: dict.fromkeys(tables[p], [])), \
                     mock.patch.object(fleet.layout, "skipped", return_value={}):
                 fleet.write_coverage(where, [ca, cb], result)
 
@@ -201,7 +202,8 @@ class TestCoverage(unittest.TestCase):
 
             tables = {one: ["autoruns"], two: []}
             where = os.path.join(d, fleet.FLEET_DIR)
-            with mock.patch.object(fleet.layout, "table_names", side_effect=lambda p: tables[p]), \
+            with mock.patch.object(fleet.fleetdb, "dataset_families",
+                                      side_effect=lambda p: dict.fromkeys(tables[p], [])), \
                     mock.patch.object(fleet.layout, "skipped", return_value={}):
                 fleet.write_coverage(where, [c1, c2], result)
 
@@ -210,6 +212,52 @@ class TestCoverage(unittest.TestCase):
             rows = self._read(os.path.join(where, "coverage.csv"))
             self.assertEqual(rows, [{"OrcComputerName": "a.lab", "table": "autoruns",
                                      "status": "missing"}])
+
+
+class TestCoverageByFamily(unittest.TestCase):
+    def test_another_hosts_volume_is_not_missing(self):
+        """On the sample, every host was 'missing' every other host's NTFSInfo_<volume>."""
+        with tempfile.TemporaryDirectory() as d:
+            result = fleet.FleetResult([], [])
+            for host, volume in (("a.lab", "0x4e10"), ("b.lab", "0x2244")):
+                dataset = os.path.join(d, host)
+                name = f"NTFSInfo_00000000_DiskInterface_{volume}_"
+                write_dataset(dataset, {name: name + ".csv", "autoruns": "autoruns.csv"})
+                collection = ingest.Collection(None, [], host, "{%s}" % host, "T")
+                result.ingested.append((collection, dataset))
+            os.remove(os.path.join(d, "b.lab", "autoruns.parquet"))
+
+            rows = fleet.coverage_rows(result)
+
+        self.assertEqual(rows, [["b.lab", "autoruns", "missing"]])
+
+    def test_a_skipped_table_is_not_also_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            result = fleet.FleetResult([], [])
+            for host in ("a.lab", "b.lab"):
+                dataset = os.path.join(d, host)
+                write_dataset(dataset, {"AD_computers": "AD_computers.csv"})
+                result.ingested.append((ingest.Collection(None, [], host, host, "T"), dataset))
+            os.remove(os.path.join(d, "b.lab", "AD_computers.parquet"))
+
+            with mock.patch.object(fleet.layout, "skipped",
+                                   side_effect=lambda p: {"AD_computers": "not a CSV"}
+                                   if p.endswith("b.lab") else {}):
+                rows = fleet.coverage_rows(result)
+
+        self.assertEqual(rows, [["b.lab", "AD_computers", "skipped"]])
+
+
+def write_dataset(dataset: str, tables: dict) -> None:
+    """A dataset as ingest leaves it, as far as families care: the name-map and the parquet."""
+    os.makedirs(layout.orca_dir(dataset), exist_ok=True)
+    with open(layout.name_map_path(dataset), "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["name", "source_archive", "entry_path", "source_mtime"])
+        for name, entry in tables.items():
+            writer.writerow([name, "General.7z", entry, ""])
+            with open(os.path.join(dataset, name + ".parquet"), "wb") as table:
+                table.write(b"PAR1")
 
 
 class TestCoverageLandsWithTheProducts(unittest.TestCase):

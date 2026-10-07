@@ -187,6 +187,15 @@ class Engine:
     def query_rows(self, select_sql: str, limit: int) -> list:
         raise NotImplementedError
 
+    def run_in_database(self, database: str, sql: str) -> None:
+        raise NotImplementedError
+
+    def query_column_in_database(self, database: str, select_sql: str, column: str) -> list[str]:
+        raise NotImplementedError
+
+    def query_rows_in_database(self, database: str, select_sql: str) -> list[dict]:
+        raise NotImplementedError
+
 
 class DuckDbEngine(Engine):
     def __init__(self, exe: str, memory_limit: str | None = None):
@@ -208,24 +217,40 @@ class DuckDbEngine(Engine):
                 settings += f"SET threads={threads}; "
         return settings
 
-    def _run(self, sql: str) -> None:
+    def _run(self, sql: str, database: str | None = None) -> None:
         # Feed SQL via stdin, not `-c`: the generated merge SQL can exceed the Windows
         # command-line length limit (WinError 206). Stdin still yields proper exit codes.
-        proc = subprocess.run([self.exe], input=self._settings() + sql,
+        command = [self.exe, database] if database else [self.exe]
+        proc = subprocess.run(command, input=self._settings() + sql,
                               capture_output=True, text=True)
         if proc.returncode != 0:
             raise RuntimeError(f"duckdb failed: {proc.stderr.strip()}\nSQL: {sql[:500]}")
 
-    def _scalar_csv(self, sql_select: str, column: str) -> list[str]:
-        # Run a SELECT, capture rows via COPY TO a temp CSV (no -json), read column.
+    def run_in_database(self, database: str, sql: str) -> None:
+        """Run 'sql' against a database file, creating it if needed, instead of in memory."""
+        self._run(sql, database)
+
+    def query_column_in_database(self, database: str, select_sql: str, column: str) -> list[str]:
+        """One column of a SELECT run against a database file."""
+        return self._scalar_csv(select_sql, column, database)
+
+    def query_rows_in_database(self, database: str, select_sql: str) -> list[dict]:
+        """Every row of a SELECT run against a database file, as text."""
+        return self._rows_csv(select_sql, database)
+
+    def _rows_csv(self, sql_select: str, database: str | None = None) -> list[dict]:
+        # Run a SELECT, capture rows via COPY TO a temp CSV (no -json), read them back.
         fd, tmp = tempfile.mkstemp(suffix=".csv")
         os.close(fd)
         try:
-            self._run(f"COPY ({sql_select}) TO '{_fwd(tmp)}' (HEADER, DELIMITER ',');")
+            self._run(f"COPY ({sql_select}) TO '{_fwd(tmp)}' (HEADER, DELIMITER ',');", database)
             with open(tmp, newline="", encoding="utf-8", errors="replace") as f:
-                return [row[column] for row in _csv.DictReader(f)]
+                return list(_csv.DictReader(f))
         finally:
             os.remove(tmp)
+
+    def _scalar_csv(self, sql_select: str, column: str, database: str | None = None) -> list[str]:
+        return [row[column] for row in self._rows_csv(sql_select, database)]
 
     def columns(self, path: str, null_padding: bool = False) -> list[str]:
         source = (_csv_source(path, null_padding) if _reader(path) == "read_csv_auto"

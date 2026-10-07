@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="GetSamples">
+
+  <table key="SampleInfo">
+
+    <utf8 name="ComputerName" maxlen="50" />
+    <utf16 name="FullPath"    maxlen="32k" />
+    <utf16 name="FileName"    maxlen="256" />
+
+    <enum name="Authenticode">
+      <value index="0x00">ASUndetermined</value>
+      <value>NotSigned</value>
+      <value>SignedVerified</value>
+      <value>SignedNotVerified</value>
+      <value>SignedTampered</value>
+    </enum>
+    <enum name="Loaded">
+      <value index="0x00">LSUndetermined</value>
+      <value>Loaded</value>
+      <value>LoadedAndUnloaded</value>
+    </enum>
+    <enum name="Registry">
+      <value index="0x00">RESUndetermined</value>
+      <value>NotRegistered</value>
+      <value>Registered</value>
+    </enum>
+
+    <enum name="Running">
+      <value index="0x00">RUSUndetermined</value>
+      <value>DoesNotRun</value>
+      <value>Runs</value>
+    </enum>
+    
+  </table>
+
+  <table key="SampleTimeline">
+
+    <utf8 name="ComputerName" maxlen="50" />
+    <timestamp name="Time" />
+    <utf8 name="Type" maxlen="20" />
+    <uint32 name="ParentID" />
+    <uint32 name="ProcessID" />
+    <utf16  name="FullPath" maxlen="32k"/>
+   
+  </table>
+  
+</sqlschema>
