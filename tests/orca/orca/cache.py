@@ -26,7 +26,9 @@ from . import ingest, layout
 # 6: each archive has a directory of its own in the run, holding the logs taken out of it, its
 #    'Errors' container and - for an encrypted collection - its decrypted '.7z'. Without the
 #    bump a run ingested before reads as current and its logs sit where report no longer looks.
-LAYOUT_VERSION = 6
+# 7: name-map records each table's top archive ('archive'), which places its CSV in that
+#    archive's directory; a run without it would put every CSV in one 'csv' at the top.
+LAYOUT_VERSION = 7
 
 MARKER = "cache-source.json"
 

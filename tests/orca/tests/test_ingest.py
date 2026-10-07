@@ -1296,6 +1296,16 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class TestJobsKnowTheirArchive(unittest.TestCase):
+    def test_a_job_records_the_stem_of_the_top_archive_it_came_from(self):
+        jobs = ingest._jobs_from_logical([
+            ("autoruns.csv", "C:/top/ORC_H_General.7z", "autoruns.csv", None, "",
+             "C:/top/ORC_H_General.7z"),
+            ("GetThis/x.csv", "C:/stage/GetThis.7z", "x.csv", None, "",
+             "C:/top/ORC_H_General.7z.p7b")])
+        self.assertEqual([job.archive for job in jobs], ["ORC_H_General", "ORC_H_General"])
+
+
 class TestIngestReusesACurrentRun(unittest.TestCase):
     """orca ingest twice, or with --csv after the fact: the tables are built once."""
 

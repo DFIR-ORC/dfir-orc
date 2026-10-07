@@ -20,14 +20,16 @@ class CsvJob:
     output_name: str
     password: str | None = None
     source_mtime: str = ""
+    archive: str = ""        # the top archive's stem: its directory in the dataset
 
 
 def _jobs_from_logical(logical: list[tuple]) -> list[CsvJob]:
-    # logical item = (logical_path, source_archive, entry_path, password, modified).
+    # logical item = (logical_path, source_archive, entry_path, password, modified[, top]).
     names = naming.assign_names([item[0] for item in logical])
-    return [CsvJob(entry_path=ep, source_archive=sa, output_name=name, password=pw,
-                   source_mtime=mt)
-            for (lp, sa, ep, pw, mt), name in zip(logical, names)]
+    return [CsvJob(entry_path=item[2], source_archive=item[1], output_name=name,
+                   password=item[3], source_mtime=item[4],
+                   archive=layout.archive_stem(item[5]) if len(item) > 5 else "")
+            for item, name in zip(logical, names)]
 
 
 def plan_jobs(entries_by_archive: list[tuple[str, list]]) -> list[CsvJob]:
@@ -92,11 +94,13 @@ def discover_jobs(top_archives: list[str], staging_dir: str, seven_zip: str,
                     relpath = f"{stem}/{nested.path}"
                     manifest.append(_manifest_row(relpath, nested))
                     if nested.path.lower().endswith(".csv"):
-                        logical.append((relpath, container, nested.path, pw, nested.modified))
+                        logical.append((relpath, container, nested.path, pw, nested.modified,
+                                        top))
             else:
                 manifest.append(_manifest_row(entry.path, entry))
                 if low.endswith(".csv"):
-                    logical.append((entry.path, top, entry.path, password_override, entry.modified))
+                    logical.append((entry.path, top, entry.path, password_override, entry.modified,
+                                    top))
     return _jobs_from_logical(logical), manifest
 
 
@@ -536,9 +540,10 @@ def _write_name_map(jobs: list[CsvJob], out_dir: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = _csv.writer(f)
-        w.writerow(["name", "source_archive", "entry_path", "source_mtime"])
+        w.writerow(["name", "source_archive", "entry_path", "source_mtime", "archive"])
         for j in jobs:
-            w.writerow([j.output_name, j.source_archive, j.entry_path, j.source_mtime])
+            w.writerow([j.output_name, j.source_archive, j.entry_path, j.source_mtime,
+                        j.archive])
 
 
 def _write_products(names: list[str], out_dir: str) -> None:

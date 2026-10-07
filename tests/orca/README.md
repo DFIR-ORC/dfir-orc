@@ -79,9 +79,9 @@ E:\dumps\ORC_WS_HOST01_Offline\
     ORC_..._General.7z        the decrypted archive, kept and reused (encrypted collections only)
     NTFSInfo.log  ...         each command's own logs, out of this archive
     Errors\                   its 'Errors' sub-archive, expanded
+    NTFSInfo_....csv  ...     this archive's tables as CSV               (with --csv)
   getthis.parquet             every collected GetThis sample (written by `orca getthis`)
   dfir-orc.parquet            the wide join (written by `orca merge`)
-  csv\                        the same tables as CSV                      (with --csv)
   csv-trunc\                  CSV with volatile date columns dropped     (with --csv-trunc)
   .orca\                      orca's own bookkeeping, nothing to read by hand
     name-map.csv              table name -> source archive / entry / mtime
@@ -131,18 +131,20 @@ one would have failed.
 
 A dataset is parquet only unless you ask for the CSVs: no orca command reads them back, and
 writing them cost the big tables (NTFSInfo, USNInfo) a second pass in a larger format.
-`--csv` writes `csv\`, the tables as normalized text (UTF-8, one quoting style, one file per
-table); `--csv-trunc` writes `csv-trunc\`, the same less the volatile columns (`--exclude-cols`),
-for a text diff of two runs. Both work on `orca ingest` and `orca fleet`, and neither is part
+`--csv` writes the tables as normalized text (UTF-8, one quoting style, one file per table),
+each directly in the directory of the archive it was collected in
+(`ORC_..._General\NTFSInfo_....csv`), beside that archive's logs and `.7z`: it is the converted
+form of a file that archive holds.
+`--csv-trunc` writes `csv-trunc\` at the dataset's top, the same less the volatile columns
+(`--exclude-cols`), for a text diff of two runs: orca's derivation, not any one archive's file. Both work on `orca ingest` and `orca fleet`, and neither is part
 of the cache key: asked for after the fact, they convert the tables already there rather than
 ingest again, and only a table whose CSV is missing or older than its parquet is written. A
 dataset is a source of its own, so `orca ingest <dataset> --csv` needs no collection. A rebuild of
 the tables removes them (they are in `products.txt`). `--no-csv` and `--no-trunc` are still
 accepted, and do nothing.
 
-The CSVs keep a directory of their own: a top-level CSV of the collection (`VSS_list.csv`)
-carries the same name as the table ingested from it, and flat they would overwrite the
-collected file. They are not ORC's own CSVs: for those, as collected, use `orca extract`.
+They are not ORC's own CSVs: for those, as collected, use `orca extract`. Each CSV is in
+`products.txt` by name, so a rebuild removes it and leaves the archive's logs and `.7z`.
 
 A second `orca ingest` of a collection whose dataset is current builds nothing (`--refresh` to
 force it), as `fleet` and `diff` already did.

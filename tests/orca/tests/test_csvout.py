@@ -78,10 +78,10 @@ class TestWriteCsv(CsvCase):
         self.assertEqual(self.write(trunc=True, drop=["MD5"]), 0)
         self.assertEqual(self.write(trunc=True, drop=["SHA1"]), 2)
 
-    def test_both_directories_are_products_a_rebuild_removes(self):
+    def test_what_it_writes_is_a_product_a_rebuild_removes(self):
         self.write(csv=True, trunc=True, drop=[])
         products = layout.products(self.dataset)
-        self.assertIn(csvout.CSV_DIR, products)
+        self.assertIn(os.path.join(csvout.CSV_DIR, "autoruns.csv"), products)
         self.assertIn(csvout.CSV_TRUNC_DIR, products)
         self.assertIn("autoruns.parquet", products)
 
@@ -111,6 +111,55 @@ class TestEveryTableHasItsParquet(CsvCase):
         with redirect_stdout(out):
             self.assertEqual(csvout.write_csv(self.engine, self.dataset, csv=True), 1)
         self.assertIn("skipped: NTFSInfo", out.getvalue())
+
+
+class TestCsvInTheArchiveDirectory(unittest.TestCase):
+    """A table's CSV beside the logs of the archive it came from; csv-trunc at the top."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.dataset = os.path.join(self.dir.name, "run")
+        os.makedirs(layout.orca_dir(self.dataset))
+        with open(layout.name_map_path(self.dataset), "w", newline="", encoding="utf-8") as f:
+            f.write("name,source_archive,entry_path,source_mtime,archive\n")
+            f.write("autoruns,x,autoruns.csv,0,ORC_H_General\n")
+            f.write("FastFind,x,FastFind.csv,0,ORC_H_FastFind\n")
+        for name in ("autoruns", "FastFind"):
+            with open(os.path.join(self.dataset, name + ".parquet"), "wb") as f:
+                f.write(b"PAR1")
+        layout.write_products(self.dataset, [layout.ORCA_DIR])
+        self.engine = FakeEngine()
+
+    def write(self, **kwargs):
+        with redirect_stdout(io.StringIO()):
+            return csvout.write_csv(self.engine, self.dataset, **kwargs)
+
+    def test_each_tables_csv_is_directly_in_its_archives_directory(self):
+        self.write(csv=True)
+        for archive, name in (("ORC_H_General", "autoruns"), ("ORC_H_FastFind", "FastFind")):
+            self.assertEqual(os.listdir(os.path.join(self.dataset, archive)), [name + ".csv"])
+        self.assertFalse(os.path.exists(os.path.join(self.dataset, "csv")))
+
+    def test_csv_trunc_stays_at_the_datasets_top(self):
+        self.write(trunc=True, drop=["MD5"])
+        self.assertEqual(sorted(os.listdir(os.path.join(self.dataset, "csv-trunc"))),
+                         ["FastFind.csv", "autoruns.csv"])
+
+    def test_a_rebuild_removes_the_csvs_and_keeps_the_archive(self):
+        from orca import cache
+        kept = os.path.join(self.dataset, "ORC_H_General", "ORC_H_General.7z")
+        os.makedirs(os.path.dirname(kept), exist_ok=True)
+        open(kept, "wb").close()
+        self.write(csv=True, trunc=True, drop=[])
+        self.assertIn(os.path.join("ORC_H_General", "autoruns.csv"),
+                      layout.products(self.dataset))
+
+        cache.clear_dataset(self.dataset)
+
+        self.assertEqual(os.listdir(os.path.join(self.dataset, "ORC_H_General")),
+                         ["ORC_H_General.7z"])
+        self.assertFalse(os.path.exists(os.path.join(self.dataset, "csv-trunc")))
 
 
 if __name__ == "__main__":

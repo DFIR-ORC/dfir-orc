@@ -4,8 +4,14 @@ The CSVs are a by-product: no orca command reads them back, every one reads parq
 ingest writes parquet only, and '--csv' / '--csv-trunc' derive the text from a dataset that is
 already there - a second ingest is not needed to get it, and nor is the collection.
 
-  csv\        the tables as normalized text: UTF-8, one quoting style, one file per table
-  csv-trunc\  the same less the volatile columns, for a readable text diff of two runs
+  <archive>\   each table as normalized text - UTF-8, one quoting style, one file per table -
+               directly in the directory of the archive it was collected in, beside that
+               archive's logs and '.7z': the converted form of a file that archive holds
+  csv-trunc\  the same less the volatile columns, for a readable text diff of two runs, at
+               the dataset's top: it is orca's derivation, not a file of any one archive
+
+A table no archive is recorded for (a dataset written by hand) has its CSV in the dataset's
+own 'csv\'.
 """
 import json
 import os
@@ -45,6 +51,12 @@ def write_trunc_columns(dataset: str, drop: list) -> None:
         json.dump(sorted(drop), f)
 
 
+def csv_dir(dataset: str, archive: str) -> str:
+    """Where a table's full CSV goes, relative to the dataset: its archive's directory, else
+    'csv'."""
+    return archive or CSV_DIR
+
+
 def write_csv(engine, dataset: str, csv: bool = False, trunc: bool = False,
               drop: list | None = None, workers: int | None = None) -> int:
     r"""Write csv\ and/or csv-trunc\ for the tables of 'dataset'. Returns how many files it wrote.
@@ -75,14 +87,21 @@ def write_csv(engine, dataset: str, csv: bool = False, trunc: bool = False,
         print(f"no CSV for the {len(passed)} table(s) the ingest skipped: {', '.join(passed)}")
 
     retrunc = trunc and read_trunc_columns(dataset) != sorted(drop or [])
-    tasks = []
-    for directory, dropped in wanted:
-        os.makedirs(os.path.join(dataset, directory), exist_ok=True)
+    archives = layout.table_archives(dataset)
+    tasks, directories, written = [], set(), []
+    for kind, dropped in wanted:
         for name in layout.table_names(dataset):
             parquet = os.path.join(dataset, name + ".parquet")
-            target = os.path.join(dataset, directory, name + ".csv")
             if not os.path.exists(parquet):     # skipped at ingest, said above
                 continue
+
+            directory = (csv_dir(dataset, archives.get(name, "")) if kind == CSV_DIR
+                         else CSV_TRUNC_DIR)
+            directories.add(directory)
+            os.makedirs(os.path.join(dataset, directory), exist_ok=True)
+            target = os.path.join(dataset, directory, name + ".csv")
+            if kind == CSV_DIR:
+                written.append(os.path.join(directory, name + ".csv"))
             if is_stale(parquet, target) or (dropped is not None and retrunc):
                 tasks.append((parquet, target, dropped))
 
@@ -92,7 +111,9 @@ def write_csv(engine, dataset: str, csv: bool = False, trunc: bool = False,
 
     if trunc:
         write_trunc_columns(dataset, drop or [])
-    layout.add_products(dataset, [directory for directory, _ in wanted])
+    # Each CSV in an archive's directory by name, never the directory: a rebuild removes the
+    # CSVs and keeps the logs and the decrypted archive beside them. csv-trunc is orca's whole.
+    layout.add_products(dataset, written + ([CSV_TRUNC_DIR] if trunc else []))
     print(f"csv: {len(tasks)} file(s) written in '{dataset}' "
-          f"({', '.join(directory for directory, _ in wanted)})")
+          f"({', '.join(sorted(directories))})")
     return len(tasks)

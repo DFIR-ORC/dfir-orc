@@ -276,6 +276,21 @@ def table_entries(dataset: str) -> list[tuple[str, str]]:
                 for row in csv.DictReader(f) if row.get("name")]
 
 
+def table_archives(dataset: str) -> dict[str, str]:
+    """table name -> the stem of the top archive it came from: its directory in the dataset.
+
+    Recorded at ingest (name-map's 'archive'); empty for a table without one, which a run
+    directory written by hand has.
+    """
+    path = name_map_path(dataset)
+    if not os.path.exists(path):
+        return {}
+
+    with open(path, newline="", encoding="utf-8", errors="replace") as f:
+        return {row["name"]: row.get("archive") or "" for row in csv.DictReader(f)
+                if row.get("name")}
+
+
 def table_paths(dataset: str) -> dict[str, str]:
     """name -> parquet path, for the tables of a run that actually exist on disk."""
     found = {}
