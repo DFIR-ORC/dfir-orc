@@ -1,4 +1,4 @@
-"""Real 'orca collect' runs, against a real ORC binary and a real disk.
+r"""Real 'orca collect' runs, against a real ORC binary and a real disk.
 
 Everything here skips unless the host supplies the inputs through the environment, the way the
 duckdb integration tests skip when duckdb is absent:

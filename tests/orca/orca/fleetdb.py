@@ -328,7 +328,7 @@ DATABASE_NAME = "fleet.duckdb"
 
 
 def database_path(where: str) -> str:
-    """'<where>/fleet.duckdb', beside fleet\: one fleet per place, as its bookkeeping is.
+    """'<where>/fleet.duckdb', beside fleet/: one fleet per place, as its bookkeeping is.
     Two fleets in one working directory overwrite each other; --out keeps them apart."""
     return os.path.join(where, DATABASE_NAME)
 

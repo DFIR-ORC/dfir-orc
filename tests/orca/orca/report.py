@@ -1146,7 +1146,7 @@ def shared_dirs(runs: list) -> set:
 
 class FleetRecord(NamedTuple):
     """What 'orca fleet' wrote about one fleet: who answered, and the gaps (fleet.py)."""
-    where: str             # the fleet's record: fleet\.orca (fleet.FLEET_DIR)
+    where: str             # the fleet's record: fleet/.orca (fleet.FLEET_DIR)
     hosts: list            # hosts.csv rows
     coverage: list         # coverage.csv rows
 
@@ -1162,7 +1162,7 @@ def fleet_record(directory: str) -> FleetRecord | None:
 
 def as_directory(path: str) -> str:
     """A path as report reads it: 'fleet.duckdb' stands for the fleet directory holding it - fleet
-    writes the database and its fleet\.orca record together, in one place."""
+    writes the database and its fleet/.orca record together, in one place."""
     if os.path.isfile(path) and os.path.basename(path).lower() == _fleetdb.DATABASE_NAME:
         return os.path.dirname(os.path.abspath(path))
     return path

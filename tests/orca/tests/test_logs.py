@@ -34,12 +34,12 @@ class TestScanMessages(unittest.TestCase):
         scan = logs.scan([
             "2026-10-03T08:15:00.000Z [I] starting",
             "2026-10-03T08:15:01.000Z [W] volume is dirty",
-            "2026-10-03T08:15:02.000Z [E] could not open \\.\C:",
+            "2026-10-03T08:15:02.000Z [E] could not open \\.\\C:",
             "2026-10-03T08:15:03.000Z [C] aborting",
         ])
         self.assertEqual([(m["level"], m["message"]) for m in scan["messages"]],
                          [("warning", "volume is dirty"),
-                          ("error", "could not open \\.\C:"),
+                          ("error", "could not open \\.\\C:"),
                           ("critical", "aborting")])
 
     def test_no_context_is_kept_unless_it_is_asked_for(self):
