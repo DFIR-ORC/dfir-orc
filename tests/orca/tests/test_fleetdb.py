@@ -159,6 +159,19 @@ class TestBuildDatabase(unittest.TestCase):
                         self.elsewhere.name)
         self.assertIn("NTFSInfo,2,2,view", catalog)
 
+    def test_a_value_outside_ascii_reaches_the_database(self):
+        # A French Windows error message in a failed host's 'error' was sent in the locale's
+        # code page, and duckdb refused the whole orca_hosts table as invalid unicode.
+        families = fleetdb.fleet_families(self.datasets)
+        tables = {"orca_hosts": (["OrcComputerName", "error"],
+                                 [["a.lab", "Accès refusé"], ["b.lab", ""]])}
+
+        fleetdb.build_database(engine.DuckDbEngine(DUCKDB), self.database, families, tables)
+
+        rows = engine.DuckDbEngine(DUCKDB).query_rows_in_database(
+            self.database, "SELECT error FROM orca_hosts WHERE OrcComputerName = 'a.lab'")
+        self.assertEqual(rows, [{"error": "Accès refusé"}])
+
     def test_an_unreadable_parquet_costs_its_view_only(self):
         dataset = self.datasets[0]
         write_name_map(dataset, {"NTFSInfo_00000000_Volume_C_": "NTFSInfo_00000000_Volume_C_.csv",

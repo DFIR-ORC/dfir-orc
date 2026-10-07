@@ -220,9 +220,14 @@ class DuckDbEngine(Engine):
     def _run(self, sql: str, database: str | None = None) -> None:
         # Feed SQL via stdin, not `-c`: the generated merge SQL can exceed the Windows
         # command-line length limit (WinError 206). Stdin still yields proper exit codes.
+        # UTF-8 both ways, never the locale's code page: duckdb reads its input as UTF-8, and
+        # an 'e' with an accent in a host name, a path or a Windows error message sent as
+        # cp1252 is "Invalid unicode" and fails the whole statement. 'replace' only for what
+        # duckdb prints back, so an odd byte in an error message cannot hide the error.
         command = [self.exe, database] if database else [self.exe]
-        proc = subprocess.run(command, input=self._settings() + sql,
-                              capture_output=True, text=True)
+        proc = subprocess.run(command, input=(self._settings() + sql).encode("utf-8"),
+                              capture_output=True)
+        proc.stderr = proc.stderr.decode("utf-8", errors="replace")
         if proc.returncode != 0:
             raise RuntimeError(f"duckdb failed: {proc.stderr.strip()}\nSQL: {sql[:500]}")
 

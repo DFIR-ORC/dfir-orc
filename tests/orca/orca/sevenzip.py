@@ -131,9 +131,13 @@ def run_7z(args: list[str], password: str | None = None) -> subprocess.Completed
     '-p' is passed even with no password, and stdin is closed: an encrypted archive would
     otherwise make 7-Zip prompt on the console, and an ingest or a report blocked on a prompt
     nobody is there to answer is worse than one that names the archive it could not open.
+
+    '-sccUTF-8' and a UTF-8 read: 7-Zip otherwise prints in the console's code page and Python
+    reads in the locale's, so an entry named outside ASCII comes back garbled and no longer
+    names the file an extract writes. 'replace' so an odd byte cannot cost the whole listing.
     """
-    return subprocess.run(args + ["-p" + (password or "")], capture_output=True, text=True,
-                          stdin=subprocess.DEVNULL)
+    return subprocess.run(args + ["-sccUTF-8", "-p" + (password or "")], capture_output=True,
+                          encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL)
 
 
 def list_entries(seven_zip: str, archive: str, password: str | None = None) -> list[ArchiveEntry]:

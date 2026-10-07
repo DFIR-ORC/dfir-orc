@@ -359,3 +359,33 @@ class TestExtractMatching(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(SEVEN_ZIP, "7z.exe not found")
+class TestNamesOutsideAscii(unittest.TestCase):
+    """7-Zip prints in the console's code page unless told otherwise, and Python read it in the
+    locale's: an entry named 'Résumé.csv' came back garbled, and no longer matched the file
+    an extract writes under its real name."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        source = os.path.join(self.dir.name, "Résumé.csv")
+        with open(source, "w", encoding="utf-8") as f:
+            f.write("a,b\n1,2\n")
+        self.archive = os.path.join(self.dir.name, "a.7z")
+        subprocess.run([SEVEN_ZIP, "a", "-t7z", self.archive, source], capture_output=True,
+                       check=True)
+
+    def test_a_listing_names_the_entry_as_it_is(self):
+        entries = sevenzip.list_entries(SEVEN_ZIP, self.archive)
+
+        self.assertEqual([entry.path for entry in entries], ["Résumé.csv"])
+
+    def test_an_entry_listed_is_an_entry_extracted(self):
+        entry = sevenzip.list_entries(SEVEN_ZIP, self.archive)[0]
+        dest = os.path.join(self.dir.name, "out")
+
+        sevenzip.extract_entry(SEVEN_ZIP, self.archive, entry.path, dest)
+
+        self.assertTrue(os.path.isfile(os.path.join(dest, "Résumé.csv")))
