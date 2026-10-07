@@ -69,7 +69,7 @@ A dataset is one directory, under the name ORC gave the run: the tables and the 
 files at its top, and a directory per archive of the run for what came out of that archive.
 
 ```
-E:\dumps\ORC_WS_H2ODEV_Offline\
+E:\dumps\ORC_WS_HOST01_Offline\
   NTFSInfo_details.parquet    one <Table>.parquet per collected CSV
   GetThis_Default.parquet     (NTFSInfo, USNInfo, GetThis_*, ...)
   ORC_..._Outcome.json        the run's Outcome, under ORC's own name
@@ -436,7 +436,7 @@ folders or a tree of dumps by date needs:
 orca report \\host\archive --recurse --private-key contoso.com.key --one-line
 DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ... dur=8m2s
 DESKTOP-U9N26B0: ok=False cmds=35 fails=12 ... dur=6m47s
-H2ODEV:          ok=False cmds=12 fails=7  ... dur=54m35s
+HOST01:          ok=False cmds=12 fails=7  ... dur=54m35s
 w11test:         ok=False cmds=35 fails=12 ... dur=7m37s
 ```
 
@@ -696,9 +696,12 @@ three-DC sample: 9 s the first time, 0.3 s the second. Ingest's progress goes to
 of its own (`ingest failed`), in every shape, the way a fleet's failed host is.
 
 **Only when a view needs it.** `--list` and `--view outcome` read the Outcome alone, so they
-never ingest: a sealed Outcome is unsealed into the work dir - a few KB, the key still needed -
-and read, without duckdb. The other views, `--one-line` and `--json` read tables or logs, and
-those are what the ingest is for.
+never ingest, and need no duckdb. A sealed Outcome is read from the plain copy a dataset of the
+collection already holds - under the current directory, inside the collection, or under
+`--work-dir` - with no key and no 7-Zip; only when there is none is it unsealed into the work
+dir, a few KB, with the key. `report outcome` and `report outline` read sealed files the same
+way. The other views, `--one-line` and `--json` read tables or logs, and those are what the
+ingest is for.
 
 **What counts as a collection under `--recurse`**: a directory with an Outcome, plain or sealed.
 Loose archives with no Outcome are ingested only in a directory you name - under `--recurse`
@@ -1034,10 +1037,10 @@ the current directory gains one directory per archive plus the collection's own 
 
 ```
 S:\work\                                          the current directory
-  ORC_WS_H2ODEV_20260921_172528_Outcome.json      sidecar, unsealed here
-  ORC_WS_H2ODEV_20260921_172528_Outline.json
-  ORC_WS_H2ODEV_20260921_172528.log
-  ORC_WS_H2ODEV_Offline\                          the expanded tree
+  ORC_WS_HOST01_20260921_172528_Outcome.json      sidecar, unsealed here
+  ORC_WS_HOST01_20260921_172528_Outline.json
+  ORC_WS_HOST01_20260921_172528.log
+  ORC_WS_HOST01_Offline\                          the expanded tree
     NTFSInfo.csv  GetThis\  ...
 ```
 
@@ -1098,7 +1101,7 @@ subsequent run. `--refresh` is how you get out of that without deleting the file
 orca check E:\dumps\DFIR-ORC_HOST.7z.p7b --private-key contoso.com.key
 
 # a whole collection directory, and a work dir to keep the decrypted archive in
-orca check \\host\share\ORC_WS_H2ODEV_20260921_172528 --private-key contoso.com.key `
+orca check \\host\share\ORC_WS_HOST01_20260921_172528 --private-key contoso.com.key `
     --work-dir E:\orca-work
 
 # just the envelope (decrypts, replays the journal, stops)
@@ -1156,9 +1159,8 @@ is 0), `warnings` (7-Zip's exit code 1), and `unsealed` (only the decrypted copy
 the Outcome's sha1 - taken over the sealed file - has nothing to compare against). The exit code
 is 1 if anything failed, which is the point of the command in CI.
 
-**Nothing is written to the collection.** `ingest --out-at-input` unseals sidecars beside the
-archives on purpose, to be reused; a verification pass must leave the evidence as it found it,
-so `check` has no such option and unseals what it needs into the work dir. `--work-dir` is a keep dir as it is
+**Nothing is written to the collection.** A verification pass must leave the evidence as it
+found it, so `check` has no `--out-at-input` and unseals what it needs into the work dir. `--work-dir` is a keep dir as it is
 everywhere else: the decrypted archive lands there and the next `check`, `ingest` or `extract`
 of the same collection reuses it rather than paying for the decrypt again.
 
@@ -1170,8 +1172,9 @@ its undamaged containers are still sound; run `extract` when you need to know th
 ### Where orca writes
 
 Everything `ingest`, `fleet`, `diff`, `merge`, `getthis` and `report` derive from a collection -
-the dataset, the decrypted archives, the unsealed sidecars - lands in the **current directory**.
-A collection is evidence, and by default not one file is written into it. (`extract` writes only
+the datasets, and in them the decrypted archives and the collection's own files - lands in the
+**current directory**. A collection is evidence, and by default not one file is written into
+it. (`extract` writes only
 under its own `--out`, the current directory too, and `check` only reads - see above.)
 
 `--out-at-input` puts all of it **beside the input** instead: inside a collection directory, or
@@ -1179,37 +1182,54 @@ beside an archive, so one place holds everything that came out of one collection
 
 ```
 E:\dumps\                                        with --out-at-input
-  ORC_WS_H2ODEV_20260921_172528.log             sidecar log, unsealed in place
-  ORC_WS_H2ODEV_20260921_172528_Outcome.json    sidecar, unsealed in place
-  ORC_WS_H2ODEV_20260921_172528_Outline.json
-  ORC_WS_H2ODEV_Offline.7z.p7b                  the collected archive
-  ORC_WS_H2ODEV_Offline\                        the run (see above)
+  ORC_WS_HOST01_20260921_172528.log.7z.p7b      the collection as ORC left it, untouched
+  ORC_WS_HOST01_20260921_172528_Outcome.json.7z.p7b
+  ORC_WS_HOST01_20260921_172528_Outline.json.7z.p7b
+  ORC_WS_HOST01_Offline.7z.p7b                  the collected archive
+  ORC_WS_HOST01_Offline\                        the run (see above)
     NTFSInfo_details.parquet  GetThis_Default.parquet  ...
     ORC_..._Outcome.json  ORC_..._Outline.json  ORC_..._172528.log  .orca\
-    ORC_WS_H2ODEV_Offline\                      the archive's directory
-      ORC_WS_H2ODEV_Offline.7z                  decrypted, kept and reused
+    ORC_WS_HOST01_Offline\                      the archive's directory
+      ORC_WS_HOST01_Offline.7z                  decrypted, kept and reused
       NTFSInfo.log  ...  Errors\
 ```
 
-Without it the same files are in the current directory, and `E:\dumps\` is left as it was.
+Without it the same datasets are in the current directory, and `E:\dumps\` is left as it was.
+Either way the collection only ever gains the datasets: nothing decrypted is left beside it.
 
 **When `--out-at-input` is worth it.** The products are a cache - a decrypted archive is as
 big as the collection, and decrypting and replaying a multi-GB collection is the expensive part
 of an ingest - and a cache in the current directory is found again only from that directory.
 Run from somewhere else, or by a colleague, and the collection is decrypted and ingested again.
 Beside the input the products are found from anywhere: by any command, from any directory, and
-by everyone reading a collection on a share. It is also what `report` needs to show a sealed
-collection's logs, and what datasets ingested before this default changed were written as. It is
-refused with `--work-dir`, and with `--out` on `ingest` and `fleet`, which already name a place.
+by everyone reading a collection on a share. It is refused with `--work-dir`, and with `--out`
+on `ingest` and `fleet`, which already name a place.
 
-A decrypted archive and an unsealed sidecar keep the encrypted file's own name with only the
-extension changed (`X.7z.p7b` -> `X.7z`, `X_Outcome.json.7z.p7b` -> `X_Outcome.json`), and both
-are reused on the next run.
+**One rule for every sealed file**: `X.7z.p7b` holds `X.7z`, `X_Outcome.json.7z.p7b` holds
+`X_Outcome.json`. When the plain file is already there - beside the sealed one, or in a dataset
+under the output (the Outcome, Outlines and log at its top, each `.7z` in its archive's
+directory) - it is used and nothing is decrypted. So a second `fleet` or `report` over a sealed
+collection whose datasets are current **needs no key**. Otherwise the file is decrypted into
+scratch, and the dataset gets the only plain copy. `--refresh` decrypts again.
+
+**What belongs to what is read from the files, never from their names.** Each Outcome names its
+archives, its log, its Outline and its console output, and carries the run id its Outlines
+carry; the dataset is named after the log the Outcome lists (`ORC_..._172528`). Dangling files
+are processed as far as their content allows:
+
+- an Outline with no Outcome is a run of its own, with the archives it lists, named
+  `<computer>_<timestamp>`;
+- an archive nothing names is ingested as a collection of its own;
+- an archive the Outcome names and that is missing, or that will not decrypt, costs itself: the
+  rest of the run is built, and the archive is listed with the tables orca could not read. A
+  run whose archive would not decrypt is not marked current, so the next run - with the key -
+  tries again;
+- a sealed file no run claims is named (`belongs to no run`).
 
 Point orca at the **directory** instead and you get one run for the whole collection - one ORC
 run writes one Outcome and one archive per command set, and they ingest together - in a
-directory named as ORC named the run, read from its Outcome (or Outline) sidecar:
-`\\h2odev\vss\extract\ORC_WS_H2ODEV_20260921_172528\`. A folder of loose archives with no such
+directory named as ORC named the run, from the log its Outcome lists:
+`\\host\vss\extract\ORC_WS_HOST01_20260921_172528\`. A folder of loose archives with no such
 sidecar is named after itself.
 
 Two ORC runs dropped in the same directory are an awkward input: there is one Outcome per run and
@@ -1220,8 +1240,8 @@ silence. For `extract` that is the whole story, since every archive gets a direc
 from its own directory when provenance matters.
 
 ```powershell
-orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z                 # run lands in the current directory
-orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z --out-at-input  # run lands beside the archive
+orca ingest E:\dumps\ORC_WS_HOST01_Offline.7z                 # run lands in the current directory
+orca ingest E:\dumps\ORC_WS_HOST01_Offline.7z --out-at-input  # run lands beside the archive
 orca diff NEW.7z REF.7z --work-dir E:\orca-work               # put both runs somewhere with room
 orca diff NEW.7z REF.7z --refresh                             # re-decrypt and re-ingest
 ```

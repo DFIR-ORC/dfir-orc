@@ -205,14 +205,20 @@ class TestCheckCollection(OrcFixtures, unittest.TestCase):
 class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
     """'orca report' over a collection whose Outcome, Outline and log are all sealed.
 
-    The state a collection arrives in. Nothing is ingested and nothing is extracted: report
-    unseals what it needs into its work dir and reads it from there.
+    The state a collection arrives in. report ingests it - the one place that decrypts - and
+    reads the dataset; '--list' and the row tables unseal the Outcome or Outline alone.
+
+    The Outcome names its archive, its log and its Outline, and carries the run id its Outline
+    carries, as ORC writes it: what belongs to the run is read from there, not from the names.
     """
 
     OUTCOME = {"dfir-orc": {"outcome": {
-        "computer_name": "SEALEDHOST",
+        "computer_name": "SEALEDHOST", "id": "{SEALED}", "timestamp": "20260925_144127",
         "start": "2026-09-25T14:41:27Z", "end": "2026-09-25T14:48:14Z",
+        "log": {"file": {"name": "ORC_SEALED.log"}},
+        "outline": {"file": {"name": "ORC_SEALED_Outline.json"}},
         "command_set": [{"name": "ORC_General",
+                         "archive": {"name": "DFIR-ORC_SEALED.p7b"},
                          "statistics": {"process_memory_peak": 1325150208},
                          "commands": [
                              {"name": "USNInfo", "tool": "USNInfo", "exit_code": 18,
@@ -419,8 +425,9 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
                        for n in ("Detail", "General")]
         with open(os.path.join(self.dumps, "ORC_H_172528_Outcome.json"), "w",
                   encoding="utf-8") as f:
-            json.dump({"dfir-orc": {"outcome": {"computer_name": "H",
-                                                "command_set": command_set}}}, f)
+            json.dump({"dfir-orc": {"outcome": {
+                "computer_name": "H", "log": {"file": {"name": "ORC_H_172528.log"}},
+                "command_set": command_set}}}, f)
 
         with redirect_stdout(io.StringIO()):
             cli.main(["ingest", self.dumps, "--no-csv"])
@@ -431,26 +438,32 @@ class TestArchiveDiff(OrcFixtures, unittest.TestCase):
         # The Outcome is in the run under the name ORC gave it, not renamed to 'outcome.json'.
         self.assertTrue(os.path.exists(os.path.join(run, "ORC_H_172528_Outcome.json")))
 
-    def test_sealed_sidecars_are_unsealed_beside_the_collection_at_input(self):
+    def test_sealed_sidecars_land_in_the_dataset_and_nowhere_else(self):
         new = self.build_archive("NEW", "200", "aaaa")
         reference = self.encrypt(self.build_archive("REF", "999", "bbbb"))
-        outcome = self.seal("ORC_H_172528_Outcome.json",
-                            '{"dfir-orc":{"outcome":{"computer_name":"H","command_set":[]}}}')
-        self.seal("ORC_H_172528_Outline.json", '{"dfir-orc":{"outline":{"computer_name":"H"}}}')
+        outcome = self.seal("ORC_H_172528_Outcome.json", json.dumps({"dfir-orc": {"outcome": {
+            "computer_name": "H", "id": "{H}",
+            "log": {"file": {"name": "ORC_H_172528.log"}},
+            "outline": {"file": {"name": "ORC_H_172528_Outline.json"}},
+            "command_set": [{"name": "ORC_General",
+                             "archive": {"name": os.path.basename(reference)}}]}}}))
+        self.seal("ORC_H_172528_Outline.json",
+                  '{"dfir-orc":{"outline":{"computer_name":"H","id":"{H}"}}}')
         self.seal("ORC_H_172528.log", "the collection log\n")
+        before = sorted(os.listdir(self.dumps))
 
         out = io.StringIO()
         with redirect_stdout(out):
             cli.main(["diff", new, reference, "--private-key", PRIVATE_KEY, "--out-at-input"])
 
-        # Each sidecar is now a plain file beside the sealed one it came from, named after it.
-        for name in ("ORC_H_172528_Outcome.json", "ORC_H_172528_Outline.json",
-                     "ORC_H_172528.log"):
-            self.assertTrue(os.path.exists(os.path.join(self.dumps, name)), name)
+        # Decrypted into scratch, not beside the sealed ones: the collection only gains the
+        # datasets.
+        after = set(os.listdir(self.dumps)) - set(before)
+        self.assertEqual(after, {"DFIR-ORC_NEW", "DFIR-ORC_REF"})
         self.assertTrue(os.path.exists(outcome))  # the sealed original is left alone
 
-        # ... and the run picked them up, flat and under the same names: outcome, outline and
-        # the collection-level log, mixed in with the tables.
+        # ... and the run holds them, flat and under the same names: outcome, outline and the
+        # collection-level log, mixed in with the tables.
         run = os.path.join(self.dumps, "DFIR-ORC_REF")
         for name in ("ORC_H_172528_Outcome.json", "ORC_H_172528_Outline.json",
                      "ORC_H_172528.log", "NTFSInfo.parquet"):

@@ -600,14 +600,15 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
     try:
         # First, so everything below reads plain files whether or not the collection was
         # encrypted - collection_of included, which reads the Outcome to name the archives. A
-        # sealed fleet's Outcomes do not exist as JSON before this line, so the refusal in
-        # collection_of could not fire any earlier.
-        unseal_sidecars(archive, seven, keep_dir, private_key, cms_backend, refresh)
-
-        directories = sidecar_dirs(archive, keep_dir)
+        # plain copy already in a dataset under keep_dir (or in the one --out names) is used
+        # without decrypting (sidecars.resolve).
         if collection is None:
-            collection = collection_of(archive, directories, collection_name)
-        run = layout.run_name_for(collection.outcome_path) if collection.outcome_path else None
+            from . import sidecars
+            resolved = sidecars.resolve(collection_dir(archive), keep_dir, seven, private_key,
+                                        cms_backend, refresh,
+                                        places=[out_dir] if out_dir else [])
+            collection = collection_of(archive, resolved.paths, collection_name)
+        run = collection.name or None
 
         # A directory source is named after the run it holds. With several in it that has to
         # be this collection's run, not the directory's first sidecar (layout.run_name).
@@ -626,11 +627,8 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
             csv_over(out_dir, engine_name, jobs, make_csv, make_trunc, exclude_cols)
             return []
 
-        # Into the archive's own directory in the run, beside the logs taken out of it: the
-        # plain '.7z' is kept for the next ingest, and kept where it belongs.
-        archives = [decrypt_archive(top, os.path.join(out_dir, layout.archive_stem(top)),
-                                    private_key, cms_backend, refresh)
-                    for top in collection.archives]
+        archives, unread, undecrypted = plain_archives(collection.archives, out_dir,
+                                                       private_key, cms_backend, refresh)
 
         # Everything this ingest writes into the run, by name: a run shares its directory with
         # the collection's own files and with an expanded tree, so a rebuild has to know what
@@ -639,9 +637,9 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
         products = [layout.ORCA_DIR]
         products += copy_into_run([collection.outcome_path] if collection.outcome_path else [],
                                   out_dir)
-        outlines = capture_outlines(directories, out_dir, run)
+        outlines = copy_into_run(list(collection.outlines), out_dir)
         products += outlines
-        products += capture_sidecar_logs(directories, out_dir, run)
+        products += copy_into_run(list(collection.sidecars), out_dir)
         products += capture_logs(seven, archives, out_dir, password)
 
         work_jobs, manifest_rows = discover_jobs(archives, staging, seven, password)
@@ -661,6 +659,10 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
     finally:
         shutil.rmtree(staging, ignore_errors=True)
 
+    # An archive that is missing, or would not decrypt, is a hole in the run as a table orca
+    # could not read is: recorded the same way, and said by the report the same way.
+    skipped = unread + skipped
+
     write_skipped(skipped, out_dir)
     report_skipped(skipped, out_dir)
 
@@ -668,9 +670,48 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
     print(summarize(records))
     csv_over(out_dir, engine_name, jobs, make_csv, make_trunc, exclude_cols)
 
-    # Last, so that its absence marks an interrupted ingest (cache.is_current).
-    cache.write_marker(out_dir, archive, key, options)
+    # Last, so that its absence marks an interrupted ingest (cache.is_current). Not at all when
+    # an archive would not decrypt: a missing key is fixed by giving it, and the next run has to
+    # try again rather than find this run current.
+    if undecrypted:
+        print(f"'{out_dir}' is not marked current: {len(undecrypted)} archive(s) could not be "
+              f"decrypted ({', '.join(undecrypted)})")
+    else:
+        cache.write_marker(out_dir, archive, key, options)
     return records
+
+
+def plain_archives(tops: list, out_dir: str, private_key=None, cms_backend=None,
+                   refresh: bool = False) -> tuple[list, list, list]:
+    """(openable archives, [(name, why)] left out, names that would not decrypt).
+
+    The run is built from the archives that are there: one missing, or one that will not
+    decrypt, costs itself and is said, as an unreadable table does. A decrypted '.7z' goes
+    into the archive's own directory in the run and is kept for the next ingest; a plain copy
+    already beside the sealed one in the collection is used as it is.
+    """
+    archives, unread, undecrypted = [], [], []
+    for top in tops:
+        name = os.path.basename(top)
+        if not os.path.exists(top):
+            print(f"'{name}' is named by the collection and is not there")
+            unread.append((name, "archive missing"))
+            continue
+
+        beside = os.path.join(os.path.dirname(top), layout.archive_stem(top) + ".7z")
+        if not refresh and top != beside and sevenzip.is_archive(beside):
+            archives.append(beside)
+            continue
+
+        try:
+            archives.append(decrypt_archive(top, os.path.join(out_dir, layout.archive_stem(top)),
+                                            private_key, cms_backend, refresh))
+        except (RuntimeError, OSError) as error:
+            print(f"could not decrypt '{name}': {error}")
+            unread.append((name, f"could not decrypt: {error}"))
+            undecrypted.append(name)
+
+    return archives, unread, undecrypted
 
 
 def csv_over(dataset: str, engine_name: str, jobs, make_csv: bool, make_trunc: bool,
@@ -805,59 +846,25 @@ class Collection(NamedTuple):
     computer_name: str
     run_id: str
     timestamp: str
+    outlines: tuple = ()     # the run's Outlines: the one its Outcome names, and those of its id
+    sidecars: tuple = ()     # the log and console output its Outcome names
+    name: str = ""           # the dataset's name: the run's, from its Outcome (sidecars.run_name)
 
 
 def collections_in(directory: str, extra_dirs=()) -> list[Collection]:
-    """Every ORC run in 'directory', one Collection per Outcome, plus one for the leftovers.
+    """Every ORC run in 'directory' (sidecars.group), from the plain sidecars of 'directory'
+    and of 'extra_dirs': one per Outcome, one per Outline whose run has no Outcome, and one for
+    the archives nothing names.
 
-    This is what separates a fleet directory from a single collection, and both 'ingest' (to
-    refuse what it cannot read) and 'fleet' (to loop) go through it, so the two can never
-    disagree about what a directory holds the way 'ingest' and 'report' did.
-
-    'extra_dirs' is where the sidecars were unsealed when that is not 'directory' - under
-    --work-dir, or scratch for a read-only collection (see sidecar_dirs). A sealed collection's
-    Outcome is '<run>_Outcome.json.7z.p7b' and invisible here until unseal_sidecars has run,
-    so callers unseal first: grouping a sealed fleet before that finds no Outcome and reads
-    every host as one unnamed collection. The archives are always resolved against
-    'directory', which is where they are.
+    This is what separates a fleet directory from a single collection. A sealed collection's
+    sidecars are invisible here until they are plain: sidecars.resolve does that, and callers
+    holding its result go to sidecars.group directly.
     """
-    found: list[Collection] = []
-    claimed: list[str] = []
-    seen_ids: set[str] = set()
-
+    from . import sidecars
+    paths = []
     for place in [directory, *extra_dirs]:
-        for path in find_outcome_jsons(place):
-            outcome = _outcome_object(path)
-            if not outcome:
-                continue
-
-            # The same run can be readable in two places - a plain Outcome beside the archives
-            # and the copy unsealed under --work-dir - and is one collection, not two hosts.
-            run_id = outcome.get("id") or ""
-            if run_id and run_id in seen_ids:
-                continue
-            seen_ids.add(run_id)
-
-            names = []
-            for cmd_set in outcome.get("command_set", []) or []:
-                archive = cmd_set.get("archive")
-                if not archive:
-                    continue
-                for one in (archive if isinstance(archive, list) else [archive]):
-                    if one.get("name"):
-                        names.append(one["name"])
-
-            archives = [archive_as_found(directory, name) for name in names]
-            claimed += archives
-            found.append(Collection(path, archives, *outcome_identity(path)))
-
-    # Whatever no Outcome accounts for is one more collection rather than a warning: an
-    # archive ORC wrote after its Outcome, or one dropped in by hand, is still data.
-    leftover = archives_not_named(directory, claimed)
-    if leftover:
-        found.append(Collection(None, leftover, "", "", ""))
-
-    return found
+        paths += sidecars.plain_sidecars(place)
+    return sidecars.group(directory, sidecars.Resolved(paths, [])).collections
 
 
 # What orca stamps into every table so a row knows which host and which run it came from.
@@ -892,7 +899,7 @@ def select_collection(found: list[Collection], wanted: str) -> Collection:
     named = [c for c in found if c.outcome_path]
     matches = [c for c in named if c.computer_name.lower() == needle]
     if not matches:
-        matches = [c for c in named if layout.run_name_for(c.outcome_path).lower() == needle]
+        matches = [c for c in named if c.name.lower() == needle]
     if not matches:
         matches = [c for c in named
                    if os.path.basename(c.outcome_path).lower().startswith(needle)]
@@ -909,21 +916,29 @@ def select_collection(found: list[Collection], wanted: str) -> Collection:
                        "name one of their Outcome files instead")
 
 
-def collection_of(source: str, directories: list[str], wanted: str | None = None) -> Collection:
-    """The one collection 'source' is, read once its sidecars are plain (see collections_in).
+def collection_of(source: str, sidecar_paths: list, wanted: str | None = None) -> Collection:
+    """The one collection 'source' is, from its sidecars as plain files (sidecars.resolve).
 
-    'directories' is where the Outcome may be (sidecar_dirs). A file is a collection of one
-    archive with whatever Outcome sits beside it. A directory holding several runs is not one
+    A file is a collection of one archive with the run whose Outcome names it - or the first
+    Outcome beside it, as before. A directory holding several runs is not one
     collection: ingesting it as one merges hosts that have nothing to do with each other into
     a dataset named after whichever Outcome sorted first, so it is refused unless 'wanted'
     names one of them. 'fleet' is the command that reads all of them.
     """
+    from . import sidecars
     if os.path.isfile(source):
-        outcome = next((found for found in map(find_outcome_json, directories) if found), None)
-        return Collection(outcome, [source], *outcome_identity(outcome))
+        runs = sidecars.group(collection_dir(source),
+                              sidecars.Resolved(list(sidecar_paths), [])).collections
+        stem = layout.archive_stem(source).lower()
+        named = [c for c in runs if c.outcome_path]
+        own = next((c for c in named
+                    if stem in {layout.archive_stem(a).lower() for a in c.archives}),
+                   named[0] if named else None)
+        if own is None:
+            return Collection(None, [source], "", "", "")
+        return own._replace(archives=[source])
 
-    extra = [d for d in directories if os.path.abspath(d) != os.path.abspath(source)]
-    found = collections_in(source, extra)
+    found = sidecars.group(source, sidecars.Resolved(list(sidecar_paths), [])).collections
     if not found:
         raise RuntimeError(f"no Orc Outcome json and no archive found in '{source}'")
 

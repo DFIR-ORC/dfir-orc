@@ -23,6 +23,8 @@ def setUpModule():
 def write_collection(d, stem, computer, archive):
     doc = {"dfir-orc": {"outcome": {"id": "{%s}" % computer, "computer_name": computer,
                                     "timestamp": "20260101_000000",
+                                    "log": {"file": {"name": stem + ".log"}},
+                                    "outline": {"file": {"name": stem + "_Outline.json"}},
                                     "command_set": [{"name": "General",
                                                      "archive": {"name": archive}}]}}}
     with open(os.path.join(d, stem + "_Outcome.json"), "w", encoding="utf-8") as f:
@@ -91,7 +93,8 @@ class TestRunFleet(unittest.TestCase):
 
             def unseal(sealed, target, seven, private_key=None, cms_backend=None):
                 stem = os.path.basename(sealed).split("_Outcome")[0]
-                write_collection(d, stem, stem.lower() + ".lab", stem + "_General.7z.p7b")
+                write_collection(os.path.dirname(target), stem, stem.lower() + ".lab",
+                                 stem + "_General.7z.p7b")
                 return target
 
             with seven_zip(), mock.patch.object(fleet.ingest, "unseal_one", unseal), \

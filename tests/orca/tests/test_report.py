@@ -970,3 +970,27 @@ class TestArchiveDirectories(unittest.TestCase):
         self.assertNotIn("ORC_H_General/NTFSInfo.log", [log["log"] for log in view["logs"]])
         self.assertEqual(view["logs_ignored"], 1)
 
+
+
+class TestSealedOutcomeFromTheDataset(unittest.TestCase):
+    """--list on a sealed collection already ingested: the dataset's copy, no key, no 7-Zip."""
+
+    def test_the_plain_copy_in_a_dataset_is_read_without_unsealing(self):
+        with tempfile.TemporaryDirectory() as root:
+            collection = os.path.join(root, "collect")
+            os.makedirs(collection)
+            open(os.path.join(collection, "ORC_A_Outcome.json.7z.p7b"), "wb").close()
+            dataset = os.path.join(collection, "ORC_A")       # as --out-at-input leaves it
+            os.makedirs(layout.orca_dir(dataset))
+            write_outcome(dataset, "A")
+            plain = [n for n in os.listdir(dataset) if n.endswith("_Outcome.json")][0]
+            os.rename(os.path.join(dataset, plain), os.path.join(dataset, "ORC_A_Outcome.json"))
+
+            work = os.path.join(root, "work")
+            with mock.patch.object(report.ingest, "unseal_one") as unseal, \
+                    mock.patch.object(report.sevenzip, "find_7z") as find_7z:
+                mapped = report.unsealed_sidecar_dirs([collection], work)
+
+            unseal.assert_not_called()
+            find_7z.assert_not_called()
+            self.assertEqual(os.listdir(mapped[collection]), ["ORC_A_Outcome.json"])

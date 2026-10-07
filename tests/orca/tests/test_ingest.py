@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
-from orca import ingest, journal, layout, sevenzip
+from orca import ingest, journal, layout, sevenzip, sidecars
 from orca.sevenzip import ArchiveEntry
 
 
@@ -1011,6 +1011,8 @@ class TestCollectionsIn(unittest.TestCase):
 def write_collection(d, stem, computer, archive, run_id=None, ts="20260101_000000"):
     doc = {"dfir-orc": {"outcome": {"id": run_id or "{%s}" % computer,
                                     "computer_name": computer, "timestamp": ts,
+                                    "log": {"file": {"name": stem + ".log"}},
+                                    "outline": {"file": {"name": stem + "_Outline.json"}},
                                     "command_set": [{"name": "General",
                                                      "archive": {"name": archive}}]}}}
     with open(os.path.join(d, stem + "_Outcome.json"), "w", encoding="utf-8") as f:
@@ -1055,7 +1057,8 @@ class TestIngestRefusesAFleet(unittest.TestCase):
             def unseal(sealed, target, seven, private_key=None, cms_backend=None):
                 stem = os.path.basename(sealed).split("_Outcome")[0]
                 computer = "a.lab" if stem == "ORC_A" else "b.lab"
-                write_collection(d, stem, computer, stem + "_General.7z.p7b")
+                write_collection(os.path.dirname(target), stem, computer,
+                                 stem + "_General.7z.p7b")
                 return target
 
             engine, seven = no_tools()
@@ -1075,7 +1078,7 @@ class TestIngestRefusesAFleet(unittest.TestCase):
 
             printed = io.StringIO()
             with redirect_stdout(printed):
-                got = ingest.collection_of(d, [d])
+                got = ingest.collection_of(d, sidecars.plain_sidecars(d))
 
             self.assertEqual(got.computer_name, "a.lab")
             self.assertEqual([os.path.basename(p) for p in got.archives],
@@ -1087,7 +1090,7 @@ class TestIngestRefusesAFleet(unittest.TestCase):
             write_collection(d, "ORC_A", "a.lab", "ORC_A_General.7z")
             archive = os.path.join(d, "ORC_A_General.7z")
 
-            got = ingest.collection_of(archive, [d])
+            got = ingest.collection_of(archive, sidecars.plain_sidecars(d))
 
             self.assertEqual(got.archives, [archive])
             self.assertEqual(got.computer_name, "a.lab")
@@ -1096,7 +1099,7 @@ class TestIngestRefusesAFleet(unittest.TestCase):
     def test_an_empty_directory_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(RuntimeError):
-                ingest.collection_of(d, [d])
+                ingest.collection_of(d, sidecars.plain_sidecars(d))
 
 
 class TestSelectCollection(unittest.TestCase):
@@ -1336,3 +1339,21 @@ class TestIngestReusesACurrentRun(unittest.TestCase):
             self.assertEqual(built, ["autoruns", "autoruns"])
             self.assertTrue(os.path.exists(gone))
             self.assertTrue(csv_over.call_args.args[3])
+
+    def test_a_run_whose_archive_would_not_decrypt_is_not_marked_current(self):
+        """A missing key is fixed by giving it: the next run must try again."""
+        with tempfile.TemporaryDirectory() as d:
+            failed = ([], [("ORC_A_General.7z", "could not decrypt: no key")],
+                      ["ORC_A_General.7z"])
+            with mock.patch.object(ingest, "plain_archives", return_value=failed):
+                built, _ = self.ingest_twice(d, {})
+            # Not current after the first, so the second builds again.
+            self.assertEqual(built, ["autoruns", "autoruns"])
+            skipped = layout.skipped(os.path.join(d, "out"))
+            self.assertIn("ORC_A_General.7z", skipped)
+            self.assertFalse(os.path.exists(cache_marker(os.path.join(d, "out"))))
+
+
+def cache_marker(dataset: str) -> str:
+    from orca import cache
+    return cache.marker_path(dataset)

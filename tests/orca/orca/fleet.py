@@ -12,7 +12,7 @@ import csv
 import os
 from typing import NamedTuple
 
-from . import cache, fleetdb, ingest, layout, orcschema, sevenzip
+from . import cache, fleetdb, ingest, layout, orcschema, sevenzip, sidecars
 from .engine import get_engine
 
 # The fleet's own bookkeeping, beside the per-host datasets rather than inside any one of them.
@@ -77,15 +77,15 @@ def ingest_collections(directory: str, out: str | None = None, *, password=None,
     if not seven:
         raise RuntimeError("7z.exe not found")
 
-    # Unseal before grouping, never after: an encrypted fleet's Outcomes are
-    # '<run>_Outcome.json.7z.p7b' and collections_in reads plain JSON, so grouping first finds
-    # no Outcome, one unnamed collection, and ingests every host into one dataset. keep_dir is
-    # where the plain sidecars land - the current directory, --out, beside the archives with
-    # --out-at-input, or scratch when that is read-only - and is where collections_in has to
-    # look as well.
+    # Plain sidecars before grouping, never after: an encrypted fleet's Outcomes are sealed,
+    # and grouping first finds no Outcome, one unnamed collection, and ingests every host into
+    # one dataset. keep_dir is the output - the current directory, --out, the collection with
+    # --out-at-input - whose datasets already hold the plain copies of a fleet ingested before.
     keep_dir, _ = layout.resolve(directory, out, at_input=at_input)
-    ingest.unseal_sidecars(directory, seven, keep_dir, private_key, cms_backend, refresh)
-    collections = ingest.collections_in(directory, ingest.sidecar_dirs(directory, keep_dir))
+    resolved = sidecars.resolve(directory, keep_dir, seven, private_key, cms_backend, refresh)
+    collections, unattached = sidecars.group(directory, resolved)
+    for path in unattached:
+        print(f"'{os.path.basename(path)}' belongs to no run: no Outcome or Outline names it")
 
     result = FleetResult([], [])
     for collection in collections:

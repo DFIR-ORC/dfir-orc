@@ -73,7 +73,7 @@ def _beside(path: str, work_dir: str | None) -> str:
 def run_name(directory: str) -> str:
     """The name ORC gave the run in 'directory', read from the sidecars it wrote there.
 
-    'ORC_WS_H2ODEV_20260921_172528_Outcome.json' -> 'ORC_WS_H2ODEV_20260921_172528', sealed or
+    'ORC_WS_HOST01_20260921_172528_Outcome.json' -> 'ORC_WS_HOST01_20260921_172528', sealed or
     not - the name is the same either way, so a collection does not change dataset the
     moment it is unsealed. A folder of loose archives carries no such sidecar and is named
     after itself.
@@ -95,7 +95,7 @@ def run_name(directory: str) -> str:
 def run_name_for(outcome_path: str) -> str:
     """The name ORC gave the run this Outcome belongs to.
 
-    'ORC_WS_H2ODEV_20260921_172528_Outcome.json' -> 'ORC_WS_H2ODEV_20260921_172528', sealed or
+    'ORC_WS_HOST01_20260921_172528_Outcome.json' -> 'ORC_WS_HOST01_20260921_172528', sealed or
     not. run_name() answers the same question for a directory and reads whichever sidecar sorts
     first, which is the wrong answer when the directory holds several runs: each one has to be
     named after itself or two hosts share a dataset directory.

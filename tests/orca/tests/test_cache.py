@@ -330,7 +330,7 @@ class TestPerCollectionKey(CacheCase):
             return cache.ingest.Collection(None, [path], "", "", "")
         return cache.ingest.Collection(
             os.path.join(self.dir.name, f"ORC_{name}_Outcome.json"), [path],
-            f"{name}.lab", "{%s}" % name, "20260101_000000")
+            f"{name}.lab", "{%s}" % name, "20260101_000000", name=f"ORC_{name}")
 
     def test_two_collections_of_one_directory_get_different_keys(self):
         """Without this every host of a fleet shares one key and one dataset."""

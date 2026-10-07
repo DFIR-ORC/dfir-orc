@@ -61,6 +61,12 @@ def key_for(source: str, options: dict, archives: list | None = None) -> str:
     """
     members = []
     for path in source_files(source, archives):
+        # A named archive that is missing is keyed by its name alone: when it arrives the key
+        # changes, and the run is built again with it.
+        if not os.path.exists(path):
+            members.append({"name": os.path.basename(path), "missing": True})
+            continue
+
         stat = os.stat(path)
         members.append({"name": os.path.basename(path), "size": stat.st_size,
                         "mtime_ns": stat.st_mtime_ns})
@@ -166,8 +172,8 @@ def dataset_name(source: str, work_dir: str | None, collection, at_input: bool) 
     never layout.run_name, which would hand it the first host's directory and have
     clear_dataset empty that host's dataset before writing over it.
     """
-    if collection and collection.outcome_path:
-        return layout.run_name_for(collection.outcome_path)
+    if collection and collection.name:
+        return collection.name
 
     if collection or layout.output_root(work_dir, at_input):
         # Beside the archive the directory name is the archive's; under a shared root - the

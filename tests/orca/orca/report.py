@@ -5,13 +5,14 @@ import glob
 import hashlib
 import json
 import os
+import shutil
 import sys
 from contextlib import redirect_stdout
 from dataclasses import asdict
 from typing import NamedTuple
 
 from . import cache, fleet as _fleet, fleetdb as _fleetdb, ignores, ingest, layout, logs as _logs
-from . import outcome as _outcome, scratch, sevenzip
+from . import outcome as _outcome, scratch, sevenzip, sidecars as _sidecars
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
@@ -1037,13 +1038,18 @@ def sidecar_dir(directory: str, work: str) -> str:
 
 def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=None,
                           refresh: bool = False) -> dict:
-    """Unseal the sealed sidecars of every collection in 'dirs'; map run dir -> where they went.
+    """The plain sidecars of every sealed collection in 'dirs'; map run dir -> where they are.
 
     A collection arrives with its Outcome, Outlines and log each sealed into a '.7z.p7b', and
     without them a report can say almost nothing: not the machine's name, not which command
-    failed. They are unsealed into the work dir and never beside the collection - 'ingest' keeps
-    what it unseals on purpose, to be reused, but a report only reads and must leave what it
-    reads as it was. They are a few KB, so paying for the decryption again next time is nothing.
+    failed. Each sealed one is put in the work dir, never beside the collection: a report only
+    reads, and must leave what it reads as it was.
+
+    The plain file is taken where it already is before anything is decrypted (sidecars, rule
+    1): beside the sealed one, or in a dataset ingest made of the collection - under the
+    current directory, inside the collection (--out-at-input) or under 'work'. A collection
+    whose datasets are there is read with no key and no 7-Zip; only what is still missing is
+    unsealed.
 
     Collections with nothing sealed are absent from the map, so the common case creates no
     directory at all.
@@ -1051,20 +1057,38 @@ def unsealed_sidecar_dirs(dirs: list, work: str, private_key=None, cms_backend=N
     mapped = {}
     seven = None
     for directory in dirs:
-        if not ingest.sealed_sidecars(directory):
-            continue
-
-        if seven is None:
-            seven = sevenzip.find_7z() or ""
-        if not seven:
-            # Not fatal: the views that read ORC's own files go quiet, the rest still print.
-            print(f"cannot unseal the sidecars of '{directory}': 7z.exe not found")
+        sealed = ingest.sealed_sidecars(directory)
+        if not sealed:
             continue
 
         target = sidecar_dir(directory, work)
         os.makedirs(target, exist_ok=True)
-        ingest.unseal_sidecars(directory, seven, target, private_key, cms_backend, refresh)
-        mapped[directory] = target
+        places = [directory] + [dataset for root in (os.getcwd(), directory, work)
+                                for dataset in _sidecars.dataset_dirs(root)]
+        for path in sealed:
+            name = ingest.sealed_name(path)
+            plain = None if refresh else _sidecars.look_for(name, places)
+            if plain:
+                if not os.path.exists(os.path.join(target, name)):
+                    shutil.copy(plain, os.path.join(target, name))
+                continue
+
+            if seven is None:
+                seven = sevenzip.find_7z() or ""
+            if not seven:
+                # Not fatal: the views that read ORC's own files go quiet, the rest still print.
+                print(f"cannot unseal '{os.path.basename(path)}': 7z.exe not found")
+                continue
+
+            try:
+                ingest.unseal_one(path, os.path.join(target, name), seven, private_key,
+                                  cms_backend)
+                print(f"unsealed '{name}'")
+            except (RuntimeError, OSError) as error:
+                print(f"could not unseal '{os.path.basename(path)}': {error}")
+
+        if os.listdir(target):
+            mapped[directory] = target
 
     return mapped
 

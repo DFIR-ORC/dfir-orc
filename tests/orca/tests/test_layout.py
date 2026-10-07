@@ -14,15 +14,15 @@ class TestRunName(unittest.TestCase):
 
     def test_from_the_outcome(self):
         with tempfile.TemporaryDirectory() as d:
-            touch(d, "ORC_WorkStation_H2ODEV_20260921_172528_Outcome.json")
-            touch(d, "ORC_WorkStation_H2ODEV_Offline.7z")
-            self.assertEqual(layout.run_name(d), "ORC_WorkStation_H2ODEV_20260921_172528")
+            touch(d, "ORC_WorkStation_HOST01_20260921_172528_Outcome.json")
+            touch(d, "ORC_WorkStation_HOST01_Offline.7z")
+            self.assertEqual(layout.run_name(d), "ORC_WorkStation_HOST01_20260921_172528")
 
     def test_a_sealed_outcome_gives_the_same_name(self):
         # The run directory must not move the moment a collection is unsealed.
         with tempfile.TemporaryDirectory() as d:
-            touch(d, "ORC_WorkStation_H2ODEV_20260921_172528_Outcome.json.7z.p7b")
-            self.assertEqual(layout.run_name(d), "ORC_WorkStation_H2ODEV_20260921_172528")
+            touch(d, "ORC_WorkStation_HOST01_20260921_172528_Outcome.json.7z.p7b")
+            self.assertEqual(layout.run_name(d), "ORC_WorkStation_HOST01_20260921_172528")
 
     def test_the_outline_answers_when_there_is_no_outcome(self):
         with tempfile.TemporaryDirectory() as d:
@@ -80,9 +80,9 @@ class TestDerivedDir(unittest.TestCase):
 
     def test_a_collection_directory_derives_into_a_run_of_its_own_name(self):
         with tempfile.TemporaryDirectory() as d:
-            touch(d, "ORC_WS_H2ODEV_172528_Outcome.json")
+            touch(d, "ORC_WS_HOST01_172528_Outcome.json")
             self.assertEqual(layout.derived_dir(d),
-                             os.path.join(d, "ORC_WS_H2ODEV_172528"))
+                             os.path.join(d, "ORC_WS_HOST01_172528"))
 
     def test_work_dir_overrides_the_location(self):
         got = layout.derived_dir(os.path.join("S:", "runs", "A", "ORC_WS_Offline.7z"),
