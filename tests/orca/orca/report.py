@@ -9,7 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import NamedTuple
 
-from . import ignores, ingest, layout, logs as _logs, outcome as _outcome, scratch, sevenzip
+from . import fleet as _fleet, fleetdb as _fleetdb, ignores, ingest, layout, logs as _logs
+from . import outcome as _outcome, scratch, sevenzip
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
@@ -961,19 +962,29 @@ def run_identity(run: Run) -> str:
     return outcome.get("id") or os.path.basename(run.outcome_path)
 
 
+def ingested_at(directory: str) -> float:
+    """When 'directory' was last ingested into, or 0 for one that never was: the time of its
+    ingest timing, which every ingest writes last."""
+    try:
+        return os.path.getmtime(layout.timing_path(directory))
+    except OSError:
+        return 0.0
+
+
 def find_runs(dirs: list, sealed: dict) -> list:
     """Every run across 'dirs', one per Outcome, in host order and without duplicates.
 
     Where the same run is seen twice, the sighting with an ingest timing beside it wins: that
-    is the ingested run, and it is the one with tables to report.
+    is the ingested run, and it is the one with tables to report. Of two ingested sightings the
+    more recent ingest wins: a dataset left beside a collection by an older orca must not hide
+    the one just built in the current directory.
     """
     best = {}
     for directory in dirs:
         for run in runs_in(directory, _extra(sealed, directory) or []):
             identity = run_identity(run)
             current = best.get(identity)
-            if current is None or (not os.path.isfile(layout.timing_path(current.directory))
-                                   and os.path.isfile(layout.timing_path(run.directory))):
+            if current is None or ingested_at(run.directory) > ingested_at(current.directory):
                 best[identity] = run
 
     return sorted(best.values(), key=lambda run: (host_of(run.directory, run.extra_dirs,
@@ -1159,6 +1170,162 @@ def orphan_lines(dirs: list, sealed: dict) -> list:
     return blocks
 
 
+class FleetRecord(NamedTuple):
+    """What 'orca fleet' wrote about one fleet: who answered, and the gaps (fleet.py)."""
+    where: str             # the .orca-fleet directory
+    hosts: list            # hosts.csv rows
+    coverage: list         # coverage.csv rows
+
+
+def fleet_record(directory: str) -> FleetRecord | None:
+    """The fleet whose output directory 'directory' is, or None. Known by '.orca-fleet/hosts.csv',
+    which fleet writes beside its datasets and fleet.duckdb."""
+    where = os.path.join(directory, _fleet.FLEET_DIR)
+    if not os.path.isfile(os.path.join(where, _fleet.HOSTS_FILE)):
+        return None
+    return FleetRecord(where, _fleet.read_hosts(where), _fleet.read_coverage(where))
+
+
+def as_directory(path: str) -> str:
+    """A path as report reads it: 'fleet.duckdb' stands for the fleet directory holding it - fleet
+    writes the database and its .orca-fleet record together, in one place."""
+    if os.path.isfile(path) and os.path.basename(path).lower() == _fleetdb.DATABASE_NAME:
+        return os.path.dirname(os.path.abspath(path))
+    return path
+
+
+def expand_fleets(dirs: list) -> tuple[list, list]:
+    """'dirs' plus the datasets of every fleet among them, and those fleets' records.
+
+    hosts.csv is the authority on a fleet's datasets, failed hosts included: the report reads it
+    rather than looking for whatever directories happen to be there.
+    """
+    seen = {os.path.abspath(d) for d in dirs}
+    expanded, records = list(dirs), []
+    for directory in dirs:
+        record = fleet_record(directory)
+        if record is None:
+            continue
+
+        records.append(record)
+        for row in record.hosts:
+            dataset = row.get("dataset") or ""
+            if row.get("status") == "ingested" and os.path.isdir(dataset) \
+                    and os.path.abspath(dataset) not in seen:
+                seen.add(os.path.abspath(dataset))
+                expanded.append(dataset)
+
+    return expanded, records
+
+
+def fleet_problems(records: list, reported: set) -> list[tuple[str, str, str]]:
+    """(host, 'failed' or 'missing', what to say) for every host a fleet could not give a dataset
+    for. Reported as hosts: a fleet report that drops them reads as a smaller, cleaner fleet.
+
+    'reported' is the identity of every run the report found anyway - a record left by an older
+    fleet run, or one written on another machine whose paths do not exist here, must not call a
+    host missing while its dataset is reported a few lines below.
+    """
+    problems = []
+    for record in records:
+        for row in record.hosts:
+            if row.get("OrcRunId") and row["OrcRunId"] in reported:
+                continue
+            host = row.get("OrcComputerName") or "unnamed collection"
+            if row.get("status") == "failed":
+                problems.append((host, "failed", f"ingest failed: {row.get('error', '')}"))
+            elif not os.path.isdir(row.get("dataset") or ""):
+                problems.append((host, "missing", f"dataset missing: {row.get('dataset')} "
+                                                  f"(re-run orca fleet)"))
+    return problems
+
+
+def coverage_gaps(records: list) -> dict[str, list[str]]:
+    """host -> its gaps as coverage.csv words them ('missing DNS_records', 'skipped autoruns')."""
+    gaps: dict[str, list[str]] = {}
+    for record in records:
+        for row in record.coverage:
+            gaps.setdefault(row.get("OrcComputerName", ""), []).append(
+                f"{row.get('status', '')} {row.get('table', '')}")
+    return gaps
+
+
+def _subdirectories(directory: str) -> list[str]:
+    try:
+        names = sorted(os.listdir(directory))
+    except OSError:
+        return []
+    return [os.path.join(directory, n) for n in names
+            if n != layout.ORCA_DIR and os.path.isdir(os.path.join(directory, n))]
+
+
+def datasets_near(given: list, known: list, identities: set, current: str) -> list:
+    """The datasets of the runs found in 'given', where ingest and fleet put them by default.
+
+    One level deep in two places: inside each given directory (--out-at-input) and in the
+    current directory (the default). Kept only when one of its runs has the identity of a run
+    already found: the run id is the link - 'orca ingest' writes no source marker, and a fleet's
+    names the shared directory, not the host - so other collections' datasets add nothing.
+    """
+    seen = {os.path.abspath(d) for d in known}
+    near = []
+    for place in list(given) + [current]:
+        for candidate in _subdirectories(place):
+            key = os.path.abspath(candidate)
+            if key in seen or not os.path.isdir(layout.orca_dir(candidate)):
+                continue
+            seen.add(key)
+            if any(run_identity(run) in identities for run in runs_in(candidate, [])):
+                near.append(candidate)
+    return near
+
+
+def render_fleet_block(records: list, reported: set) -> str:
+    """The fleet's own say, before the hosts: how many answered, who did not, and the gaps."""
+    problems = fleet_problems(records, reported)
+    gaps = coverage_gaps(records)
+    lines = []
+    for record in records:
+        total = len(record.hosts)
+        failed = sum(1 for row in record.hosts if row.get("status") == "failed")
+        lines.append(f"fleet: {total} collection(s), {total - failed} ingested, {failed} failed  "
+                     f"({record.where})")
+    for host, _kind, message in problems:
+        lines.append(f"  {host}: {message}")
+    if gaps:
+        lines.append("  coverage gaps:")
+        for host in sorted(gaps):
+            shown = ", ".join(gaps[host][:6]) + (", ..." if len(gaps[host]) > 6 else "")
+            lines.append(f"    {host}: {shown} ({len(gaps[host])})")
+    return "\n".join(lines)
+
+
+def fleet_json(host_objects: list, records: list, reported: set) -> list:
+    """The host objects, each told how its fleet saw it, plus one per host with no dataset.
+
+    On the hosts rather than in a top-level object: the JSON is a flat list so that filtering a
+    fleet stays a one-liner (host_json), and a wrapper would break every such filter.
+    """
+    gaps = coverage_gaps(records)
+    for host in host_objects:
+        host["ingest"] = "ingested"
+        host["coverage_gaps"] = gaps.get(host.get("host", ""), [])
+    for host, kind, message in fleet_problems(records, reported):
+        host_objects.append({"host": host, "ok": False, "ingest": kind, "error": message,
+                             "coverage_gaps": gaps.get(host, [])})
+    return host_objects
+
+
+def fleet_one_lines(records: list, reported: set) -> list[str]:
+    """A line per host with no dataset, so a script counting lines counts every host."""
+    return [f"{host}: ok=False ingest={kind}"
+            for host, kind, _message in fleet_problems(records, reported)]
+
+
+NOTHING_FOUND = ("give a collection, a dataset, a fleet's output directory (one holding "
+                 ".orca-fleet) or its fleet.duckdb")
+
+
 def run_report(paths, views=None, one_line=False, as_json=False, list_commands=False,
                failed_only=False, private_key=None, cms_backend=None, work_dir=None,
                refresh=False, ignore_file=None, recurse=False, context=None,
@@ -1175,18 +1342,28 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     # Read before anything expensive: a mistyped ignore file must not surface after a fleet's
     # worth of decryption, and must never be read as "nothing to ignore".
     ignore = ignores.load(ignore_file)
-    dirs = candidate_dirs(list(paths or []), recurse)
+    given = [as_directory(path) for path in (paths or ["."])]
+    dirs, fleets = expand_fleets(candidate_dirs(given, recurse))
 
     scratch.use(work_dir)
     work = work_dir or scratch.directory("report_")
     sealed = unsealed_sidecar_dirs(dirs, work, private_key, cms_backend, refresh)
     runs = find_runs(dirs, sealed)
-    if not runs:
+
+    # A collection's datasets where fleet and ingest put them by default, matched by run id.
+    identities = {run_identity(run) for run in runs if run.outcome_path}
+    near = datasets_near(given, dirs, identities, os.getcwd()) if identities else []
+    if near:
+        dirs += near
+        runs = find_runs(dirs, sealed)
+
+    reported = {run_identity(run) for run in runs}
+    if not runs and not fleets:
         # Name the flag: a parent of per-host folders is the likeliest reason, and the fix is
         # one word rather than a hunt for which directory to point at.
-        inside = "" if recurse else " (--recurse to look inside)"
-        raise RuntimeError(f"no collection in {', '.join(paths)}{inside}: need a collection, "
-                           f"an ingested dataset, or a directory holding either")
+        inside = "" if recurse else ", or add --recurse to look inside"
+        raise RuntimeError(f"no collection in {', '.join(paths or ['.'])}: {NOTHING_FOUND}"
+                           f"{inside}")
 
     # Before the views, and not for '--list', which reads the Outcome alone: the per-command
     # logs are inside the archives, and without this the errors and criticals views read
@@ -1197,6 +1374,8 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     orphans = orphan_lines(dirs, sealed)
 
     if list_commands:
+        if fleets:
+            print(render_fleet_block(fleets, reported))
         # The same rows 'orca report outcome' writes to parquet, so the text and the table can
         # never disagree - and no engine is needed to print them.
         paths = [run.outcome_path for run in runs if run.outcome_path]
@@ -1225,14 +1404,19 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
         for run in runs]
 
     if as_json:
-        print(render_json([host_json(r) for r in reports]))
+        hosts = [host_json(r) for r in reports]
+        print(render_json(fleet_json(hosts, fleets, reported) if fleets else hosts))
         return
     if one_line:
         for r in reports:
             print(render_one_line(summary_of(r)))
+        for line in fleet_one_lines(fleets, reported):
+            print(line)
         return
 
     # 'explicit' is whether a view was named: a named view prints its heading even when it is
     # empty, and the default report leaves the empty ones out.
     explicit = bool(views)
-    print("\n\n".join([render_human(r, views, explicit, context) for r in reports] + orphans))
+    blocks = [render_fleet_block(fleets, reported)] if fleets else []
+    blocks += [render_human(r, views, explicit, context) for r in reports] + orphans
+    print("\n\n".join(blocks))

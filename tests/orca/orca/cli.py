@@ -327,8 +327,10 @@ def _build_parser() -> argparse.ArgumentParser:
                     "machine in it. Two row tables are modes: 'orca report outcome' (one row "
                     "per command run) and 'orca report outline' (one row per ORC run).",
         epilog="orca report outcome E:\\datasets --recurse --out fleet.parquet")
-    rp.add_argument("paths", nargs="+",
-                    help="collection(s), ingested dataset(s), or a directory holding either")
+    rp.add_argument("paths", nargs="*", default=["."],
+                    help="collection(s), ingested dataset(s), a directory holding either, or a "
+                         "fleet's output directory or fleet.duckdb (default: the current "
+                         "directory)")
     rp.add_argument("--view", action="extend", type=view_names, default=None,
                     metavar="NAME[,NAME...]",
                     help=f'view(s) to show: {" | ".join(report.VIEW_NAMES)}')

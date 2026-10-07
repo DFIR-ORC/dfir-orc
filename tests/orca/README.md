@@ -377,6 +377,8 @@ orca report E:\datasets --list               # one line per command, every host
 orca report E:\datasets --list --failed      # only the commands that did not exit 0
 orca report \\host\dumps\ORC_HOST --private-key contoso.com.key   # a sealed collection
 orca report E:\datasets --ignore ignore.json         # pass over what you already know about
+orca report                                  # in a fleet's output directory: the whole fleet
+orca report fleet.duckdb --one-line          # the same, named by its database
 ```
 
 `report` also holds the two row tables: `orca report outcome` and `orca report outline` (below).
@@ -414,14 +416,41 @@ w11test:         ok=False cmds=35 fails=12 ... dur=7m37s
 ```
 
 One machine with several collections is several runs, as above: each Outcome is one. When a
-directory holds no collection, the error says `--recurse to look inside`, since a parent of
-per-host folders is the likeliest reason.
+directory holds no collection, the error lists what would have worked - a collection, a dataset,
+a fleet's output directory or its `fleet.duckdb`, or `--recurse` to look inside.
 
-Where the same run is seen twice - `ingest` writes its dataset *inside* the collection, Outcome
-and all, and an expanded tree holds another copy - the sighting with an ingest timing beside it
-wins: that is the one with tables to report. That de-duplication by run id is what makes
-`--recurse` safe to point at a tree. A dataset carrying no Outcome at all is still a run, since
-its tables are worth reporting.
+Where the same run is seen twice - a collection, the dataset made from it, an expanded tree -
+the sighting with an ingest timing beside it wins: that is the one with tables to report; of two
+datasets, the more recently ingested. That de-duplication by run id is what makes `--recurse`
+safe to point at a tree. A dataset carrying no Outcome at all is still a run, since its tables
+are worth reporting.
+
+#### A fleet, and a collection's datasets
+
+`report` meets `fleet` without being told how:
+
+- **A fleet's output directory is reported as a fleet.** It is known by `.orca-fleet/hosts.csv`,
+  the list of every host and its dataset - failed ones included. No `--recurse`, and no path at
+  all when it is the current directory; `fleet.duckdb` names the same directory.
+- **A collection finds its datasets** where `fleet` and `ingest` put them by default: one level
+  inside the collection (`--out-at-input`) and in the current directory. A dataset is matched to
+  the collection by run id, so the other collections' datasets in the current directory are left
+  out. Where a past `--out` wrote is not remembered: name it, or `--recurse`.
+
+A fleet report starts with what the fleet itself recorded - and says who it could not read,
+since a report that drops a failed host reads as a smaller, cleaner fleet:
+
+```
+fleet: 3 collection(s), 2 ingested, 1 failed  (.\.orca-fleet)
+  c.lab: ingest failed: archive is truncated
+  coverage gaps:
+    DOM-DC-W2008.dom2008.lab: missing AD_computers, missing DNS_records, ... (10)
+```
+
+`--one-line` gives a failed host its line too (`c.lab: ok=False ingest=failed`), so counting lines
+counts hosts; `--json` gives it an object (`"ingest": "failed"`, `"error"`) and every host its
+`"ingest"` and `"coverage_gaps"`, still one flat list. A host a stale or foreign record calls
+missing but whose run is reported anyway is not listed twice.
 
 A sealed Outcome is found by the name ORC gives it, so discovery needs no key; reading it needs
 one. Only an Outcome makes a directory a collection - a stray sealed log says nothing about what

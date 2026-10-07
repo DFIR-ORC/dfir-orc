@@ -132,6 +132,29 @@ def coverage_rows(result: FleetResult) -> list[list[str]]:
     return rows
 
 
+HOSTS_FILE = "hosts.csv"
+COVERAGE_FILE = "coverage.csv"
+
+
+def _read_csv(path: str) -> list[dict]:
+    """The rows of one of the fleet's own CSVs; empty when it is not there."""
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except OSError:
+        return []
+
+
+def read_hosts(where: str) -> list[dict]:
+    """hosts.csv as write_coverage wrote it under 'where' (the .orca-fleet directory)."""
+    return _read_csv(os.path.join(where, HOSTS_FILE))
+
+
+def read_coverage(where: str) -> list[dict]:
+    """coverage.csv as write_coverage wrote it under 'where'."""
+    return _read_csv(os.path.join(where, COVERAGE_FILE))
+
+
 def _write_csv(path: str, columns: list[str], rows: list[list[str]]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -148,8 +171,8 @@ def write_coverage(where: str, collections: list, result: FleetResult) -> None:
     reading as 'clean' is the dangerous failure, so the denominator is written down.
     """
     os.makedirs(where, exist_ok=True)
-    _write_csv(os.path.join(where, "hosts.csv"), HOST_COLUMNS, host_rows(collections, result))
-    _write_csv(os.path.join(where, "coverage.csv"), COVERAGE_COLUMNS, coverage_rows(result))
+    _write_csv(os.path.join(where, HOSTS_FILE), HOST_COLUMNS, host_rows(collections, result))
+    _write_csv(os.path.join(where, COVERAGE_FILE), COVERAGE_COLUMNS, coverage_rows(result))
 
 
 def write_database(where: str, collections: list, result: FleetResult,

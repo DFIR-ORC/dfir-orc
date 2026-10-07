@@ -201,9 +201,9 @@ class TestCli(unittest.TestCase):
 
         self.assertEqual(args.ignore, "ignore.json")
 
-    def test_report_needs_something_to_report_on(self):
-        with self.assertRaises(SystemExit):
-            cli._build_parser().parse_args(["report"])
+    def test_report_without_a_path_reports_the_current_directory(self):
+        # In a fleet's output directory a bare 'orca report' reports the fleet.
+        self.assertEqual(cli._build_parser().parse_args(["report"]).paths, ["."])
 
     def test_report_takes_the_keys_it_needs_to_unseal_a_collection(self):
         # A collection arrives with its Outcome, Outline and log each sealed.
