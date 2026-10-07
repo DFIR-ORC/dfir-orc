@@ -1226,7 +1226,7 @@ def expand_fleets(dirs: list) -> tuple[list, list]:
 
         records.append(record)
         for row in record.hosts:
-            dataset = row.get("dataset") or ""
+            dataset = _fleet.dataset_of(row, record.where)
             if row.get("status") == "ingested" and os.path.isdir(dataset) \
                     and os.path.abspath(dataset) not in seen:
                 seen.add(os.path.abspath(dataset))
@@ -1249,10 +1249,11 @@ def fleet_problems(records: list, reported: set) -> list[tuple[str, str, str]]:
             if row.get("OrcRunId") and row["OrcRunId"] in reported:
                 continue
             host = row.get("OrcComputerName") or "unnamed collection"
+            dataset = _fleet.dataset_of(row, record.where)
             if row.get("status") == "failed":
                 problems.append((host, "failed", f"ingest failed: {row.get('error', '')}"))
-            elif not os.path.isdir(row.get("dataset") or ""):
-                problems.append((host, "missing", f"dataset missing: {row.get('dataset')} "
+            elif not os.path.isdir(dataset):
+                problems.append((host, "missing", f"dataset missing: {dataset} "
                                                   f"(re-run orca fleet)"))
     return problems
 

@@ -87,8 +87,11 @@ HOST_COLUMNS = ["OrcComputerName", "OrcRunId", "dataset", "status", "error"]
 COVERAGE_COLUMNS = ["OrcComputerName", "table", "status"]
 
 
-def host_rows(collections: list, result: FleetResult) -> list[list[str]]:
-    """One row per collection, failed ones included: the denominator of any fleet answer."""
+def host_rows(collections: list, result: FleetResult, root: str | None = None) -> list[list[str]]:
+    """One row per collection, failed ones included: the denominator of any fleet answer.
+
+    With 'root', the fleet's directory, each dataset is written relative to it (stored_dataset).
+    """
     # By identity, not equality: 'result' is built from the very objects in 'collections'.
     datasets = {id(collection): dataset for collection, dataset in result.ingested}
     failures = {id(collection): message for collection, message in result.failed}
@@ -100,8 +103,33 @@ def host_rows(collections: list, result: FleetResult) -> list[list[str]]:
                          failures[id(collection)]])
         else:
             rows.append([collection.computer_name, collection.run_id,
-                         datasets[id(collection)], "ingested", ""])
+                         stored_dataset(datasets[id(collection)], root), "ingested", ""])
     return rows
+
+
+def stored_dataset(dataset: str, root: str | None) -> str:
+    """'dataset' as the fleet's records hold it: relative to 'root', the fleet's directory.
+
+    Relative so that a fleet copied off the analysis machine, or moved to another disk, still
+    names its own datasets. Absolute where no relative path exists (another drive), and that
+    record breaks on a move the way every record did before.
+    """
+    if not root:
+        return dataset
+    try:
+        return os.path.relpath(dataset, root)
+    except ValueError:
+        return os.path.abspath(dataset)
+
+
+def dataset_of(row: dict, where: str) -> str:
+    """The dataset a hosts.csv row names, as a path: relative ones are under the fleet's directory,
+    the parent of 'where' (.orca-fleet). Absolute ones, as older fleets wrote, are kept. Empty
+    for a host that failed."""
+    dataset = row.get("dataset") or ""
+    if not dataset:
+        return ""
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(where)), dataset))
 
 
 def coverage_rows(result: FleetResult) -> list[list[str]]:
@@ -171,7 +199,8 @@ def write_coverage(where: str, collections: list, result: FleetResult) -> None:
     reading as 'clean' is the dangerous failure, so the denominator is written down.
     """
     os.makedirs(where, exist_ok=True)
-    _write_csv(os.path.join(where, HOSTS_FILE), HOST_COLUMNS, host_rows(collections, result))
+    _write_csv(os.path.join(where, HOSTS_FILE), HOST_COLUMNS,
+               host_rows(collections, result, os.path.dirname(os.path.abspath(where))))
     _write_csv(os.path.join(where, COVERAGE_FILE), COVERAGE_COLUMNS, coverage_rows(result))
 
 
@@ -187,7 +216,7 @@ def write_database(where: str, collections: list, result: FleetResult,
 
     database = fleetdb.database_path(where)
     families = fleetdb.fleet_families([dataset for _, dataset in result.ingested])
-    tables = {"orca_hosts": (HOST_COLUMNS, host_rows(collections, result)),
+    tables = {"orca_hosts": (HOST_COLUMNS, host_rows(collections, result, where)),
               "orca_coverage": (COVERAGE_COLUMNS, coverage_rows(result))}
     try:
         built = fleetdb.build_database(get_engine(engine_name), database, families, tables,

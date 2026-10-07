@@ -76,6 +76,14 @@ class TestFleetDirectory(FleetCase):
         self.assertEqual([line.split(":")[0] for line in lines], ["a.lab", "b.lab"])
         self.assertIn("tables=2", lines[0])
 
+    def test_a_relative_dataset_is_read_from_the_fleet_directory(self):
+        """What a moved fleet looks like: hosts.csv names its datasets relative to itself."""
+        write_dataset(os.path.join(self.dir, "ORC_A"), "a.lab", "{A}", tables=2)
+        write_fleet(self.dir, [["a.lab", "{A}", "ORC_A", "ingested", ""]])
+        lines = self.invoke([self.dir], one_line=True).strip().splitlines()
+        self.assertEqual(lines, [line for line in lines if "tables=2" in line])
+        self.assertEqual([line.split(":")[0] for line in lines], ["a.lab"])
+
     def test_a_failed_host_is_a_host_in_every_shape(self):
         self.fleet()
         lines = self.invoke([self.dir], one_line=True).strip().splitlines()

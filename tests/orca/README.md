@@ -432,7 +432,9 @@ are worth reporting.
 
 - **A fleet's output directory is reported as a fleet.** It is known by `.orca-fleet/hosts.csv`,
   the list of every host and its dataset - failed ones included. No `--recurse`, and no path at
-  all when it is the current directory; `fleet.duckdb` names the same directory.
+  all when it is the current directory; `fleet.duckdb` names the same directory. Datasets are
+  recorded relative to that directory, so a fleet copied elsewhere still reports; one on another
+  drive is recorded in full, and an older fleet's absolute paths need `--recurse` once moved.
 - **A collection finds its datasets** where `fleet` and `ingest` put them by default: one level
   inside the collection (`--out-at-input`) and in the current directory. A dataset is matched to
   the collection by run id, so the other collections' datasets in the current directory are left

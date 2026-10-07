@@ -190,6 +190,23 @@ class TestCoverage(unittest.TestCase):
             self.assertEqual(rows[1]["dataset"], "")
             self.assertEqual(rows[1]["error"], "archive is truncated")
 
+    def test_hosts_csv_names_a_dataset_relative_to_the_fleet(self):
+        """A fleet moved to another disk or machine must still name its own datasets."""
+        with tempfile.TemporaryDirectory() as d:
+            a = os.path.join(d, "ds-a")
+            os.makedirs(a, exist_ok=True)
+            good = ingest.Collection(os.path.join(d, "ORC_A_Outcome.json"), [],
+                                     "a.lab", "{A}", "T")
+            result = fleet.FleetResult([(good, a)], [])
+
+            where = os.path.join(d, fleet.FLEET_DIR)
+            with mock.patch.object(fleet.layout, "table_names", return_value=[]),                     mock.patch.object(fleet.layout, "skipped", return_value={}):
+                fleet.write_coverage(where, [good], result)
+
+            rows = self._read(os.path.join(where, "hosts.csv"))
+            self.assertEqual(rows[0]["dataset"], "ds-a")
+            self.assertEqual(fleet.dataset_of(rows[0], where), os.path.normpath(a))
+
     def test_the_same_host_twice_is_two_rows_with_their_own_gaps(self):
         """Review Focus 1: two runs of one host are two denominators, not one overwritten."""
         with tempfile.TemporaryDirectory() as d:
@@ -212,6 +229,25 @@ class TestCoverage(unittest.TestCase):
             rows = self._read(os.path.join(where, "coverage.csv"))
             self.assertEqual(rows, [{"OrcComputerName": "a.lab", "table": "autoruns",
                                      "status": "missing"}])
+
+
+class TestDatasetPaths(unittest.TestCase):
+    def test_a_relative_dataset_is_under_the_fleet_directory(self):
+        where = os.path.join(r"C:\fleet", fleet.FLEET_DIR)
+        self.assertEqual(fleet.dataset_of({"dataset": "ORC_A"}, where), r"C:\fleet\ORC_A")
+
+    def test_an_absolute_dataset_from_an_older_fleet_is_kept(self):
+        where = os.path.join(r"C:\fleet", fleet.FLEET_DIR)
+        self.assertEqual(fleet.dataset_of({"dataset": r"D:\old\ORC_A"}, where), r"D:\old\ORC_A")
+
+    def test_a_failed_host_has_no_dataset(self):
+        self.assertEqual(fleet.dataset_of({"dataset": ""}, fleet.FLEET_DIR), "")
+
+    def test_a_dataset_on_another_drive_is_stored_absolute(self):
+        self.assertEqual(fleet.stored_dataset(r"D:\out\ORC_A", r"C:\fleet"), r"D:\out\ORC_A")
+
+    def test_a_dataset_under_the_fleet_is_stored_relative(self):
+        self.assertEqual(fleet.stored_dataset(r"C:\fleet\ORC_A", r"C:\fleet"), "ORC_A")
 
 
 class TestCoverageByFamily(unittest.TestCase):
