@@ -654,11 +654,17 @@ tree `orca extract` expanded inside it is not read:
     ORC_General  NTFSInfo  -  0m0s  cpu=?  read=?  wrote=?  0x00000001
 
   logs with errors (1 of 2)
-    ORC_HOST_General/NTFSInfo.dev.log  0W  1E  1C
+    ORC_General/NTFSInfo.dev.log  0W  1E  1C
 
   critical (1)
-    ORC_HOST_General/NTFSInfo.dev.log  09:14:22  Failed to open volume \.\C: [access denied]
+    ORC_General/NTFSInfo.dev.log  09:14:22  Failed to open volume \.\C: [access denied]
 ```
+
+A log is labelled by the key its archive was collected under (`ORC_General`, as the Outcome
+pairs each command set with its archive, or an Outline-only run's `keyword`), not by the
+archive's directory name, which repeats the host and the system type the header already shows
+and pushes a message off the line. An `--ignore` pattern matches that label, or the log's file
+name alone.
 
 The archives themselves are not opened by `report`: after an ingest everything it reads is in
 the dataset, and the decrypted `.7z` kept there serves the next ingest only.

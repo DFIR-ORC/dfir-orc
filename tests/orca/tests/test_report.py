@@ -964,6 +964,32 @@ class TestArchiveDirectories(unittest.TestCase):
         hr = report.build_host_report(self.run, None, [], self.outcome)
         self.assertEqual([m["message"] for m in hr["critical"]["messages"]], ["gone"])
 
+    def test_a_log_is_labelled_by_its_archives_key_not_its_directory(self):
+        hr = report.build_host_report(self.run, None, [], self.outcome)
+        self.assertEqual(sorted(log["log"] for log in hr["log"]["logs"]),
+                         ["ORC_General/Errors/Autoruns.dev.log", "ORC_General/NTFSInfo.log"])
+        self.assertEqual([m["log"] for m in hr["critical"]["messages"]],
+                         ["ORC_General/NTFSInfo.log"])
+
+    def test_an_ignore_pattern_on_the_keyed_label_passes_a_log_over(self):
+        hr = report.build_host_report(self.run, None, [], self.outcome, None,
+                                      ["ORC_General/NTFS*"])
+        self.assertEqual([log["log"] for log in hr["log"]["logs"]],
+                         ["ORC_General/Errors/Autoruns.dev.log"])
+
+    def test_a_run_known_by_its_outline_takes_the_keys_from_it(self):
+        os.remove(self.outcome)
+        with open(os.path.join(self.run, "ORC_H_Outline.json"), "w", encoding="utf-8") as f:
+            f.write('{"dfir-orc": {"outline": {"id": "{H}", "archives": ['
+                    '{"keyword": "ORC_General", "file": "ORC_H_General.7z"}]}}}')
+        self.assertEqual(report.archive_keys(self.run), {"ORC_H_General": "ORC_General"})
+
+    def test_a_directory_no_key_is_known_for_keeps_its_name(self):
+        self.assertEqual(report.keyed_label("Other/x.log", {"ORC_H_General": "ORC_General"}),
+                         "Other/x.log")
+        self.assertEqual(report.keyed_label("top.log", {"ORC_H_General": "ORC_General"}),
+                         "top.log")
+
     def test_an_ignore_pattern_on_the_file_name_still_passes_a_log_over(self):
         view = report.build_log_view(self.run, [], None, ["NTFSInfo.log"], None,
                                      report.archive_dirs(self.run, self.outcome))

@@ -167,6 +167,45 @@ def archive_dirs(directory: str, outcome_path: str | None = None) -> list[str]:
     return sorted(set(name for name in names if name))
 
 
+def archive_keys(directory: str, outcome_path: str | None = None) -> dict[str, str]:
+    """archive directory name -> the key its archive was collected under ('ORC_General').
+
+    From the run's own records: the Outcome pairs each command set's name with its archive,
+    and for a run known only by its Outline, the Outline pairs each 'keyword' with its 'file'.
+    What labels a log in the report: the directory repeats the host and the system type the
+    host header already shows, and in a message view that pushes the message off the line.
+    """
+    keys = {}
+    outcome = _outcome.read_outcome(outcome_path) if outcome_path else None
+    for command_set in (outcome or {}).get("command_set", []) or []:
+        archive = command_set.get("archive")
+        for one in (archive if isinstance(archive, list) else [archive] if archive else []):
+            if one.get("name") and command_set.get("name"):
+                keys[layout.archive_stem(one["name"])] = command_set["name"]
+
+    if not keys:
+        for path in glob.glob(os.path.join(directory, "*.json")):
+            kind, outline = _sidecars.kind_of(path)
+            if kind != "outline":
+                continue
+            for entry in outline.get("archives", []) or []:
+                if isinstance(entry, dict) and entry.get("file") and entry.get("keyword"):
+                    keys[layout.archive_stem(entry["file"])] = entry["keyword"]
+
+    return keys
+
+
+def keyed_label(label: str, keys: dict | None) -> str:
+    """'label' with its archive directory replaced by that archive's key, when one is known:
+    'ORC_..._General/GetSamples.log' -> 'ORC_General/GetSamples.log'. Anything else as it is."""
+    head, sep, rest = label.partition("/")
+    if not sep or not keys:
+        return label
+
+    key = {name.lower(): value for name, value in keys.items()}.get(head.lower())
+    return f"{key}/{rest}" if key else label
+
+
 def run_log_files(directory: str, extra_dirs: list | None = None,
                   archives: list | None = None) -> list[str]:
     """The logs of a run: the ones at its top level and in each of its archive directories
@@ -269,7 +308,8 @@ def log_stem(outcome_path: str) -> str | None:
 
 def build_log_view(directory: str, extra_dirs: list | None = None,
                    stem: str | None = None, ignore: list | None = None,
-                   context: int | None = None, archives: list | None = None) -> dict:
+                   context: int | None = None, archives: list | None = None,
+                   keys: dict | None = None) -> dict:
     """What went wrong in this run: the logs carrying error lines, and the tables the ingest
     could not read at all, which are a hole in the run rather than a message inside it.
 
@@ -288,7 +328,8 @@ def build_log_view(directory: str, extra_dirs: list | None = None,
         if size == 0:
             continue
 
-        logs.append(dict(scan_log(path, context), log=log_label(path, directory), bytes=size))
+        logs.append(dict(scan_log(path, context),
+                         log=keyed_label(log_label(path, directory), keys), bytes=size))
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
     # The file name too: a log is listed under its archive's directory now, and an ignore
     # pattern written for 'GetSamples.dev.log' has to keep passing it over.
@@ -380,7 +421,7 @@ def build_host_report(directory: str, engine=None, extra_dirs: list | None = Non
     oc = _outcome.parse_outcome(op) if op else None
     files = empty_output_files(engine, layout.manifest_path(directory)) if engine else []
     log_view = build_log_view(directory, extra_dirs, stem, ignore, context,
-                              archive_dirs(directory, op))
+                              archive_dirs(directory, op), archive_keys(directory, op))
     return {
         "host": host_of(directory, extra_dirs, op),
         "directory": directory,
