@@ -247,9 +247,10 @@ class TestReportSealedCollection(OrcFixtures, unittest.TestCase):
 
         self.assertIn("SEALEDHOST", output)
         self.assertIn("failed commands (1)", output)
-        # set, command, tool, duration, exit code - the columns a --list line uses.
+        # set, command, tool, duration, what it did, and the exit code in hex last.
         line = next(l for l in output.splitlines() if "USNInfo" in l and "ORC_General" in l)
-        self.assertEqual(line.split(), ["ORC_General", "USNInfo", "USNInfo", "0m22s", "18"])
+        self.assertEqual(line.split(), ["ORC_General", "USNInfo", "USNInfo", "0m22s", "cpu=?",
+                                        "read=?", "wrote=?", "0x00000012"])
 
     def test_the_log_is_unsealed_so_the_errors_view_works(self):
         output = self.report()

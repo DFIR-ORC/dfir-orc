@@ -373,6 +373,11 @@ class TestRenderCommandLines(unittest.TestCase):
 
         self.assertIn("?", self.lines(rows)[0])
 
+    def test_the_exit_code_is_hex(self):
+        rows = [command_row("H", "Processes1", "2147500036", False, "2026-09-25T14:00:00Z")]
+
+        self.assertTrue(self.lines(rows)[0].endswith("0x80004004"), self.lines(rows)[0])
+
     def test_nothing_to_list_says_so(self):
         self.assertIn("0 command(s)", report.render_command_lines([], False))
 
@@ -409,7 +414,22 @@ class TestRenderSections(unittest.TestCase):
     def test_a_failure_is_columnised_with_the_code_last(self):
         line = next(l for l in self.lines() if "Autoruns" in l)
 
-        self.assertEqual(line.split(), ["ORC_General", "Autoruns", "-", "0m0s", "1"])
+        self.assertEqual(line.split(), ["ORC_General", "Autoruns", "-", "0m0s", "cpu=?",
+                                        "read=?", "wrote=?", "0x00000001"])
+
+    def test_a_failure_says_what_the_process_did(self):
+        # No CPU and nothing read is a command that never started; a full timeout's worth of
+        # reading is one that was cut short.
+        hr = full_host_report()
+        hr["outcome"]["failures"] = [{"set": "ORC_General", "command": "Processes1", "tool": "",
+                                      "exit_code": "2147500036", "duration_seconds": 300.0,
+                                      "start": "", "cpu_seconds": 3.0, "read_bytes": 2048,
+                                      "write_bytes": 1024}]
+
+        line = next(l for l in self.lines(hr=hr) if "Processes1" in l)
+
+        self.assertEqual(line.split()[3:], ["5m0s", "cpu=0m3s", "read=2.0KB", "wrote=1.0KB",
+                                            "0x80004004"])
 
     def test_the_failure_columns_line_up(self):
         failures = [l for l in self.lines() if "Command" in l and "dev.log" not in l]

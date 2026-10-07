@@ -492,10 +492,23 @@ def counted(label: str, kept: int, ignored: int = 0) -> str:
 
 def failure_rows(outcome: dict) -> list:
     """The failed commands, with the columns a '--list' line uses: set, command, tool,
-    duration, and the exit code last."""
+    duration, then what the process did - CPU time, bytes read and written - and the exit code
+    last. Those three tell a command that never started from one cut short at its timeout."""
+    failures = outcome.get("failures", [])
+    cpu = labelled("cpu", [_hdur(failure.get("cpu_seconds")) for failure in failures])
+    read = labelled("read", [_hsize(failure.get("read_bytes")) for failure in failures])
+    wrote = labelled("wrote", [_hsize(failure.get("write_bytes")) for failure in failures])
     return [[failure["set"], failure["command"], failure.get("tool") or "-",
-             _hdur(failure["duration_seconds"]), str(failure["exit_code"])]
-            for failure in outcome.get("failures", [])]
+             _hdur(failure["duration_seconds"]), cpu[index], read[index], wrote[index],
+             _outcome.exit_hex(failure["exit_code"])]
+            for index, failure in enumerate(failures)]
+
+
+def labelled(label: str, values: list) -> list:
+    """'label=value' cells padded between the two, so the labels start in one column and the
+    values end in one: a '?' must not pull its label to the right of the others."""
+    width = max((len(value) for value in values), default=0)
+    return [f"{label}={value:>{width}}" for value in values]
 
 
 def table_rows(stats: dict) -> list:
@@ -610,7 +623,7 @@ def outcome_lines(hr: dict, explicit: bool) -> list:
     if rows or explicit or outcome.get("failures_ignored", 0):
         lines.append("")
         lines += section(counted("failed commands", len(rows),
-                                 outcome.get("failures_ignored", 0)), rows, "<<<>>")
+                                 outcome.get("failures_ignored", 0)), rows, "<<<>>>>>")
 
     return lines
 
@@ -798,7 +811,7 @@ def command_fields(row: dict) -> list[str]:
         row.get("tool") or "-",
         _hdur(row.get("duration_seconds")),
         _hsize(row.get("set_memory_peak") or None),
-        str(row.get("exit_code", "")),
+        _outcome.exit_hex(row.get("exit_code", "")),
     ]
 
 
@@ -927,7 +940,8 @@ def archives_named_by(outcome_paths: list) -> list:
     return named
 
 
-def orphan_rows(directory: str, extra_dirs: list | None = None) -> list:
+def orphan_rows(directory: str, extra_dirs: list | None = None,
+                accounted: list | None = None) -> list:
     """The archives of 'directory' that no Outcome of it accounts for, with their sizes.
 
     A collection whose Outcome never arrived leaves exactly this: data sitting in the directory
@@ -937,8 +951,12 @@ def orphan_rows(directory: str, extra_dirs: list | None = None) -> list:
     collection whose ingested run won the de-duplication still named its own archives, and
     calling them orphans because the run directory is where the report came from would be a
     false alarm.
+
+    'accounted' is what the Outcomes found elsewhere in the report name: 'orca fleet' leaves
+    the archives it decrypts in its output directory, and their Outcomes sit one level down
+    in the datasets - calling those orphans would be the same false alarm.
     """
-    named = []
+    named = list(accounted or [])
     for place in [directory] + list(extra_dirs or []):
         named += archives_named_by(ingest.find_outcome_jsons(place))
 
@@ -1153,7 +1171,7 @@ def shared_dirs(runs: list) -> set:
     return {directory for directory, count in counts.items() if count > 1}
 
 
-def orphan_lines(dirs: list, sealed: dict) -> list:
+def orphan_lines(dirs: list, sealed: dict, accounted: list | None = None) -> list:
     """One block per directory holding an archive no Outcome accounts for.
 
     Said once per directory rather than under each of its collections: it is a fact about the
@@ -1161,7 +1179,7 @@ def orphan_lines(dirs: list, sealed: dict) -> list:
     """
     blocks = []
     for directory in dirs:
-        rows = orphan_rows(directory, _extra(sealed, directory))
+        rows = orphan_rows(directory, _extra(sealed, directory), accounted)
         if rows:
             blocks.append("\n".join([directory]
                                     + section(f"archives no Outcome names ({len(rows)})",
@@ -1371,7 +1389,9 @@ def run_report(paths, views=None, one_line=False, as_json=False, list_commands=F
     if archive_logs and not list_commands:
         runs = with_archived_logs(runs, work, sevenzip.find_7z() or "", refresh)
 
-    orphans = orphan_lines(dirs, sealed)
+    orphans = orphan_lines(dirs, sealed,
+                           archives_named_by([run.outcome_path for run in runs
+                                              if run.outcome_path]))
 
     if list_commands:
         if fleets:

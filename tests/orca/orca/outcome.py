@@ -16,6 +16,12 @@ class Failure:
     # The ORC subtool that ran, empty for a command running a packaged binary, so a failure
     # reads with the same columns as a '--list' line.
     tool: str = ""
+    # What the process did before it failed, None when the Outcome did not record it: a
+    # command that used no CPU and read nothing never really started, one that ran to its
+    # timeout reading gigabytes was cut short.
+    cpu_seconds: float | None = None
+    read_bytes: int | None = None
+    write_bytes: int | None = None
 
 
 @dataclass
@@ -52,6 +58,30 @@ def _exit_int(code) -> int | None:
     return None
 
 
+def exit_hex(code) -> str:
+    """An exit code as ORC's own logs and Windows write it: 32-bit hex, '0x80070005' rather
+    than '2147942405', so it can be looked up. A code that is not a number is left as it is."""
+    value = _exit_int(code)
+    if value is None:
+        return str(code)
+
+    return f"0x{value & 0xFFFFFFFF:08X}"
+
+
+def _cpu_seconds(command: dict) -> float | None:
+    """User plus kernel time, which ORC records in whole seconds."""
+    user, kernel = command.get("user_time"), command.get("kernel_time")
+    if not isinstance(user, (int, float)) and not isinstance(kernel, (int, float)):
+        return None
+
+    return float((user or 0) + (kernel or 0))
+
+
+def _counter(command: dict, name: str) -> int | None:
+    value = (command.get("io_counters") or {}).get(name)
+    return value if isinstance(value, int) else None
+
+
 def parse_outcome(path: str) -> Outcome:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
@@ -78,6 +108,9 @@ def parse_outcome(path: str) -> Outcome:
                     duration_seconds=_seconds(cmd.get("start", ""), cmd.get("end", "")),
                     start=cmd.get("start", ""),
                     tool=cmd.get("tool") or "",
+                    cpu_seconds=_cpu_seconds(cmd),
+                    read_bytes=_counter(cmd, "read_transfer"),
+                    write_bytes=_counter(cmd, "write_transfer"),
                 ))
 
     start, end = o.get("start", ""), o.get("end", "")
@@ -231,4 +264,4 @@ def run_outcome(paths, out=None, engine_name="duckdb", as_json=False,
     print(f"{out}: {len(rows)} command(s) from {len(dirs)} run(s), {len(failed)} failed")
     for row in failed[:10]:
         print(f"  {row['computer_name'] or '?':16s} {row['command_set']}/{row['command']} "
-              f"(code: {row['exit_code']})")
+              f"(code: {exit_hex(row['exit_code'])})")

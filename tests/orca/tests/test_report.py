@@ -910,6 +910,15 @@ class TestOrphanArchives(unittest.TestCase):
 
         self.assertEqual(report.orphan_rows(self.dir.name), [])
 
+    def test_an_archive_an_outcome_elsewhere_names_is_no_orphan(self):
+        # 'orca fleet' leaves the archives it decrypts in its output directory, while their
+        # Outcomes sit one level down, in each host's dataset.
+        self.archive("ORC_WS-0001_General.7z")
+
+        rows = report.orphan_rows(self.dir.name, accounted=["ORC_WS-0001_General.7z.p7b"])
+
+        self.assertEqual(rows, [])
+
     def test_a_directory_with_no_archive_at_all_has_no_orphan(self):
         write_outcome(self.dir.name, "WS-0001")
 

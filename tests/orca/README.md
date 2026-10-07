@@ -472,7 +472,9 @@ ORC's console output show up where they should.
 
 In a merged dump that is the thing worth noticing: a collection whose Outcome never arrived, so
 data is sitting there that nothing in the report says a word about. Matched by archive stem, so
-the decrypted copy of a sealed archive is not mistaken for an orphan.
+the decrypted copy of a sealed archive is not mistaken for an orphan - and against every Outcome
+the report read, not only the directory's own: `fleet` leaves the archives it decrypted in its
+output directory while their Outcomes sit one level down in each host's dataset.
 
 #### The default report
 
@@ -480,57 +482,58 @@ A header line naming the host and where it came from, the run's scalars, then on
 section per thing worth looking at, every row of it in columns:
 
 ```
-DESKTOP-U9N26B0  E:/datasets/DESKTOP-U9N26B0
-  ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
+DOM-DC-W2008.dom2008.lab  .\ORC_DomainController_DOM-DC-W2008.dom2008.lab_20261006_120552
+  ok=False  cmds=41  fails=16  dur=29m33s  mem=629.2MB (ORC_General)
 
-  failed commands (12)
-    ORC_General  Azure_Identity            -         0m22s   1
-    ORC_General  GetThis_Additional        GetThis   0m51s   9
-    ORC_General  USNInfo                   USNInfo   0m22s  18
-    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
-    ORC_General  GetThis_Default           GetThis   0m45s   9
-    ORC_General  GetThis_Protected         GetThis   0m51s   9
-    ORC_General  GetBrowsers_History       GetThis   0m28s   9
-    ORC_General  GetResidents              GetThis   0m29s   9
-    ORC_General  Autoruns                  -          0m0s   1
-    ORC_General  Azure_Attested            -         0m22s   1
-    ORC_General  Azure_Instance            -         0m22s   1
-    ORC_General  Azure_ScheduledEvents     -         0m21s   1
+  failed commands (16)
+    ORC_General  Flashback              -            0m5s  cpu=0m0s  read=276.0B  wrote= 40.9KB  0x80070006
+    ORC_General  Azure_Identity         -            0m0s  cpu=   ?  read=     ?  wrote=      ?  0xFFFFFFFF
+    ORC_General  Autoruns               -            0m3s  cpu=0m0s  read=  0.0B  wrote=   0.0B  0xC0000139
+    ORC_General  GetSamples             GetSamples  0m10s  cpu=0m1s  read= 7.5KB  wrote=748.8KB  0x80004005
+    ORC_General  Processes1             -            0m0s  cpu=   ?  read=     ?  wrote=      ?  0xFFFFFFFF
 
-  tables (26, 1598014 rows, 64.4MB)
-    NTFSInfo_00000001_Volume_C_                 29.0MB  415398 rows  1.95s
-    I30Info_00000001_Volume_C_                  20.8MB  798432 rows  1.23s
-    USNInfo_00000001_Volume_C_                   7.8MB  323566 rows  0.68s
-    GetThis_Residents                            5.6MB   41220 rows  0.40s
-    SecDescr_00000001_Volume_C_                371.6KB    2385 rows  0.26s
-    GetThis_GetThis_Protected                  267.1KB    3148 rows  0.31s
+  tables (16, 389566 rows, 15.7MB)
+    NTFSInfo_00000000_DiskInterface_0x4e106ff4106fe187_    8.6MB  100576 rows  0.76s
+    I30Info_00000000_DiskInterface_0x4e106ff4106fe187_     5.9MB  217202 rows  0.54s
+    USNInfo_00000000_DiskInterface_0x4e106ff4106fe187_   684.5KB   66876 rows  0.37s
+    GetThis_Residents                                    365.5KB    3008 rows  0.22s
 
-  empty tables (2)
-    USNInfo_00000000_DiskInterface_0x9e1e94d71e94aa33_
+  empty tables (3)
     VSS_list
-  empty outputs (9)
-    Azure_Attested.json
-    Azure_Identity.json
+    autoruns
+    volstats_FatInfo_detail
+  empty outputs (7)
+    Residents.log
+    autoruns.csv
 
-  logs with errors (33 of 35)
-    USNInfo.dev.log              12W  2397E  1C
-    Residents.dev.log             4W  1288E  0C
+  logs with errors (27 of 30)
+    ORC_DomainController_DOM-DC-W2008.dom2008.lab_20261006_120552.log   1W  32E  0C
+    GetSamples.dev.log                                                  8W   6E  1C
 
   unread tables (1)
     autoruns  duckdb failed: Invalid Input Error: Error when sniffing file "C:/Users/...
 
-  critical (1)
-    USNInfo.dev.log  09:14:22  Failed to open volume \\.\C: [access denied]
+  critical (2)
+    GetSamples.dev.log  12:20:10  Command failed with 0x80004005: Unspecified error
+    GetSamples.log      12:20:10  Command failed with 0x80004005: Unspecified error
 ```
 
-The real run continues from there: all 26 tables, all 9 empty outputs and all 33 logs are
-printed, and the sample above is shortened for the README, not by `report`. **Nothing is
+The real run continues from there: all 16 failures, all 16 tables, all 7 empty outputs and all
+27 logs are printed, and the sample above is shortened for the README, not by `report`. **Nothing is
 folded away.** A report that hid rows behind a `... N more` would be one you have to run again
 with another flag to finish reading; the count in each heading is there to tell you how long
 the list is, not to excuse not printing it. One real host comes to 95 lines.
 
 A failure carries the columns a `--list` line does - set, command, tool, duration, exit code
-last - so the two read the same way. The `tables` section is one list of every table with its
+last - so the two read the same way. The exit code is 32-bit hex, the way ORC's own logs and
+Windows write it (`0x80004005`, not `2147500037`), so it can be looked up. Between the duration
+and the code, what the process did: CPU time (`cpu=`, user plus kernel, which ORC records in
+whole seconds) and the bytes it read and wrote. They tell failures apart that the code alone
+does not: `cpu=?` and nothing read is a command that never started, while `0x80004004` after
+exactly its timeout with a megabyte read is one that was cut short. `?` is a field the Outcome
+did not record. Memory is on the scalars line only (`mem=`): an Outcome records a peak per
+command set, not per command. `--json` keeps the code as ORC wrote it, plus `cpu_seconds`,
+`read_bytes` and `write_bytes` on each failure. The `tables` section is one list of every table with its
 size, rows and time, replacing the old `big` and `slow` pair, which on that run named the same
 four tables twice.
 
@@ -632,7 +635,7 @@ archive next to it. `report` now pulls those logs out before building the views:
 
 ```
   failed commands (1)
-    ORC_General  NTFSInfo  -  0m0s  1
+    ORC_General  NTFSInfo  -  0m0s  cpu=?  read=?  wrote=?  0x00000001
 
   logs with errors (1 of 2)
     NTFSInfo.dev.log  0W  1E  1C
@@ -715,9 +718,9 @@ DESKTOP-U9N26B0  //host/dumps/ORC_HOST
   ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
 
   failed commands (12)
-    ORC_General  USNInfo                   USNInfo   0m22s  18
-    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
-    ORC_General  Autoruns                  -          0m0s   1
+    ORC_General  USNInfo                   USNInfo   0m22s  0x00000012
+    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s  0x00000009
+    ORC_General  Autoruns                  -          0m0s  0x00000001
 
   tables: (no ingest timing: not a dataset)
 
@@ -797,7 +800,7 @@ choice in a human report:
 DESKTOP-U9N26B0: ok=False cmds=35 fails=7 empty=2 tables=26 ... ignored=33
 
   failed commands (7 of 12, 5 ignored)
-    ORC_General  USNInfo                   USNInfo   0m22s  18
+    ORC_General  USNInfo                   USNInfo   0m22s  0x00000012
     ...
   empty outputs (0 of 9, 9 ignored)
 
@@ -816,10 +819,10 @@ with:     DESKTOP-U9N26B0: ok=False cmds=35 fails=2 ... ignored=10
           w11test:         ok=False cmds=35 fails=2 ... ignored=10
 
 orca report ... --ignore ignore.json --list --failed
-  DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m36s  18
-  DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  6m14s   9
-  w11test          ORC_General  USNInfo                   USNInfo   0m23s  18
-  w11test          ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m39s   9
+  DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m36s  0x00000012
+  DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  6m14s  0x00000009
+  w11test          ORC_General  USNInfo                   USNInfo   0m23s  0x00000012
+  w11test          ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m39s  0x00000009
 
   50 command(s), 4 failed, 20 ignored, 2 host(s)
 ```
@@ -853,11 +856,11 @@ The view to scan when you have N machines and expect none of them to have failed
 command, no per-host headers, machine first and exit code last:
 
 ```
-DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m22s  1.2GB  18
-DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s  1.2GB   9
-DESKTOP-U9N26B0  ORC_General  GetThis_Default           GetThis   0m45s  1.2GB   9
-DESKTOP-U9N26B0  ORC_General  Autoruns                  -          0m0s  1.2GB   1
-TESTHOST         ORC_General  NTFSInfo                  NTFSInfo   1m2s  412MB    0
+DESKTOP-U9N26B0  ORC_General  USNInfo                   USNInfo   0m22s  1.2GB  0x00000012
+DESKTOP-U9N26B0  ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s  1.2GB  0x00000009
+DESKTOP-U9N26B0  ORC_General  GetThis_Default           GetThis   0m45s  1.2GB  0x00000009
+DESKTOP-U9N26B0  ORC_General  Autoruns                  -          0m0s  1.2GB  0x00000001
+TESTHOST         ORC_General  NTFSInfo                  NTFSInfo   1m2s  412MB  0x00000000
 
   35 command(s), 12 failed, 1 host(s)
 ```
@@ -888,9 +891,9 @@ DESKTOP-U9N26B0  //host/dumps/ORC_HOST
   ok=False  cmds=35  fails=12  dur=6m47s  mem=1.2GB (ORC_General)
 
   failed commands (12)
-    ORC_General  USNInfo                   USNInfo   0m22s  18
-    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s   9
-    ORC_General  Autoruns                  -          0m0s   1
+    ORC_General  USNInfo                   USNInfo   0m22s  0x00000012
+    ORC_General  NTFSInfo_Details_Current  NTFSInfo  5m10s  0x00000009
+    ORC_General  Autoruns                  -          0m0s  0x00000001
 
   tables: (no ingest timing: not a dataset)
 

@@ -51,6 +51,27 @@ class TestOutcome(unittest.TestCase):
         self.assertEqual([(f.command, f.tool) for f in o.failures],
                          [("USNInfo", "USNInfo"), ("Azure_Identity", "")])
 
+    def test_a_failure_carries_what_the_process_did(self):
+        doc = {"dfir-orc": {"outcome": {"command_set": [
+            {"name": "SetA", "commands": [
+                {"name": "Processes1", "exit_code": 2147500036, "user_time": 2,
+                 "kernel_time": 1, "io_counters": {"read_transfer": 795094,
+                                                   "write_transfer": 42645}},
+                {"name": "Azure_Identity", "exit_code": -1}]}]}}}
+
+        o = outcome.parse_outcome(self._write(doc))
+
+        self.assertEqual([(f.cpu_seconds, f.read_bytes, f.write_bytes) for f in o.failures],
+                         [(3.0, 795094, 42645), (None, None, None)])
+
+    def test_an_exit_code_reads_as_32_bit_hex(self):
+        self.assertEqual(outcome.exit_hex(2147500036), "0x80004004")
+        self.assertEqual(outcome.exit_hex("4294967295"), "0xFFFFFFFF")
+        self.assertEqual(outcome.exit_hex(-1), "0xFFFFFFFF")
+        self.assertEqual(outcome.exit_hex("0xc0000139"), "0xC0000139")
+        self.assertEqual(outcome.exit_hex(0), "0x00000000")
+        self.assertEqual(outcome.exit_hex("weird"), "weird")
+
     def test_counts_every_command_it_ran(self):
         # 'fails=1' cannot tell 1 of 2 from 1 of 300, so the summary needs the denominator.
         o = outcome.parse_outcome(self._write(DOC))
