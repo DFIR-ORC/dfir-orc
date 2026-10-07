@@ -142,6 +142,27 @@ class TestMemoryBudget(unittest.TestCase):
         self.assertIn(eng.temp_directory.replace("\\", "/"), settings)
         self.assertIn("memory_limit='2340MB'", settings)
 
+    def test_each_duckdb_process_spills_into_a_directory_of_its_own(self):
+        """A shared spill directory let parallel duckdb processes, or a killed run's leftover,
+        meet in one temporary file: "Corrupt temporary file: failed to decompress block"."""
+        eng = engine.DuckDbEngine("duckdb")
+        seen = []
+
+        def run(command, input, capture_output):
+            spill = input.decode("utf-8").split("SET temp_directory='")[1].split("'")[0]
+            seen.append(spill)
+            self.assertTrue(os.path.isdir(spill))
+            return mock.Mock(returncode=0, stderr=b"")
+
+        with mock.patch.object(engine.subprocess, "run", side_effect=run):
+            eng._run("SELECT 1;")
+            eng._run("SELECT 2;")
+
+        self.assertEqual(len(set(seen)), 2)
+        self.assertTrue(all(os.path.basename(path).startswith("orca_duckdb_") for path in seen))
+        # Removed once the process ended.
+        self.assertFalse(any(os.path.exists(path) for path in seen))
+
     def test_no_memory_limit_statement_when_unconstrained(self):
         self.assertNotIn("memory_limit", engine.DuckDbEngine("duckdb")._settings())
 

@@ -197,23 +197,34 @@ class Engine:
         raise NotImplementedError
 
 
+def spill_directory(parent: str) -> str:
+    """A spill directory of its own for one duckdb process, removed when the process ends.
+
+    One shared directory let two duckdb processes - ingest's parallel workers, two orca commands
+    at once - or a spill file a killed run left behind, meet in the same temporary file, and
+    duckdb then fails with "Corrupt temporary file: failed to decompress block".
+    """
+    return tempfile.mkdtemp(prefix="orca_duckdb_", dir=parent)
+
+
 class DuckDbEngine(Engine):
     def __init__(self, exe: str, memory_limit: str | None = None):
         self.exe = exe
         self.memory_limit = memory_limit
-        # LOCAL disk, never the (SMB) working directory: a large spill onto a share fails with
+        # Where each duckdb process gets a spill directory of its own (spill_directory): LOCAL
+        # disk, never the (SMB) working directory - a large spill onto a share fails with
         # WinError 1450, insufficient system resources.
-        self.temp_directory = os.path.join(tempfile.gettempdir(), "orca_duckdb_tmp")
+        self.temp_directory = tempfile.gettempdir()
         # Where a relative file path in a statement - or in a view it reads - is found, instead
         # of the process's working directory: the fleet database's views name their files
         # relative to the database's own directory (fleetdb).
         self.file_search_path = None
 
-    def _settings(self) -> str:
+    def _settings(self, spill: str | None = None) -> str:
         """Prologue every statement runs with: somewhere to spill, a memory budget that accounts
         for the other duckdb processes orca may be running alongside this one, and a thread count
         that budget can feed."""
-        settings = f"SET temp_directory='{_fwd(self.temp_directory)}'; "
+        settings = f"SET temp_directory='{_fwd(spill or self.temp_directory)}'; "
         if self.file_search_path:
             settings += f"SET file_search_path='{sql_path(self.file_search_path)}'; "
         if self.memory_limit:
@@ -231,8 +242,12 @@ class DuckDbEngine(Engine):
         # cp1252 is "Invalid unicode" and fails the whole statement. 'replace' only for what
         # duckdb prints back, so an odd byte in an error message cannot hide the error.
         command = [self.exe, database] if database else [self.exe]
-        proc = subprocess.run(command, input=(self._settings() + sql).encode("utf-8"),
-                              capture_output=True)
+        spill = spill_directory(self.temp_directory)
+        try:
+            proc = subprocess.run(command, input=(self._settings(spill) + sql).encode("utf-8"),
+                                  capture_output=True)
+        finally:
+            shutil.rmtree(spill, ignore_errors=True)
         proc.stderr = proc.stderr.decode("utf-8", errors="replace")
         if proc.returncode != 0:
             raise RuntimeError(f"duckdb failed: {proc.stderr.strip()}\nSQL: {sql[:500]}")
