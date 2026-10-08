@@ -17,8 +17,8 @@ https://dfir-orc.github.io
 
 | Branch       | Status |
 |:-------------|:-------|
-| main         | [![Build Status](https://github.com/DFIR-ORC/dfir-orc/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/DFIR-ORC/dfir-orc/actions/workflows/build.yml) |
 | release/10.3 | [![Build Status](https://github.com/DFIR-ORC/dfir-orc/actions/workflows/build.yml/badge.svg?branch=release%2F10.3.x)](https://github.com/DFIR-ORC/dfir-orc/actions/workflows/build.yml) |
+| release/10.4 | [![Build Status](https://github.com/DFIR-ORC/dfir-orc/actions/workflows/build.yml/badge.svg?branch=release%2F10.4.x)](https://github.com/DFIR-ORC/dfir-orc/actions/workflows/build.yml) |
 
 ---
 
