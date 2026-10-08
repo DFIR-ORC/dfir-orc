@@ -12,6 +12,8 @@
 #include <fmt/format.h>
 #include <fmt/xchar.h>
 
+#include "Log/Log.h"
+
 using namespace Orc;
 
 Orc::UploadVerdict Orc::GradeUploadOutcomes(
@@ -94,4 +96,48 @@ bool Orc::DestinationWantsFile(
     }
 
     return false;
+}
+
+bool Orc::ShouldDeleteAfterUpload(
+    const std::wstring& localPath,
+    const std::wstring& remoteName,
+    bool isArtifact,
+    const std::vector<OutputSpec::UploadDestination>& destinations,
+    const std::map<std::wstring, std::set<std::wstring>>& confirmedByDestination)
+{
+    bool wantedBySomeRequired = false;
+
+    for (const auto& destination : destinations)
+    {
+        if (!destination.Required)
+        {
+            continue;
+        }
+
+        // Judged across the whole chain: a required destination whose fallback asked for this file did
+        // want it, so its missing confirmation must still hold the file back.
+        if (!DestinationWantsFile(destination, remoteName, isArtifact))
+        {
+            continue;
+        }
+
+        wantedBySomeRequired = true;
+
+        const auto confirmed = confirmedByDestination.find(destination.Name);
+        if (confirmed == confirmedByDestination.end() || confirmed->second.find(localPath) == confirmed->second.end())
+        {
+            Log::Debug(L"Not deleting '{}': required destination '{}' did not confirm it", localPath, destination.Name);
+            return false;
+        }
+    }
+
+    // Vacuous truth is the dangerous case: with no required destination, or none that wanted this file,
+    // the loop above agrees with everything and nothing was ever uploaded.
+    if (!wantedBySomeRequired)
+    {
+        Log::Debug(L"Not deleting '{}': no required destination wanted it", localPath);
+        return false;
+    }
+
+    return true;
 }

@@ -9,6 +9,8 @@
 
 #include "OrcLib.h"
 
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -59,6 +61,26 @@ bool DestinationWantsFile(
     const OutputSpec::UploadDestination& destination,
     const std::wstring& remoteName,
     bool isArtifact);
+
+// Whether one local file may be deleted now that every destination has run (<uploads
+// delete_when_done="yes">). True only when at least one REQUIRED destination wanted this file and
+// every required destination that wanted it confirmed receipt.
+//
+// Every other shape fails closed, because this deletes evidence. The two that look true but are not:
+// a configuration with no required destination at all, and a file no required destination wanted -
+// "every required destination confirmed it" is vacuously true for both, and nothing was uploaded.
+// A destination whose method cannot confirm per file (BITS) never appears in 'confirmedByDestination',
+// so its files are kept by the same rule.
+//
+// 'isArtifact' marks one of the four files the collection writes about itself (outline, outcome, log,
+// console). Those ignore include/exclude and reach every destination; only artifacts="no" keeps one
+// away.
+bool ShouldDeleteAfterUpload(
+    const std::wstring& localPath,
+    const std::wstring& remoteName,
+    bool isArtifact,
+    const std::vector<OutputSpec::UploadDestination>& destinations,
+    const std::map<std::wstring, std::set<std::wstring>>& confirmedByDestination);
 
 }  // namespace Orc
 

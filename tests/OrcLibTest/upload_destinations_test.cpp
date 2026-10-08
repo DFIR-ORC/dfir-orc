@@ -844,6 +844,127 @@ public:
     }
 };
 
+// delete_when_done removes local evidence, so every ambiguous case has to fail closed. Two of these
+// are vacuous-truth traps: "every required destination confirmed it" is trivially true when there are
+// no required destinations, or when none of them wanted the file.
+TEST_CLASS(DeleteWhenDoneTest)
+{
+private:
+    static OutputSpec::UploadDestination
+    MakeDestination(const std::wstring& name, bool required, const std::wstring& include)
+    {
+        OutputSpec::UploadDestination destination;
+        destination.Name = name;
+        destination.Required = required;
+
+        auto upload = std::make_shared<OutputSpec::Upload>();
+        upload->Method = OutputSpec::UploadMethod::REST;
+        if (!include.empty())
+        {
+            upload->FilterInclude.push_back(include);
+        }
+
+        destination.Chain.push_back(upload);
+        return destination;
+    }
+
+public:
+    TEST_METHOD(DeletedWhenTheOnlyRequiredDestinationConfirmedIt)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {MakeDestination(L"hq", true, L"")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"hq", {L"c:\\out\\a.7z"}}};
+
+        Assert::IsTrue(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+
+    TEST_METHOD(KeptWhenOneRequiredDestinationDidNotConfirmIt)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {
+            MakeDestination(L"hq", true, L""), MakeDestination(L"dr", true, L"")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"hq", {L"c:\\out\\a.7z"}}};
+
+        Assert::IsFalse(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+
+    // An optional destination missing the file does not hold it back: the operator said it was optional.
+    TEST_METHOD(DeletedEvenWhenAnOptionalDestinationMissedIt)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {
+            MakeDestination(L"hq", true, L""), MakeDestination(L"nas", false, L"")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"hq", {L"c:\\out\\a.7z"}}};
+
+        Assert::IsTrue(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+
+    // Review Focus 1: with no required destination, "every required destination confirmed it" is
+    // vacuously true. Deleting the collection after a best-effort upload is the worst outcome this
+    // feature could have.
+    TEST_METHOD(KeptWhenThereIsNoRequiredDestination)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {MakeDestination(L"nas", false, L"")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"nas", {L"c:\\out\\a.7z"}}};
+
+        Assert::IsFalse(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+
+    // Review Focus 2: no required destination wanted this file, so none can have confirmed it. The file
+    // was never uploaded anywhere and must survive.
+    TEST_METHOD(KeptWhenNoRequiredDestinationWantedIt)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {MakeDestination(L"hq", true, L"*.log")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"hq", {}}};
+
+        Assert::IsFalse(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+
+    // A run artifact ignores the filters, but artifacts="no" still keeps it away, and a destination that
+    // was never sent it cannot have confirmed it.
+    TEST_METHOD(ArtifactKeptWhenARequiredDestinationTakesNoArtifacts)
+    {
+        std::vector<OutputSpec::UploadDestination> destinations = {MakeDestination(L"hq", true, L"")};
+        destinations[0].Artifacts = false;
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"hq", {}}};
+
+        Assert::IsFalse(ShouldDeleteAfterUpload(L"c:\\out\\log.txt", L"log.txt", true, destinations, confirmed));
+    }
+
+    // An artifact reaches a destination whatever its include/exclude say, so a filter that excludes it
+    // must not keep it on the host once the destination confirmed it.
+    TEST_METHOD(ArtifactDeletedDespiteAFilterThatWouldExcludeIt)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {MakeDestination(L"hq", true, L"*.7z")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"hq", {L"c:\\out\\log.txt"}}};
+
+        Assert::IsTrue(ShouldDeleteAfterUpload(L"c:\\out\\log.txt", L"log.txt", true, destinations, confirmed));
+    }
+
+    // A destination that confirmed nothing at all (a BITS entry, which cannot confirm per file) appears
+    // with no entry in the map; its files stay on the host.
+    TEST_METHOD(KeptWhenTheRequiredDestinationConfirmedNothingAtAll)
+    {
+        const std::vector<OutputSpec::UploadDestination> destinations = {MakeDestination(L"hq", true, L"")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed;
+
+        Assert::IsFalse(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+
+    // Review: "wanted" must be judged on the WHOLE chain, not on its first entry. A required
+    // destination whose primary filters a file out but whose fallback asks for everything did want it,
+    // so its missing confirmation must still hold the file back.
+    TEST_METHOD(KeptWhenOnlyAFallbackOfARequiredDestinationWantedIt)
+    {
+        OutputSpec::UploadDestination hq = MakeDestination(L"hq", true, L"*.log");
+        auto wide = std::make_shared<OutputSpec::Upload>();
+        wide->Method = OutputSpec::UploadMethod::REST;
+        hq.Chain.push_back(wide);  // second entry takes everything
+
+        const std::vector<OutputSpec::UploadDestination> destinations = {hq, MakeDestination(L"dr", true, L"")};
+        const std::map<std::wstring, std::set<std::wstring>> confirmed = {{L"dr", {L"c:\\out\\a.7z"}}};
+
+        Assert::IsFalse(ShouldDeleteAfterUpload(L"c:\\out\\a.7z", L"a.7z", false, destinations, confirmed));
+    }
+};
+
 // Whether a destination has any interest in a file, judged across its whole fallback chain. Shared by
 // the "nothing matched its filters" check and by delete_when_done, which must agree on the question.
 TEST_CLASS(DestinationWantsFileTest)

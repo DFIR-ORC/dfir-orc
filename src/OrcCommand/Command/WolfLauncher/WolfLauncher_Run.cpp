@@ -1310,7 +1310,84 @@ HRESULT Main::CompleteUpload()
 
     ReportUploadOutcomes(outcomes, legacyChainSize);
 
+    if (config.Output.DeleteWhenDone)
+    {
+        DeleteConfirmedLocalFiles();
+    }
+
     return S_OK;
+}
+
+// delete_when_done: the local files every required destination confirmed are no longer needed on the
+// host. Runs only once every destination has finished, which is what makes it safe where
+// operation="move" is not: move deletes on the first success, before any peer has been served.
+void Main::DeleteConfirmedLocalFiles()
+{
+    // A destination served by BITS cannot confirm a transfer per file (see ReportsPerFileSuccess), so it
+    // confirms nothing and nothing it was sent is ever deleted. Say so once rather than leaving the
+    // operator to wonder why the files are still there.
+    // Confirmation is gated on ReportsPerFileSuccess, not on the mode, so that is what this must test:
+    // a SYNCHRONOUS BITS destination also confirms nothing, and would otherwise keep every file with no
+    // explanation. Any entry of the chain could be the one that ran.
+    for (const auto& destination : config.Output.UploadDestinations)
+    {
+        if (!destination.Required)
+        {
+            continue;
+        }
+
+        for (const auto& upload : destination.Chain)
+        {
+            if (!ReportsPerFileSuccess(*upload))
+            {
+                Log::Warn(
+                    L"delete_when_done: destination '{}' uses an upload method that cannot confirm a "
+                    L"transfer per file (BITS); the files it was sent are kept on this host",
+                    destination.Name);
+                break;
+            }
+        }
+    }
+
+    for (const auto& pending : m_pendingUploads)
+    {
+        if (!pending.request || pending.request->GetRequest() != UploadMessage::UploadFile)
+        {
+            continue;
+        }
+
+        const std::wstring& localPath = pending.request->LocalName();
+
+        // 'filtered' is set for collected data and clear for a run artifact, which is exactly the
+        // distinction ShouldDeleteAfterUpload needs.
+        if (!ShouldDeleteAfterUpload(
+                localPath,
+                pending.request->RemoteName(),
+                !pending.filtered,
+                config.Output.UploadDestinations,
+                m_confirmedByDestination))
+        {
+            continue;
+        }
+
+        if (!DeleteFileW(localPath.c_str()))
+        {
+            auto ec = LastWin32Error();
+
+            // A single-destination operation="move" is legal alongside delete_when_done, and the agent
+            // already deleted the file: that is the configured outcome, not a failure to report.
+            if (ec == std::errc::no_such_file_or_directory)
+            {
+                Log::Debug(L"'{}' was already removed by the upload itself", localPath);
+                continue;
+            }
+
+            Log::Error(L"Failed to delete uploaded file '{}' [{}]", localPath, ec);
+            continue;
+        }
+
+        Log::Info(L"Deleted '{}': every required destination confirmed it", localPath);
+    }
 }
 
 HRESULT Main::SetWERDontShowUI(DWORD dwNewValue, DWORD& dwPreviousValue)

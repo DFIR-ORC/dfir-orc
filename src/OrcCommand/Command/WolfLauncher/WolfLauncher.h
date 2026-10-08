@@ -230,6 +230,9 @@ private:
     // Bring a started-but-unused upload agent to a terminal state, so nothing destroys one that is
     // still parked in Concurrency::receive on a buffer about to be freed.
     void DrainInheritedUploadAgent(bool alreadyNeedsFreshAgent);
+    // <uploads delete_when_done="yes">: drop the local files every required destination confirmed, once
+    // every destination has finished. Thin glue over ShouldDeleteAfterUpload, which decides.
+    void DeleteConfirmedLocalFiles();
 
     std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
 
