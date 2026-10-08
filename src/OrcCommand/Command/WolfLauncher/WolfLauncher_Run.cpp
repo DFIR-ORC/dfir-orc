@@ -34,6 +34,7 @@
 #include "MemoryStream.h"
 #include "ArchiveCreate.h"
 #include "BinaryBuffer.h"
+#include "UploadOutcome.h"
 
 #include "Utils/Guard.h"
 #include "Utils/TypeTraits.h"
@@ -349,11 +350,21 @@ HRESULT CloseStructuredOutput(
 UploadMessage::Message MakeReplayRequest(
     const Orc::Command::Wolf::PendingUpload& pending,
     const OutputSpec::Upload& spec,
+    bool acceptsArtifacts,
     const std::set<std::wstring>& alreadyUploaded)
 {
     const UploadMessage::Message& recorded = pending.request;
     if (!recorded || recorded->GetRequest() != UploadMessage::UploadFile)
     {
+        return nullptr;
+    }
+
+    // A run artifact carries no include/exclude choice: it is the collection's own record and reaches
+    // every destination whatever the filters say. artifacts="no" is the explicit opt-out, and the only
+    // thing that keeps one away.
+    if (!pending.filtered && !acceptsArtifacts)
+    {
+        Log::Debug(L"Upload of '{}' is a run artifact and this destination takes none", recorded->RemoteName());
         return nullptr;
     }
 
@@ -838,22 +849,90 @@ bool ReportsPerFileSuccess(const OutputSpec::Upload& spec)
     return spec.Method == OutputSpec::UploadMethod::REST || spec.Method == OutputSpec::UploadMethod::FileCopy;
 }
 
+// Whether anything the run produced is destined for this destination at all. A destination whose
+// filters matched nothing is not a failure, but a filter typo matching nothing should be visible
+// without condemning the run, so it is told apart from a destination that tried and failed.
+bool WantsAnything(
+    const OutputSpec::UploadDestination& destination,
+    const std::vector<Orc::Command::Wolf::PendingUpload>& pending)
+{
+    if (destination.Chain.empty())
+    {
+        return false;
+    }
+
+    for (const auto& item : pending)
+    {
+        if (!item.request || item.request->GetRequest() != UploadMessage::UploadFile)
+        {
+            continue;
+        }
+
+        // DestinationWantsFile scans the WHOLE chain and handles the artifact rule, so this agrees with
+        // delete_when_done on the same question. Judging by the primary alone skipped a destination
+        // whose fallback asked for everything, and reported the run as complete.
+        // 'filtered' is false for a run artifact, which carries no include/exclude choice.
+        if (DestinationWantsFile(destination, item.request->RemoteName(), !item.filtered))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Report the run's single upload verdict. Each failure along the way is an Error because a later entry,
+// or a later destination, may still succeed; without this one a collection that reached nowhere would
+// end with nothing more severe than a line the loop moved past.
+void ReportUploadOutcomes(const std::vector<UploadOutcome>& outcomes, size_t legacyChainSize)
+{
+    std::vector<std::wstring> failedRequired;
+    std::vector<std::wstring> failedOptional;
+
+    switch (GradeUploadOutcomes(outcomes, failedRequired, failedOptional))
+    {
+        case UploadVerdict::LegacyChainFailed:
+            Log::Critical(
+                L"UPLOAD: no configured upload succeeded ({} configured); the files that were not uploaded remain "
+                L"on this host",
+                legacyChainSize);
+            return;
+
+        case UploadVerdict::RequiredFailed:
+            Log::Critical(
+                L"UPLOAD: {} required destination(s) received nothing ({}); the files that were not uploaded "
+                L"remain on this host",
+                failedRequired.size(),
+                fmt::join(failedRequired, L", "));
+            return;
+
+        case UploadVerdict::OptionalFailed:
+            Log::Error(
+                L"UPLOAD: {} optional destination(s) failed ({}); the collection reached every required "
+                L"destination",
+                failedOptional.size(),
+                fmt::join(failedOptional, L", "));
+            return;
+
+        case UploadVerdict::AllSucceeded:
+            Log::Info(L"UPLOAD: every configured destination received the collection");
+            return;
+    }
+}
+
 // Wait between two attempts at the same <upload> entry. Announced at Info because this is the one place a
 // run deliberately stands still for a long time, and a silent pause at the end of a collection reads as a
 // hang. Blocking is fine here: CompleteUpload runs on the main thread once collection is over.
-void WaitBeforeRetry(std::chrono::seconds delay, size_t entry, uint32_t nextAttempt, uint32_t attempts)
+void WaitBeforeRetry(std::chrono::seconds delay, const std::wstring& label, uint32_t nextAttempt, uint32_t attempts)
 {
     // Validate() refuses a delay above the cap at embed time; clamp again so a value that reached us
     // some other way cannot overflow the millisecond conversion.
     const uint32_t seconds = static_cast<uint32_t>(
         std::min<int64_t>(delay.count(), static_cast<int64_t>(OutputSpec::Upload::kMaxRetryDelay)));
 
-    Log::Info(
-        L"UPLOAD: upload #{} attempt {}/{} failed; retrying in {} second(s)",
-        entry + 1,
-        nextAttempt - 1,
-        attempts,
-        seconds);
+    // The label names the destination too: with several of them each retrying its own entry, "upload #1"
+    // alone does not say which one is holding the run up.
+    Log::Info(L"UPLOAD: {} attempt {}/{} failed; retrying in {} second(s)", label, nextAttempt - 1, attempts, seconds);
 
     Sleep(seconds * 1000);
 }
@@ -991,13 +1070,16 @@ void Orc::Command::Wolf::Main::UploadSingleFile(
         return;
     }
 
-    const OutputSpec::Upload& primary = *config.Output.UploadDestinations.front().Chain.front();
+    const OutputSpec::UploadDestination& first = config.Output.UploadDestinations.front();
+    const OutputSpec::Upload& primary = *first.Chain.front();
     const bool filtered = (subject == UploadSubject::CollectedData);
 
     // Collected data is what 'include'/'exclude' select, so an archive reaching the upload agents here -
     // a set whose output already existed, uploaded outside the usual path - obeys them like any other.
-    // A run artifact carries no such choice and is always sent.
-    const bool acceptedByPrimary = (!filtered || primary.IsFileUploaded(fileName));
+    // A run artifact carries no such choice; artifacts="no" is the only thing that keeps one away, and
+    // it has to apply here as well as on the replay path, or the first destination receives the one
+    // thing it asked not to.
+    const bool acceptedByPrimary = filtered ? primary.IsFileUploaded(fileName) : first.Artifacts;
 
     // The record is what the run produced, not what the first destination accepted, so it is written
     // whatever the primary decides. A fallback has its own 'operation' and its own filters, applied when
@@ -1026,6 +1108,7 @@ void Orc::Command::Wolf::Main::UploadSingleFile(
 }
 
 HRESULT Main::RestartUploadAgent(
+    const OutputSpec::UploadDestination& destination,
     const OutputSpec::Upload& spec,
     size_t entry,
     bool afterAsyncAttempt,
@@ -1035,32 +1118,35 @@ HRESULT Main::RestartUploadAgent(
     m_pUploadMessageQueue.reset();
     m_pUploadNotification.reset();
 
+    const std::wstring label = UploadLabel(destination.Name, entry, destination.Chain.size());
+
     if (afterAsyncAttempt)
     {
         Log::Warn(
-            L"UPLOAD: upload #{} follows a failed asynchronous upload; "
+            L"UPLOAD: {} follows a failed asynchronous upload; "
             L"the file may no longer be present if the async transfer already succeeded.",
-            entry + 1);
+            label);
     }
 
     if (HRESULT hr = InitializeUpload(spec); FAILED(hr))
     {
-        Log::Error(L"Failed to initialise upload #{}, skipping [{}]", entry + 1, SystemError(hr));
+        Log::Error(L"Failed to initialise {}, skipping [{}]", label, SystemError(hr));
         return hr;
     }
 
     if (!m_pUploadMessageQueue)
     {
         // InitializeUpload returned S_OK but no queue was created (e.g. NoUpload method). Nothing to do.
-        Log::Warn(L"Upload #{}: no upload method available, skipping", entry + 1);
+        Log::Warn(L"{}: no upload method available, skipping", label);
         return E_FAIL;
     }
 
     // Replay every recorded request, rebuilt for THIS spec: its own operation and its own include/exclude
-    // decide what it receives and whether the local file survives.
+    // decide what it receives and whether the local file survives, and its destination's artifacts=
+    // decides whether the run's own record reaches it.
     for (const auto& pending : m_pendingUploads)
     {
-        if (auto replay = MakeReplayRequest(pending, spec, alreadyUploaded); replay)
+        if (auto replay = MakeReplayRequest(pending, spec, destination.Artifacts, alreadyUploaded); replay)
         {
             Concurrency::send(m_pUploadMessageQueue.get(), replay);
         }
@@ -1069,118 +1155,160 @@ HRESULT Main::RestartUploadAgent(
     return S_OK;
 }
 
+// Bring a started-but-unused upload agent to a terminal state before anything destroys it.
+//
+// The agent built in Run_Execute is running: its run() is parked in Concurrency::receive on the message
+// buffer. Only the MakeCompleteRequest + agent::wait pair ends it. Any path that steps past a
+// destination without running an attempt has to do that here, or the next RestartUploadAgent resets an
+// agent still blocked on a buffer it is about to free.
+void Main::DrainInheritedUploadAgent(bool alreadyNeedsFreshAgent)
+{
+    // Nothing inherited: either the caller already owns no agent, or one was never built.
+    if (alreadyNeedsFreshAgent || !m_pUploadAgent || !m_pUploadMessageQueue)
+    {
+        return;
+    }
+
+    Log::Debug(L"Draining the upload agent built for the first destination; it was not used");
+    Concurrency::send(m_pUploadMessageQueue.get(), UploadMessage::MakeCompleteRequest());
+    Concurrency::agent::wait(m_pUploadAgent.get());
+}
+
 HRESULT Main::CompleteUpload()
 {
     // m_pUploadAgent may be null here if the primary upload spec failed to initialise during Run_Execute()
     // (e.g. the server is unreachable). We must still enter the loop so retries and any configured fallback
     // specs are attempted - bailing out here would defeat the whole point of the fallback list.
     bool anyAsyncAttempted = false;
-    bool uploaded = false;
 
-    // Entry #1's first attempt inherits the agent Run_Execute built, unless that initialisation failed and
-    // left nothing to inherit: a destination that was already down when the run started is then retried
-    // like any other rather than only being fallen back from.
+    // The first destination's first entry inherits the agent Run_Execute built, unless that initialisation
+    // failed and left nothing to inherit: a destination that was already down when the run started is then
+    // retried like any other rather than only being fallen back from.
     bool needsFreshAgent = (m_pUploadAgent == nullptr);
 
-    // Only the first destination's chain for now; the outer loop over every destination lands with the
-    // <uploads> runtime.
-    const std::vector<std::shared_ptr<OutputSpec::Upload>>& chain = config.Output.UploadDestinations.front().Chain;
+    std::vector<UploadOutcome> outcomes;
+    size_t legacyChainSize = 0;
 
-    for (size_t i = 0; i < chain.size() && !uploaded; ++i)
+    // Destinations run one after another, never concurrently, to protect the uplink of the collected host.
+    // Unlike the chain inside one destination, this loop never stops early: a required destination failing
+    // must not cost the others their copy.
+    for (const auto& destination : config.Output.UploadDestinations)
     {
-        const OutputSpec::Upload& uploadSpec = *chain[i];
+        legacyChainSize = destination.Chain.size();
 
-        // What this entry has already received, so a retry does not send it a second time. Scoped to the
-        // entry on purpose: the next destination has none of it.
-        std::set<std::wstring> uploadedHere;
+        UploadOutcome outcome;
+        outcome.Name = destination.Name;
+        outcome.Required = destination.Required;
 
-        // An asynchronous entry is never retried, whatever it asks for: BITSAgent::IsComplete answers
-        // "done, no failure" as soon as the agent is ready to exit, without looking at the jobs, so there
-        // is no failure to react to and a further attempt could only re-queue a transfer already running.
-        // Validate warns about this at embed time; this is what makes that warning true.
-        const bool retryable = (uploadSpec.Mode != OutputSpec::UploadMode::Asynchronous);
-        const uint32_t attempts = retryable ? uploadSpec.Retry + 1 : 1;
-        uint32_t attemptsMade = 0;
-
-        for (uint32_t attempt = 1; attempt <= attempts; ++attempt)
+        if (!WantsAnything(destination, m_pendingUploads))
         {
-            if (needsFreshAgent)
-            {
-                if (attempt > 1)
-                {
-                    WaitBeforeRetry(uploadSpec.RetryDelay, i, attempt, attempts);
-                }
+            outcome.WantedNothing = true;
+            Log::Warn(L"Upload destination '{}': no file matched its filters, nothing sent", destination.Name);
 
-                if (FAILED(RestartUploadAgent(uploadSpec, i, anyAsyncAttempted, uploadedHere)))
-                {
-                    break;  // this entry cannot run at all; the next one still may
-                }
-            }
-
-            // Whoever built the agent this attempt used, the next attempt needs one of its own.
+            // The inherited agent belongs to the FIRST destination's first entry. Stepping past that
+            // entry without using it leaves a STARTED agent parked in Concurrency::receive, and the next
+            // RestartUploadAgent would destroy it, and the buffer its scheduler thread is blocked on,
+            // while it is still running. Drain it here instead: the next destination then builds its
+            // own, which is also what keeps it from sending to this one's server.
+            DrainInheritedUploadAgent(needsFreshAgent);
             needsFreshAgent = true;
-
-            if (!m_pUploadMessageQueue || !m_pUploadAgent)
-            {
-                Log::Warn(L"Upload #{}: agent not available, skipping", i + 1);
-                break;
-            }
-
-            // Only flag an async attempt once we have a live agent that the job is actually handed to: a
-            // spec whose agent failed to initialise never touched the file, so a later attempt must not
-            // warn that the file "may already be gone".
-            if (uploadSpec.Mode == OutputSpec::UploadMode::Asynchronous)
-            {
-                anyAsyncAttempted = true;
-            }
-
-            attemptsMade = attempt;
-
-            // Signal completion and wait for the agent to drain; async agents finish shortly after.
-            Concurrency::send(m_pUploadMessageQueue.get(), UploadMessage::MakeCompleteRequest());
-            Concurrency::agent::wait(m_pUploadAgent.get());
-
-            // Read the outcome from the agent, which agent::wait has just ordered against, rather than from
-            // the notification handler, whose last message may still be queued (see HasNotifiedFailure).
-            if (ReportsPerFileSuccess(uploadSpec))
-            {
-                const std::set<std::wstring>& delivered = m_pUploadAgent->UploadedFiles();
-                uploadedHere.insert(delivered.begin(), delivered.end());
-            }
-
-            if (!m_pUploadAgent->HasNotifiedFailure())
-            {
-                Log::Info(L"Upload completed successfully (upload #{}, attempt {}/{})", i + 1, attempt, attempts);
-                uploaded = true;
-                break;
-            }
+            outcomes.push_back(std::move(outcome));
+            continue;
         }
 
-        if (!uploaded && i + 1 < chain.size())
+        for (size_t i = 0; i < destination.Chain.size() && !outcome.Succeeded; ++i)
         {
-            // attemptsMade is 0 when the entry never got as far as a live agent, which is a different
-            // story from an attempt that ran and failed.
-            if (attemptsMade == 0)
+            const OutputSpec::Upload& uploadSpec = *destination.Chain[i];
+            const std::wstring label = UploadLabel(destination.Name, i, destination.Chain.size());
+
+            // What this entry has already received, so a retry does not send it a second time. Scoped to the
+            // entry on purpose: the next destination has none of it.
+            std::set<std::wstring> uploadedHere;
+
+            // An asynchronous entry is never retried, whatever it asks for: BITSAgent::IsComplete answers
+            // "done, no failure" as soon as the agent is ready to exit, without looking at the jobs, so there
+            // is no failure to react to and a further attempt could only re-queue a transfer already running.
+            // Validate warns about this at embed time; this is what makes that warning true.
+            const bool retryable = (uploadSpec.Mode != OutputSpec::UploadMode::Asynchronous);
+            const uint32_t attempts = retryable ? uploadSpec.Retry + 1 : 1;
+            uint32_t attemptsMade = 0;
+
+            for (uint32_t attempt = 1; attempt <= attempts; ++attempt)
             {
-                Log::Warn(L"Upload #{} could not be started, trying next upload...", i + 1);
+                if (needsFreshAgent)
+                {
+                    if (attempt > 1)
+                    {
+                        WaitBeforeRetry(uploadSpec.RetryDelay, label, attempt, attempts);
+                    }
+
+                    if (FAILED(RestartUploadAgent(destination, uploadSpec, i, anyAsyncAttempted, uploadedHere)))
+                    {
+                        break;  // this entry cannot run at all; the next one still may
+                    }
+                }
+
+                // Whoever built the agent this attempt used, the next attempt needs one of its own.
+                needsFreshAgent = true;
+
+                if (!m_pUploadMessageQueue || !m_pUploadAgent)
+                {
+                    Log::Warn(L"{}: agent not available, skipping", label);
+                    break;
+                }
+
+                // Only flag an async attempt once we have a live agent that the job is actually handed to: a
+                // spec whose agent failed to initialise never touched the file, so a later attempt must not
+                // warn that the file "may already be gone".
+                if (uploadSpec.Mode == OutputSpec::UploadMode::Asynchronous)
+                {
+                    anyAsyncAttempted = true;
+                }
+
+                attemptsMade = attempt;
+
+                // Signal completion and wait for the agent to drain; async agents finish shortly after.
+                Concurrency::send(m_pUploadMessageQueue.get(), UploadMessage::MakeCompleteRequest());
+                Concurrency::agent::wait(m_pUploadAgent.get());
+
+                // Read the outcome from the agent, which agent::wait has just ordered against, rather than from
+                // the notification handler, whose last message may still be queued (see HasNotifiedFailure).
+                if (ReportsPerFileSuccess(uploadSpec))
+                {
+                    const std::set<std::wstring>& delivered = m_pUploadAgent->UploadedFiles();
+                    uploadedHere.insert(delivered.begin(), delivered.end());
+                    // What delete_when_done keys on. Only methods that confirm per file get in here, so a
+                    // BITS destination never confirms anything and its files are never deleted.
+                    m_confirmedByDestination[destination.Name].insert(delivered.begin(), delivered.end());
+                }
+
+                if (!m_pUploadAgent->HasNotifiedFailure())
+                {
+                    Log::Info(L"{} completed successfully (attempt {}/{})", label, attempt, attempts);
+                    outcome.Succeeded = true;
+                    break;
+                }
             }
-            else
+
+            if (!outcome.Succeeded && i + 1 < destination.Chain.size())
             {
-                Log::Warn(L"Upload #{} failed after {} attempt(s), trying next upload...", i + 1, attemptsMade);
+                // attemptsMade is 0 when the entry never got as far as a live agent, which is a different
+                // story from an attempt that ran and failed.
+                if (attemptsMade == 0)
+                {
+                    Log::Warn(L"{} could not be started, trying next upload...", label);
+                }
+                else
+                {
+                    Log::Warn(L"{} failed after {} attempt(s), trying next upload...", label, attemptsMade);
+                }
             }
         }
+
+        outcomes.push_back(std::move(outcome));
     }
 
-    // The only critical line of the upload. Each failure along the way is an error, because a fallback may
-    // still succeed; without this one, a collection that reached no destination at all would end with
-    // nothing more severe than an error the loop moved past.
-    if (!uploaded)
-    {
-        Log::Critical(
-            L"UPLOAD: no configured upload succeeded ({} configured); the files that were not uploaded remain "
-            L"on this host",
-            chain.size());
-    }
+    ReportUploadOutcomes(outcomes, legacyChainSize);
 
     return S_OK;
 }

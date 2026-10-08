@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <agents.h>
+#include <map>
 #include <set>
 #include <chrono>
 
@@ -220,11 +221,15 @@ private:
     // latches a rejected authentication and a failed session so it refuses to try them again, and it owns
     // the WinHTTP handles.
     HRESULT RestartUploadAgent(
+        const OutputSpec::UploadDestination& destination,
         const OutputSpec::Upload& spec,
         size_t entry,
         bool afterAsyncAttempt,
         const std::set<std::wstring>& alreadyUploaded);
     HRESULT CompleteUpload();
+    // Bring a started-but-unused upload agent to a terminal state, so nothing destroys one that is
+    // still parked in Concurrency::receive on a buffer about to be freed.
+    void DrainInheritedUploadAgent(bool alreadyNeedsFreshAgent);
 
     std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
 
@@ -264,6 +269,12 @@ private:
     std::unique_ptr<UploadMessage::UnboundedMessageBuffer> m_pUploadMessageQueue;
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
     std::vector<PendingUpload> m_pendingUploads;
+
+    // Per destination, the local paths its successful entry confirmed. Only destinations whose method
+    // reports per-file success appear here (see ReportsPerFileSuccess), so a BITS destination confirms
+    // nothing and delete_when_done therefore keeps every file it was sent.
+    std::map<std::wstring, std::set<std::wstring>> m_confirmedByDestination;
+
     std::vector<std::wstring> m_emptyDirectoriesToRemove;
 
     std::optional<Guard::Handle> m_hInstanceEvent;

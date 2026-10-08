@@ -774,6 +774,8 @@ set(SRC_INOUT_UPLOAD
     "RESTCapture.h"
     "UploadAgent.cpp"
     "UploadAgent.h"
+    "UploadOutcome.cpp"
+    "UploadOutcome.h"
     "UploadMessage.cpp"
     "UploadMessage.h"
     "UploadNotification.cpp"

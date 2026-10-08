@@ -12,6 +12,7 @@
 #include "Configuration/ConfigFile_Common.h"
 #include "Configuration/ConfigFileReader.h"
 #include "Configuration/UploadDestinationReader.h"
+#include "UploadOutcome.h"
 #include "MemoryStream.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -742,6 +743,164 @@ public:
         bool deleteWhenDone = false;
         Assert::IsTrue(SUCCEEDED(ReadUploads(destinations, deleteWhenDone)));
         Assert::IsTrue(FAILED(ReadLegacy(destinations)));
+    }
+};
+
+// The end-of-upload verdict and the log label. Pure decisions over per-destination outcomes, kept out
+// of CompleteUpload so the part most likely to be wrong is the part that is tested: the severity a set
+// of outcomes deserves, and the exact wording a legacy configuration still has to produce.
+TEST_CLASS(UploadOutcomeTest)
+{
+private:
+    static UploadOutcome Make(const std::wstring& name, bool required, bool succeeded, bool wantedNothing = false)
+    {
+        UploadOutcome outcome;
+        outcome.Name = name;
+        outcome.Required = required;
+        outcome.Succeeded = succeeded;
+        outcome.WantedNothing = wantedNothing;
+        return outcome;
+    }
+
+public:
+    // Existing log parsers match "Upload #2", so an unnamed legacy list must keep producing it.
+    TEST_METHOD(LegacyUnnamedDestinationKeepsTodaysLabel)
+    {
+        Assert::AreEqual(std::wstring(L"Upload #2"), UploadLabel(L"", 1, 2));
+    }
+
+    TEST_METHOD(NamedDestinationLabelCarriesTheNameAndChainPosition)
+    {
+        Assert::AreEqual(std::wstring(L"Upload 'hq' #2/3"), UploadLabel(L"hq", 1, 3));
+    }
+
+    TEST_METHOD(AllSucceededWhenEveryDestinationGotIt)
+    {
+        const std::vector<UploadOutcome> outcomes = {Make(L"hq", true, true), Make(L"nas", false, true)};
+        std::vector<std::wstring> failedRequired;
+        std::vector<std::wstring> failedOptional;
+
+        Assert::IsTrue(UploadVerdict::AllSucceeded == GradeUploadOutcomes(outcomes, failedRequired, failedOptional));
+        Assert::IsTrue(failedRequired.empty());
+        Assert::IsTrue(failedOptional.empty());
+    }
+
+    // A required destination failing is the whole point of 'required': it outranks any number of
+    // optional ones, and its name must reach the Critical line.
+    TEST_METHOD(RequiredFailureOutranksOptionalFailure)
+    {
+        const std::vector<UploadOutcome> outcomes = {Make(L"hq", true, false), Make(L"nas", false, false)};
+        std::vector<std::wstring> failedRequired;
+        std::vector<std::wstring> failedOptional;
+
+        Assert::IsTrue(UploadVerdict::RequiredFailed == GradeUploadOutcomes(outcomes, failedRequired, failedOptional));
+        Assert::AreEqual(size_t(1), failedRequired.size());
+        Assert::AreEqual(std::wstring(L"hq"), failedRequired[0]);
+        Assert::AreEqual(size_t(1), failedOptional.size());
+    }
+
+    TEST_METHOD(OptionalFailureAloneIsNotCritical)
+    {
+        const std::vector<UploadOutcome> outcomes = {Make(L"hq", true, true), Make(L"nas", false, false)};
+        std::vector<std::wstring> failedRequired;
+        std::vector<std::wstring> failedOptional;
+
+        Assert::IsTrue(UploadVerdict::OptionalFailed == GradeUploadOutcomes(outcomes, failedRequired, failedOptional));
+        Assert::IsTrue(failedRequired.empty());
+        Assert::AreEqual(std::wstring(L"nas"), failedOptional[0]);
+    }
+
+    // A filter typo that matches nothing must be visible without condemning the run, so a destination
+    // that was handed nothing is not counted as a failure.
+    TEST_METHOD(FiltersMatchedNothingIsNotAFailure)
+    {
+        const std::vector<UploadOutcome> outcomes = {Make(L"hq", true, true), Make(L"nas", true, false, true)};
+        std::vector<std::wstring> failedRequired;
+        std::vector<std::wstring> failedOptional;
+
+        Assert::IsTrue(UploadVerdict::AllSucceeded == GradeUploadOutcomes(outcomes, failedRequired, failedOptional));
+        Assert::IsTrue(failedRequired.empty());
+    }
+
+    // One unnamed destination IS a legacy top-level <upload> list, and its total failure has to produce
+    // today's exact Critical rather than the new per-destination one.
+    TEST_METHOD(LegacyUnnamedSingleDestinationIsGradedSeparately)
+    {
+        const std::vector<UploadOutcome> outcomes = {Make(L"", true, false)};
+        std::vector<std::wstring> failedRequired;
+        std::vector<std::wstring> failedOptional;
+
+        Assert::IsTrue(
+            UploadVerdict::LegacyChainFailed == GradeUploadOutcomes(outcomes, failedRequired, failedOptional));
+    }
+
+    TEST_METHOD(LegacyUnnamedSingleDestinationThatSucceededIsSilent)
+    {
+        const std::vector<UploadOutcome> outcomes = {Make(L"", true, true)};
+        std::vector<std::wstring> failedRequired;
+        std::vector<std::wstring> failedOptional;
+
+        Assert::IsTrue(UploadVerdict::AllSucceeded == GradeUploadOutcomes(outcomes, failedRequired, failedOptional));
+    }
+};
+
+// Whether a destination has any interest in a file, judged across its whole fallback chain. Shared by
+// the "nothing matched its filters" check and by delete_when_done, which must agree on the question.
+TEST_CLASS(DestinationWantsFileTest)
+{
+private:
+    static std::shared_ptr<OutputSpec::Upload> Entry(const std::wstring& include)
+    {
+        auto upload = std::make_shared<OutputSpec::Upload>();
+        upload->Method = OutputSpec::UploadMethod::REST;
+        if (!include.empty())
+        {
+            upload->FilterInclude.push_back(include);
+        }
+
+        return upload;
+    }
+
+public:
+    TEST_METHOD(TrueWhenThePrimaryTakesIt)
+    {
+        OutputSpec::UploadDestination d;
+        d.Chain.push_back(Entry(L"*.7z"));
+        Assert::IsTrue(DestinationWantsFile(d, L"a.7z", false));
+    }
+
+    // The case the first implementation got wrong: only a later entry asks for it.
+    TEST_METHOD(TrueWhenOnlyAFallbackTakesIt)
+    {
+        OutputSpec::UploadDestination d;
+        d.Chain.push_back(Entry(L"*.log"));
+        d.Chain.push_back(Entry(L""));  // takes everything
+        Assert::IsTrue(DestinationWantsFile(d, L"a.7z", false));
+    }
+
+    TEST_METHOD(FalseWhenNoEntryTakesIt)
+    {
+        OutputSpec::UploadDestination d;
+        d.Chain.push_back(Entry(L"*.log"));
+        d.Chain.push_back(Entry(L"*.txt"));
+        Assert::IsFalse(DestinationWantsFile(d, L"a.7z", false));
+    }
+
+    // A run artifact ignores every filter; only artifacts="no" keeps it away.
+    TEST_METHOD(ArtifactFollowsTheArtifactsSwitchNotTheFilters)
+    {
+        OutputSpec::UploadDestination d;
+        d.Chain.push_back(Entry(L"*.7z"));
+        Assert::IsTrue(DestinationWantsFile(d, L"log.txt", true));
+
+        d.Artifacts = false;
+        Assert::IsFalse(DestinationWantsFile(d, L"log.txt", true));
+    }
+
+    TEST_METHOD(FalseForAnEmptyChain)
+    {
+        OutputSpec::UploadDestination d;
+        Assert::IsFalse(DestinationWantsFile(d, L"a.7z", false));
     }
 };
 
