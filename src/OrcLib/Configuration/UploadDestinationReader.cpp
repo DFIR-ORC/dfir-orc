@@ -72,6 +72,37 @@ void ApplyInheritedFilters(const ConfigItem& uploadItem, const InheritedFilters&
     }
 }
 
+// operation="move" deletes the source after upload, so a peer destination would find nothing. Within
+// ONE destination it is still fine: the chain stops at the first success, and a fallback that finds
+// the file gone is the historical behaviour. Judged on the destinations that survived configuration,
+// so dropping an optional one back down to a single destination does not refuse the survivor.
+HRESULT RefuseMoveAcrossDestinations(const std::vector<OutputSpec::UploadDestination>& destinations)
+{
+    if (destinations.size() <= 1)
+    {
+        return S_OK;
+    }
+
+    for (const auto& destination : destinations)
+    {
+        for (const auto& upload : destination.Chain)
+        {
+            if (upload->Operation == OutputSpec::UploadOperation::Move)
+            {
+                Log::Error(
+                    L"Upload destination '{}' uses operation=\"move\" alongside {} other destination(s); move "
+                    L"deletes the local file, leaving the others nothing to send. Use operation=\"copy\" with "
+                    L"<uploads delete_when_done=\"yes\">.",
+                    destination.Name,
+                    destinations.size() - 1);
+                return E_INVALIDARG;
+            }
+        }
+    }
+
+    return S_OK;
+}
+
 // A yes/no attribute that defaults to yes: only an explicit no turns it off, matching how the four
 // run-artifact switches are read.
 bool ReadYesByDefault(const ConfigItem& item, DWORD index)
@@ -310,6 +341,12 @@ HRESULT Orc::Config::ReadUploadDestinations(
     {
         Log::Error(L"No upload destination in <uploads> could be configured; refusing to run");
         return E_INVALIDARG;
+    }
+
+    // Last, so it judges what survived rather than what was written.
+    if (auto hr = RefuseMoveAcrossDestinations(destinations); FAILED(hr))
+    {
+        return hr;
     }
 
     return S_OK;

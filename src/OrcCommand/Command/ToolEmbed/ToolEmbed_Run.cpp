@@ -22,6 +22,7 @@
 #include "EmbeddedResource.h"
 #include "OutputSpec.h"
 #include "Configuration/ConfigFileReader.h"
+#include "Configuration/UploadDestinationReader.h"
 #include "ConfigFile_ToolEmbed.h"
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
 
@@ -181,8 +182,7 @@ bool ArchiveHasRecipient(const ConfigItem& schema, const ConfigItem& archiveNode
         }
 
         std::vector<std::wstring> specs;
-        boost::split(
-            specs, (const std::wstring&)recipient[WOLFLAUNCHER_RECIPIENT_ARCHIVE], boost::is_any_of(L",;"));
+        boost::split(specs, (const std::wstring&)recipient[WOLFLAUNCHER_RECIPIENT_ARCHIVE], boost::is_any_of(L",;"));
 
         for (const std::wstring& spec : specs)
         {
@@ -407,7 +407,72 @@ HRESULT ValidateEmbeddedUploadSecurity(const std::vector<EmbeddedResource::Embed
             uploads.push_back(std::move(upload));
         }
 
-        WarnOnUploadFilterMismatch(path, uploads);
+        // One form or the other, never both - the same rule the run enforces, applied here so the
+        // operator learns of it on their workstation rather than on a collected host that then refuses
+        // to start and loses the collection.
+        if (schema[WOLFLAUNCHER_UPLOAD] && schema[WOLFLAUNCHER_UPLOADS])
+        {
+            Log::Error(
+                L"ToolEmbed: refusing to embed '{}': it uses both a top-level <upload> list and an "
+                L"<uploads> block; use one form or the other",
+                path);
+            refused = true;
+        }
+
+        // The <uploads> form goes through the same reader the run uses, so every refusal it carries -
+        // operation="move" across destinations, a duplicate or empty name, a required destination with
+        // no usable <upload> - is caught here too. Its entries are then appended to the same vector the
+        // advisory warnings read, so a config migrated from <upload> to <uploads> keeps getting the
+        // clear-text and credential warnings instead of silently losing them.
+        if (schema[WOLFLAUNCHER_UPLOADS])
+        {
+            std::vector<OutputSpec::UploadDestination> destinations;
+            bool deleteWhenDone = false;
+            if (FAILED(Orc::Config::ReadUploadDestinations(schema[WOLFLAUNCHER_UPLOADS], destinations, deleteWhenDone)))
+            {
+                Log::Error(L"ToolEmbed: refusing to embed '{}': invalid <uploads> section", path);
+                refused = true;
+            }
+
+            for (const auto& destination : destinations)
+            {
+                std::vector<OutputSpec::Upload> chain;
+
+                for (const auto& upload : destination.Chain)
+                {
+                    const auto check = upload->Validate();
+                    if (check.verdict == OutputSpec::Upload::Verdict::Refuse)
+                    {
+                        Log::Error(
+                            L"ToolEmbed: refusing to embed '{}': destination '{}': {}",
+                            path,
+                            destination.Name,
+                            check.message);
+                        refused = true;
+                    }
+                    else if (check.verdict == OutputSpec::Upload::Verdict::Warn)
+                    {
+                        Log::Warn(L"ToolEmbed: '{}': destination '{}': {}", path, destination.Name, check.message);
+                    }
+
+                    chain.push_back(*upload);
+                }
+
+                // Per destination: entries of ONE chain disagreeing on their filters is the surprise
+                // this warns about. Destinations disagreeing with each other is routing, which is what
+                // the feature is for, so comparing across them would warn on every correct config.
+                WarnOnUploadFilterMismatch(path, chain);
+
+                uploads.insert(uploads.end(), chain.begin(), chain.end());
+            }
+        }
+        else
+        {
+            WarnOnUploadFilterMismatch(path, uploads);
+        }
+
+        // Clear-text exposure is about what leaves the host at all, so every entry of every destination
+        // counts here.
         WarnOnPlaintextUpload(path, schema, uploads);
     }
 

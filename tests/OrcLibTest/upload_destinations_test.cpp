@@ -518,6 +518,77 @@ public:
 
         Assert::IsTrue(FAILED(Read(xml, destinations, deleteWhenDone)));
     }
+
+    // move deletes the source after upload, so a peer destination would find nothing. Refused where
+    // it is written, not discovered mid-transfer.
+    TEST_METHOD(MoveWithTwoDestinationsIsRefused)
+    {
+        std::vector<OutputSpec::UploadDestination> destinations;
+        bool deleteWhenDone = false;
+        const std::string xml = Wrap(
+            "",
+            "    <destination name=\"hq\">\n"
+            "      <upload method=\"REST\" server=\"http://a.example\" operation=\"move\"/>\n"
+            "    </destination>\n"
+            "    <destination name=\"nas\">\n"
+            "      <upload method=\"REST\" server=\"http://b.example\"/>\n"
+            "    </destination>\n");
+
+        Assert::IsTrue(FAILED(Read(xml, destinations, deleteWhenDone)));
+    }
+
+    // Refused whichever destination writes it: the second one deleting the file is just as fatal to
+    // the first as the other way round.
+    TEST_METHOD(MoveOnTheSecondDestinationIsAlsoRefused)
+    {
+        std::vector<OutputSpec::UploadDestination> destinations;
+        bool deleteWhenDone = false;
+        const std::string xml = Wrap(
+            "",
+            "    <destination name=\"hq\">\n"
+            "      <upload method=\"REST\" server=\"http://a.example\"/>\n"
+            "    </destination>\n"
+            "    <destination name=\"nas\">\n"
+            "      <upload method=\"REST\" server=\"http://b.example\" operation=\"move\"/>\n"
+            "    </destination>\n");
+
+        Assert::IsTrue(FAILED(Read(xml, destinations, deleteWhenDone)));
+    }
+
+    // One destination is the historical case and keeps working: move is only dangerous next to a peer,
+    // and a fallback inside one chain that finds the file gone is existing behaviour.
+    TEST_METHOD(MoveWithOneDestinationIsAccepted)
+    {
+        std::vector<OutputSpec::UploadDestination> destinations;
+        bool deleteWhenDone = false;
+        const std::string xml = Wrap(
+            "",
+            "    <destination name=\"hq\">\n"
+            "      <upload method=\"REST\" server=\"http://a.example\" operation=\"move\"/>\n"
+            "      <upload method=\"REST\" server=\"http://b.example\" operation=\"move\"/>\n"
+            "    </destination>\n");
+
+        Assert::IsTrue(SUCCEEDED(Read(xml, destinations, deleteWhenDone)));
+        Assert::AreEqual(size_t(1), destinations.size());
+        Assert::AreEqual(size_t(2), destinations[0].Chain.size());
+    }
+
+    // An optional destination dropped for being unconfigurable leaves one destination behind, so the
+    // move on the survivor must not be refused by a count taken before the drop.
+    TEST_METHOD(MoveIsJudgedOnSurvivingDestinations)
+    {
+        std::vector<OutputSpec::UploadDestination> destinations;
+        bool deleteWhenDone = false;
+        const std::string xml = Wrap(
+            "",
+            std::string("    <destination name=\"nas\" required=\"no\">\n") + BadUpload() + "    </destination>\n"
+                + "    <destination name=\"hq\">\n"
+                + "      <upload method=\"REST\" server=\"http://b.example\" operation=\"move\"/>\n"
+                + "    </destination>\n");
+
+        Assert::IsTrue(SUCCEEDED(Read(xml, destinations, deleteWhenDone)));
+        Assert::AreEqual(size_t(1), destinations.size());
+    }
 };
 
 // An empty filter attribute must mean "no filter" at every level. Upload::Configure used a bare
